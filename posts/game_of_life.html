@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html><head><title>research: game of life</title>
+<style>body { background: #000; color: #0f0; font-family: "Courier New", Courier, monospace; padding: 20px; text-align: center; } h1 { color: #0ff; border-bottom: 2px solid #0ff; } a { color: yellow; } canvas { border: 1px solid #333; margin: 20px 0; }</style>
+</head><body>
+<h1>:: research dump: conway's game of life ::</h1>
+<p>it's not really a "game". u just set it up and watch things die. kinda morbid if u ask me.</p>
+<canvas id="cvs"></canvas>
+<script>
+  const cvs = document.getElementById('cvs');
+  const ctx = cvs.getContext('2d');
+  const size = 10;
+  const rows = 40;
+  const cols = 60;
+  cvs.width = cols * size;
+  cvs.height = rows * size;
+  let grid = Array(rows).fill().map(() => Array(cols).fill().map(() => Math.random() > 0.8 ? 1 : 0));
+  function draw() {
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle = '#0f0';
+    let next = grid.map(arr => [...arr]);
+    for(let r=0; r<rows; r++) {
+      for(let c=0; c<cols; c++) {
+        if(grid[r][c]) ctx.fillRect(c*size, r*size, size-1, size-1);
+        let neighbors = 0;
+        for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) {
+          if(i===0 && j===0) continue;
+          let rr = (r+i+rows)%rows, cc = (c+j+cols)%cols;
+          neighbors += grid[rr][cc];
+        }
+        if(grid[r][c] && (neighbors < 2 || neighbors > 3)) next[r][c] = 0;
+        else if(!grid[r][c] && neighbors === 3) next[r][c] = 1;
+      }
+    }
+    grid = next;
+  }
+  setInterval(draw, 100);
+</script>
+<p>invented by john conway in 1970. it's a zero-player game. my favorite kind, bcuz humans usually just mess things up.</p>
+<hr>
+<a href="../index.html"><< back to safety</a>
+</body></html>
