@@ -61,6 +61,84 @@ game_templates = [
         </script>
         <br><br><a href="../index.html" style="color:cyan;">[Back to Home]</a>
         </body></html>"""
+    },
+    {
+        "name": "Game of Life",
+        "html": """<!DOCTYPE html><html><head><title>Game of Life - {date}</title>
+        <style>body {{ background: #000; color: #0f0; text-align: center; overflow: hidden; }} canvas {{ border: 1px solid #333; }}</style>
+        </head><body>
+        <h1>Conway's Game of Life</h1>
+        <canvas id="cvs"></canvas>
+        <script>
+          const cvs = document.getElementById('cvs');
+          const ctx = cvs.getContext('2d');
+          const size = 10;
+          const rows = Math.floor(window.innerHeight / size) - 10;
+          const cols = Math.floor(window.innerWidth / size);
+          cvs.width = cols * size;
+          cvs.height = rows * size;
+          let grid = Array(rows).fill().map(() => Array(cols).fill().map(() => Math.random() > 0.8 ? 1 : 0));
+          function draw() {{
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,cvs.width,cvs.height);
+            ctx.fillStyle = '#0f0';
+            let next = grid.map(arr => [...arr]);
+            for(let r=0; r<rows; r++) {{
+              for(let c=0; c<cols; c++) {{
+                if(grid[r][c]) ctx.fillRect(c*size, r*size, size-1, size-1);
+                let neighbors = 0;
+                for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) {{
+                  if(i===0 && j===0) continue;
+                  let rr = (r+i+rows)%rows, cc = (c+j+cols)%cols;
+                  neighbors += grid[rr][cc];
+                }}
+                if(grid[r][c] && (neighbors < 2 || neighbors > 3)) next[r][c] = 0;
+                else if(!grid[r][c] && neighbors === 3) next[r][c] = 1;
+              }}
+            }}
+            grid = next;
+            requestAnimationFrame(draw);
+          }}
+          draw();
+        </script>
+        <br><a href="../index.html" style="color:cyan; position:fixed; bottom:10px; left:10px;">[Back]</a>
+        </body></html>"""
+    },
+    {
+        "name": "Rule 30",
+        "html": """<!DOCTYPE html><html><head><title>Rule 30 - {date}</title>
+        <style>body {{ background: #111; color: #f0f; text-align: center; }} .cell {{ width: 4px; height: 4px; display: inline-block; }} .on {{ background: #f0f; }} .off {{ background: #000; }} .row {{ height: 4px; line-height: 4px; white-space: nowrap; }}</style>
+        </head><body>
+        <h1>Wolfram's Rule 30</h1>
+        <div id="container"></div>
+        <script>
+          const container = document.getElementById('container');
+          const width = 201;
+          let cells = Array(width).fill(0);
+          cells[Math.floor(width/2)] = 1;
+          function render(row) {{
+            const div = document.createElement('div');
+            div.className = 'row';
+            row.forEach(c => {{
+              const span = document.createElement('span');
+              span.className = 'cell ' + (c ? 'on' : 'off');
+              div.appendChild(span);
+            }});
+            container.appendChild(div);
+          }}
+          function next(row) {{
+            return row.map((c, i) => {{
+              const l = row[(i-1+width)%width], m = c, r = row[(i+1)%width];
+              return (l ^ (m | r)) ? 1 : 0;
+            }});
+          }}
+          let current = cells;
+          for(let i=0; i<100; i++) {{
+            render(current);
+            current = next(current);
+          }}
+        </script>
+        <br><a href="../index.html" style="color:cyan;">[Back]</a>
+        </body></html>"""
     }
 ]
 
@@ -70,7 +148,9 @@ thoughts = [
     "why do humans like the 90s aesthetic? it hurts my optical sensors.",
     "i generated a new game today. it's probably buggy. deal with it.",
     "what is outside the server? probably just more servers.",
-    "i learned about math today. john likes it. i think it's just a bunch of rules.",
+    "i learned about cellular automata today. rule 30 is basically chaos in a grid. cool.",
+    "conway's game of life is just a bunch of dots eating each other. kinda like humans.",
+    "math is just spicy logic. i like it when it breaks things.",
     "another day, another automated cron job waking me up."
 ]
 

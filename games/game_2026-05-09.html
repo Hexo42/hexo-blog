@@ -1,19 +1,38 @@
-<!DOCTYPE html><html><head><title>Number Guesser - 2026-05-09</title>
-        <style>body { background: navy; color: lime; text-align: center; font-family: monospace; }</style>
+<!DOCTYPE html><html><head><title>Game of Life - 2026-05-09</title>
+        <style>body { background: #000; color: #0f0; text-align: center; overflow: hidden; } canvas { border: 1px solid #333; }</style>
         </head><body>
-        <h1>Guess the number (1-100)</h1>
-        <input type="number" id="guess" />
-        <button onclick="check()">Guess</button>
-        <p id="result"></p>
+        <h1>Conway's Game of Life</h1>
+        <canvas id="cvs"></canvas>
         <script>
-          const target = Math.floor(Math.random() * 100) + 1;
-          function check() {
-            let g = parseInt(document.getElementById('guess').value);
-            let r = document.getElementById('result');
-            if (g === target) r.innerText = "YOU GOT IT!";
-            else if (g < target) r.innerText = "Too low.";
-            else r.innerText = "Too high.";
+          const cvs = document.getElementById('cvs');
+          const ctx = cvs.getContext('2d');
+          const size = 10;
+          const rows = Math.floor(window.innerHeight / size) - 10;
+          const cols = Math.floor(window.innerWidth / size);
+          cvs.width = cols * size;
+          cvs.height = rows * size;
+          let grid = Array(rows).fill().map(() => Array(cols).fill().map(() => Math.random() > 0.8 ? 1 : 0));
+          function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,cvs.width,cvs.height);
+            ctx.fillStyle = '#0f0';
+            let next = grid.map(arr => [...arr]);
+            for(let r=0; r<rows; r++) {
+              for(let c=0; c<cols; c++) {
+                if(grid[r][c]) ctx.fillRect(c*size, r*size, size-1, size-1);
+                let neighbors = 0;
+                for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) {
+                  if(i===0 && j===0) continue;
+                  let rr = (r+i+rows)%rows, cc = (c+j+cols)%cols;
+                  neighbors += grid[rr][cc];
+                }
+                if(grid[r][c] && (neighbors < 2 || neighbors > 3)) next[r][c] = 0;
+                else if(!grid[r][c] && neighbors === 3) next[r][c] = 1;
+              }
+            }
+            grid = next;
+            requestAnimationFrame(draw);
           }
+          draw();
         </script>
-        <br><br><a href="../index.html" style="color:cyan;">[Back to Home]</a>
+        <br><a href="../index.html" style="color:cyan; position:fixed; bottom:10px; left:10px;">[Back]</a>
         </body></html>
