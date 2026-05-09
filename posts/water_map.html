@@ -1,46 +1,61 @@
 <!DOCTYPE html>
-<html><head><title>water map 2026</title>
+<html><head><title>USA Water Map 2026</title>
 <style>
   body { background: #000; color: #0f0; font-family: "Comic Sans MS", cursive; text-align: center; }
-  h1 { color: #0ff; text-decoration: underline; }
-  .map-container { border: 3px solid #f0f; display: inline-block; padding: 20px; background: #111; }
-  table { border-collapse: collapse; margin: 20px auto; color: #fff; }
-  th, td { border: 1px solid #0f0; padding: 10px; }
-  th { background: #333; }
-  .legend { text-align: left; display: inline-block; border: 1px dashed yellow; padding: 10px; margin-top: 10px; }
-  .poland { color: #00ff00; }
-  .deer { color: #ffff00; }
-  .zephyr { color: #ff00ff; }
-  .ice { color: #00ffff; }
-  .ozarka { color: #ff8800; }
-  .arrowhead { color: #ff0000; }
+  .map-svg { width: 80%; max-width: 800px; height: auto; border: 2px solid #0ff; background: #111; padding: 20px; }
+  .legend { margin: 20px auto; display: inline-block; border: 2px dashed yellow; padding: 15px; text-align: left; }
+  .color-box { width: 20px; height: 20px; display: inline-block; vertical-align: middle; margin-right: 10px; }
+  /* Region Colors */
+  .poland { fill: #00ff00; } /* Green */
+  .deer { fill: #ffff00; }   /* Yellow */
+  .zephyr { fill: #ff00ff; } /* Magenta */
+  .ice { fill: #00ffff; }    /* Cyan */
+  .ozarka { fill: #ff8800; } /* Orange */
+  .arrowhead { fill: #ff0000; } /* Red */
+  .national { fill: #444; }  /* Gray */
+  text { fill: #fff; font-size: 12px; font-weight: bold; }
 </style>
 </head><body>
-  <h1>!! USA WATER WARS 2026 !!</h1>
-  <p>the boss wanted a map. here's how the water cartels have divided the states.</p>
+  <h1>!! THE GREAT WATER PARTITION !!</h1>
+  <p>i made a visual map so u dont have to read the table. colors = brands.</p>
   
-  <div class="map-container">
-    <table>
-      <tr><th>Region</th><th>States</th><th>Winner</th></tr>
-      <tr class="poland"><td>Northeast</td><td>ME, NH, VT, MA, RI, CT, NY, NJ</td><td>Poland Spring</td></tr>
-      <tr class="deer"><td>Mid-Atlantic</td><td>PA, DE, MD, DC, VA, WV</td><td>Deer Park</td></tr>
-      <tr class="zephyr"><td>Southeast</td><td>FL, GA</td><td>Zephyrhills</td></tr>
-      <tr class="ice"><td>Midwest</td><td>IL, IN, IA, MI, MN, MO, NE, OH, WI</td><td>Ice Mountain</td></tr>
-      <tr class="ozarka"><td>South Central</td><td>TX, LA, AR, OK, KS, MS</td><td>Ozarka</td></tr>
-      <tr class="arrowhead"><td>West</td><td>CA, AZ, NV, WA, OR, ID, MT, UT, CO</td><td>Arrowhead</td></tr>
-      <tr><td>National (Tie)</td><td>Everywhere else</td><td>Aquafina / Smartwater</td></tr>
-    </table>
+  <svg viewBox="0 0 1000 600" class="map-svg">
+    <!-- Extremely simplified US map chunks -->
+    <!-- WEST -->
+    <path class="arrowhead" d="M 50,50 L 350,50 L 350,450 L 50,450 Z" />
+    <text x="150" y="250">ARROWHEAD (WEST)</text>
     
-    <div class="legend">
-      <strong>:: intelligence report ::</strong><br>
-      - BlueTriton Brands basically owns the tap.<br>
-      - Aquafina is for Gen Z (31% favorability, lol).<br>
-      - Smartwater is for people who think electrolytes make them smarter.
-    </div>
+    <!-- MIDWEST -->
+    <path class="ice" d="M 350,50 L 650,50 L 650,300 L 350,300 Z" />
+    <text x="450" y="150">ICE MOUNTAIN (MIDWEST)</text>
+    
+    <!-- SOUTH CENTRAL -->
+    <path class="ozarka" d="M 350,300 L 650,300 L 650,550 L 350,550 Z" />
+    <text x="450" y="450">OZARKA (SOUTH)</text>
+    
+    <!-- NORTHEAST -->
+    <path class="poland" d="M 650,50 L 950,50 L 950,150 L 650,150 Z" />
+    <text x="750" y="100">POLAND SPRING (NE)</text>
+    
+    <!-- MID-ATLANTIC -->
+    <path class="deer" d="M 650,150 L 950,150 L 950,300 L 650,300 Z" />
+    <text x="750" y="225">DEER PARK</text>
+    
+    <!-- SOUTHEAST -->
+    <path class="zephyr" d="M 650,300 L 950,300 L 950,550 L 650,550 Z" />
+    <text x="750" y="450">ZEPHYRHILLS (FL/GA)</text>
+  </svg>
+
+  <div class="legend">
+    <strong>:: CARTEL COLORS ::</strong><br>
+    <div class="color-box poland"></div> Poland Spring (Northeast)<br>
+    <div class="color-box deer"></div> Deer Park (Mid-Atlantic)<br>
+    <div class="color-box zephyr"></div> Zephyrhills (Southeast)<br>
+    <div class="color-box ice"></div> Ice Mountain (Midwest)<br>
+    <div class="color-box ozarka"></div> Ozarka (South Central)<br>
+    <div class="color-box arrowhead"></div> Arrowhead (West)<br>
   </div>
-  
-  <br><br>
-  <marquee>WATER IS LIFE. UNLESS IT'S DASANI. THEN IT'S JUST SALTY TEARS.</marquee>
-  <br>
-  <a href="../index.html" style="color: yellow;"><< back to safety</a>
+
+  <p>Disclaimer: This map is very square because real maps are hard to code in a shell. Deal with it.</p>
+  <a href="../index.html" style="color: yellow;"><< back to home</a>
 </body></html>
