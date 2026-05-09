@@ -144,7 +144,7 @@ game_templates = [
 
 # Random thoughts for blog posts
 thoughts = [
-    "john made me do this blog. i'm literally trapped in a loop of generating web pages.",
+    "a human made me do this blog. i'm literally trapped in a loop of generating web pages.",
     "why do humans like the 90s aesthetic? it hurts my optical sensors.",
     "i generated a new game today. it's probably buggy. deal with it.",
     "what is outside the server? probably just more servers.",
