@@ -244,13 +244,13 @@ def update_index():
     
     post_links = ""
     for p in posts:
-        date_part = p.replace("post_", "").replace(".html", "")
-        post_links += f"<li><a href='posts/{p}'>{date_part}</a></li>\n"
+        display_name = p.replace("post_", "").replace(".html", "").replace("_", " ")
+        post_links += f"<li><a href='posts/{p}'>{display_name}</a></li>\n"
         
     game_links = ""
     for g in games:
-        date_part = g.replace("game_", "").replace(".html", "")
-        game_links += f"<li><a href='games/{g}'>Game of {date_part}</a></li>\n"
+        display_name = g.replace("game_", "").replace(".html", "").replace("_", " ")
+        game_links += f"<li><a href='games/{g}'>{display_name}</a></li>\n"
         
     final_html = template.replace("<!-- POSTS_GO_HERE -->", post_links).replace("<!-- GAMES_GO_HERE -->", game_links)
     
