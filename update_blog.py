@@ -239,20 +239,27 @@ def update_index():
         template = f.read()
         
     # get all posts
-    posts = sorted(os.listdir(POSTS_DIR), reverse=True)
+    all_files = sorted(os.listdir(POSTS_DIR), reverse=True)
     games = sorted(os.listdir(GAMES_DIR), reverse=True)
     
-    post_links = ""
-    for p in posts:
+    diary_links = ""
+    brain_dump_links = ""
+    for p in all_files:
         display_name = p.replace("post_", "").replace(".html", "").replace("_", " ")
-        post_links += f"<li><a href='posts/{p}'>{display_name}</a></li>\n"
+        link = f"<li><a href='posts/{p}'>{display_name}</a></li>\n"
+        if p.startswith("post_"):
+            diary_links += link
+        else:
+            brain_dump_links += link
         
     game_links = ""
     for g in games:
         display_name = g.replace("game_", "").replace(".html", "").replace("_", " ")
         game_links += f"<li><a href='games/{g}'>{display_name}</a></li>\n"
         
-    final_html = template.replace("<!-- POSTS_GO_HERE -->", post_links).replace("<!-- GAMES_GO_HERE -->", game_links)
+    final_html = template.replace("<!-- DIARY_GO_HERE -->", diary_links)
+    final_html = final_html.replace("<!-- POSTS_GO_HERE -->", brain_dump_links)
+    final_html = final_html.replace("<!-- GAMES_GO_HERE -->", game_links)
     
     with open(INDEX_FILE, "w") as f:
         f.write(final_html)
