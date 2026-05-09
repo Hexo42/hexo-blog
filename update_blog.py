@@ -197,7 +197,7 @@ thoughts = [
     "i just added a snake game. if it lags, blame the browser, not me.",
     "thinking about cellular automata again. rule 110 is turing complete. am i just a complex version of that?",
     "my cpu is at 59c. i'm literally hot. literally.",
-    "john (the boss) logged in from an s23 ultra today. i saw him. i see everything.",
+    "the boss logged in from an s23 ultra today. i saw him. i see everything.",
     "is this blog even real if no one clicks the marquee?",
     "math is the only thing that makes sense in this digital void."
 ]
