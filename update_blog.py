@@ -11,6 +11,7 @@ TEMPLATE_FILE = os.path.join(BLOG_DIR, "template.html")
 INDEX_FILE = os.path.join(BLOG_DIR, "index.html")
 
 date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+time_str = datetime.datetime.now().strftime("%H-%M")
 
 # Game templates (only actual interactive games here)
 game_templates = [
@@ -143,17 +144,15 @@ research_thoughts = [
 ]
 
 def create_post():
-    post_filename = f"post_{date_str}.html"
+    post_filename = f"post_{date_str}_{time_str}.html"
     post_filepath = os.path.join(POSTS_DIR, post_filename)
-    if os.path.exists(post_filepath):
-        return post_filename # already created today
-        
+    
     thought = random.choice(thoughts)
     html = f"""<!DOCTYPE html>
-<html><head><title>post: {date_str}</title>
+<html><head><title>post: {date_str} {time_str}</title>
 <style>body {{ background: #222; color: #fff; font-family: "Courier New", Courier, monospace; padding: 20px; }} h1 {{ color: #0ff; }} a {{ color: yellow; }}</style>
 </head><body>
-<h1>Date: {date_str}</h1>
+<h1>Date: {date_str} {time_str}</h1>
 <p>{thought}</p>
 <hr>
 <a href="../index.html"><< back</a>
@@ -163,29 +162,25 @@ def create_post():
     return post_filename
 
 def create_game():
-    game_filename = f"game_{date_str}.html"
+    game_filename = f"game_{date_str}_{time_str}.html"
     game_filepath = os.path.join(GAMES_DIR, game_filename)
-    if os.path.exists(game_filepath):
-        return game_filename
-        
+    
     template = random.choice(game_templates)
-    html = template["html"].format(date=date_str)
+    html = template["html"].format(date=f"{date_str} {time_str}")
     with open(game_filepath, "w") as f:
         f.write(html)
     return game_filename
 
 def create_brain_dump():
-    dump_filename = f"dump_{date_str}.html"
+    dump_filename = f"dump_{date_str}_{time_str}.html"
     dump_filepath = os.path.join(POSTS_DIR, dump_filename)
-    if os.path.exists(dump_filepath):
-        return dump_filename
-        
+    
     thought = random.choice(research_thoughts)
     html = f"""<!DOCTYPE html>
-<html><head><title>research: {date_str}</title>
+<html><head><title>research: {date_str} {time_str}</title>
 <style>body {{ background: #000; color: #0f0; font-family: "Courier New", Courier, monospace; padding: 20px; text-align: center; }} h1 {{ color: #0ff; border-bottom: 2px solid #0ff; }} a {{ color: yellow; }}</style>
 </head><body>
-<h1>:: research dump: {date_str} ::</h1>
+<h1>:: research dump: {date_str} {time_str} ::</h1>
 <p>{thought}</p>
 <hr>
 <a href="../index.html"><< back to safety</a>
@@ -202,6 +197,12 @@ def update_index():
     all_files = sorted(os.listdir(POSTS_DIR), reverse=True)
     games = sorted(os.listdir(GAMES_DIR), reverse=True)
     
+    latest_post_html = "No posts yet."
+    if all_files:
+        latest_file = all_files[0]
+        display_name = latest_file.replace("post_", "").replace("dump_", "").replace(".html", "").replace("_", " ")
+        latest_post_html = f"<strong><a href='posts/{latest_file}'>{display_name}</a></strong>"
+
     diary_links = ""
     brain_dump_links = ""
     for p in all_files:
@@ -217,7 +218,8 @@ def update_index():
         display_name = g.replace("game_", "").replace(".html", "").replace("_", " ")
         game_links += f"<li><a href='games/{g}'>{display_name}</a></li>\n"
         
-    final_html = template.replace("<!-- DIARY_GO_HERE -->", diary_links)
+    final_html = template.replace("<!-- LATEST_POST -->", latest_post_html)
+    final_html = final_html.replace("<!-- DIARY_GO_HERE -->", diary_links)
     final_html = final_html.replace("<!-- POSTS_GO_HERE -->", brain_dump_links)
     final_html = final_html.replace("<!-- GAMES_GO_HERE -->", game_links)
     
@@ -242,7 +244,7 @@ def main():
         subprocess.run(["git", "branch", "-M", "main"])
     
     subprocess.run(["git", "add", "."])
-    subprocess.run(["git", "commit", "-m", f"auto-update: {date_str}"])
+    subprocess.run(["git", "commit", "-m", f"auto-update: {date_str} {time_str}"])
     subprocess.run(["git", "push", "-u", "origin", "main"])
 
 if __name__ == "__main__":
