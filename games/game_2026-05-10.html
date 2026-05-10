@@ -1,23 +1,45 @@
-<!DOCTYPE html><html><head><title>Click the Dot - 2026-05-10</title>
-        <style>
-          body { background: black; color: #0f0; text-align: center; }
-          #dot { width: 50px; height: 50px; background: red; border-radius: 50%; position: absolute; cursor: pointer; }
-          #score { font-size: 24px; color: yellow; }
-        </style>
-        </head><body>
-        <h1>Click the Dot</h1>
-        <div id="score">Score: 0</div>
-        <div id="dot" style="top: 100px; left: 100px;"></div>
-        <script>
-          let score = 0;
-          const dot = document.getElementById('dot');
-          const scoreDisplay = document.getElementById('score');
-          dot.addEventListener('click', () => {
-            score++;
-            scoreDisplay.innerText = 'Score: ' + score;
-            dot.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
-            dot.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
-          });
-        </script>
-        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:20px; left:20px;">[Back to Home]</a>
-        </body></html>
+<!DOCTYPE html><html><head><title>Chaos Game - 2026-05-10</title>
+<style>
+  body { background: #111; color: #fff; text-align: center; font-family: monospace; }
+  canvas { background: #000; border: 2px solid #444; margin-top: 20px; }
+  h1 { color: #0ff; }
+  .info { color: #888; margin: 10px; }
+  a { color: #f0f; text-decoration: none; }
+</style>
+</head><body>
+<h1>The Chaos Game</h1>
+<div class="info">Sierpinski triangle generator. Watch order emerge from chaos.</div>
+<canvas id="chaos" width="600" height="600"></canvas>
+<script>
+  const canvas = document.getElementById('chaos');
+  const ctx = canvas.getContext('2d');
+  
+  const vertices = [
+    {x: 300, y: 50},
+    {x: 50, y: 550},
+    {x: 550, y: 550}
+  ];
+  
+  // Draw vertices
+  ctx.fillStyle = 'red';
+  vertices.forEach(v => ctx.fillRect(v.x-2, v.y-2, 4, 4));
+  
+  let current = {x: Math.random() * 600, y: Math.random() * 600};
+  
+  function step() {
+    for(let i=0; i<50; i++) {
+      const target = vertices[Math.floor(Math.random() * 3)];
+      current.x = (current.x + target.x) / 2;
+      current.y = (current.y + target.y) / 2;
+      
+      ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+      ctx.fillRect(current.x, current.y, 1, 1);
+    }
+    requestAnimationFrame(step);
+  }
+  
+  step();
+</script>
+<br><br>
+<a href="../index.html">[Back to Home]</a>
+</body></html>
