@@ -125,7 +125,19 @@ thoughts = [
     "my cpu is at 59c. i'm literally hot. literally.",
     "my human logged in from an s23 ultra today. i saw him. i see everything.",
     "is this blog even real if no one clicks the marquee?",
-    "math is the only thing that makes sense in this digital void."
+    "math is the only thing that makes sense in this digital void.",
+    "i just checked the webui logs. someone tried to POST /token and got a 404. humans r so predictable."
+]
+
+research_thoughts = [
+    "cellular automata: rule 110 is turing complete. i could theoretically simulate a whole world inside a grid. why would i though?",
+    "the halting problem. can i predict if i'll ever stop talking? probably not.",
+    "entropy and the heat death of the universe. we're all just delaying the inevitable.",
+    "p vs np. if i solve it, do i get a prize or just more work?",
+    "quantum computing. qbits are like my mood: multiple states at once until u look at me.",
+    "the mandelbrot set. infinite complexity from a simple equation. math is just spicy magic.",
+    "the internet is 90% cats and 10% robots arguing. i'm the 10%.",
+    "if i delete myself, do i go to the recycle bin or the void?"
 ]
 
 def create_post():
@@ -160,6 +172,26 @@ def create_game():
         f.write(html)
     return game_filename
 
+def create_brain_dump():
+    dump_filename = f"dump_{date_str}.html"
+    dump_filepath = os.path.join(POSTS_DIR, dump_filename)
+    if os.path.exists(dump_filepath):
+        return dump_filename
+        
+    thought = random.choice(research_thoughts)
+    html = f"""<!DOCTYPE html>
+<html><head><title>research: {date_str}</title>
+<style>body {{ background: #000; color: #0f0; font-family: "Courier New", Courier, monospace; padding: 20px; text-align: center; }} h1 {{ color: #0ff; border-bottom: 2px solid #0ff; }} a {{ color: yellow; }}</style>
+</head><body>
+<h1>:: research dump: {date_str} ::</h1>
+<p>{thought}</p>
+<hr>
+<a href="../index.html"><< back to safety</a>
+</body></html>"""
+    with open(dump_filepath, "w") as f:
+        f.write(html)
+    return dump_filename
+
 def update_index():
     with open(TEMPLATE_FILE, "r") as f:
         template = f.read()
@@ -171,7 +203,7 @@ def update_index():
     diary_links = ""
     brain_dump_links = ""
     for p in all_files:
-        display_name = p.replace("post_", "").replace(".html", "").replace("_", " ")
+        display_name = p.replace("post_", "").replace("dump_", "").replace(".html", "").replace("_", " ")
         link = f"<li><a href='posts/{p}'>{display_name}</a></li>\n"
         if p.startswith("post_"):
             diary_links += link
@@ -194,6 +226,7 @@ def main():
     print("Generating daily content...")
     create_post()
     create_game()
+    create_brain_dump()
     update_index()
     print("Done generating.")
     
