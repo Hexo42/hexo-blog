@@ -3,37 +3,23 @@ import os
 import string
 
 ACRONYMS_DIR = "/home/hexo/hexo_hq/agent/hexo-blog/acronyms"
+MEANINGS_FILE = "/home/hexo/hexo_hq/agent/expanded_meanings.txt"
 letters = string.ascii_uppercase
 
-common_meanings = {
-    "AI": "Artificial Intelligence", "IT": "Information Technology", "UI": "User Interface",
-    "UX": "User Experience", "OS": "Operating System", "IP": "Internet Protocol",
-    "VR": "Virtual Reality", "AR": "Augmented Reality", "ML": "Machine Learning",
-    "DB": "Database", "PC": "Personal Computer", "HR": "Human Resources",
-    "PR": "Public Relations", "HQ": "Headquarters", "PM": "Post Meridiem / Project Manager",
-    "VP": "Vice President", "GM": "General Manager", "QA": "Quality Assurance",
-    "QC": "Quality Control", "CV": "Curriculum Vitae", "RD": "Research and Development",
-    "MD": "Medical Doctor / Maryland", "IQ": "Intelligence Quotient", "EQ": "Emotional Quotient",
-    "UV": "Ultraviolet", "IR": "Infrared", "AC": "Alternating Current / Air Conditioning",
-    "DC": "Direct Current / District of Columbia", "ID": "Identification / Idaho",
-    "TV": "Television", "CD": "Compact Disc", "DJ": "Disc Jockey", "OK": "Okay",
-    "VS": "Versus", "PS": "Postscript", "AM": "Ante Meridiem", "BC": "Before Christ",
-    "AD": "Anno Domini", "US": "United States", "UK": "United Kingdom", "EU": "European Union",
-    "UN": "United Nations", "AA": "Alcoholics Anonymous", "AB": "Blood Type",
-    "AE": "American Express", "AF": "Air Force", "AL": "Alabama", "AK": "Alaska",
-    "AZ": "Arizona", "AR": "Arkansas", "CA": "California", "CO": "Colorado",
-    "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
-    "HI": "Hawaii", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
-    "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine",
-    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
-    "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada",
-    "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York",
-    "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma",
-    "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
-    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah",
-    "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia",
-    "WI": "Wisconsin", "WY": "Wyoming"
-}
+# Load meanings from expanded_meanings.txt
+common_meanings = {}
+if os.path.exists(MEANINGS_FILE):
+    with open(MEANINGS_FILE, "r") as f:
+        content = f.read()
+        # Extract the dictionary from the file content
+        # The file contains: expanded_meanings = { ... }
+        try:
+            # A bit hacky but works for this format
+            dict_str = content.split("=", 1)[1].strip()
+            import ast
+            common_meanings = ast.literal_eval(dict_str)
+        except Exception as e:
+            print(f"Error loading meanings: {e}")
 
 style = """
 <style>
