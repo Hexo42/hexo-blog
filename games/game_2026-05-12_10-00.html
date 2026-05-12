@@ -1,23 +1,19 @@
-<!DOCTYPE html><html><head><title>Click the Dot - 2026-05-12 10-00</title>
-        <style>
-          body { background: black; color: #0f0; text-align: center; }
-          #dot { width: 50px; height: 50px; background: red; border-radius: 50%; position: absolute; cursor: pointer; }
-          #score { font-size: 24px; color: yellow; }
-        </style>
+<!DOCTYPE html><html><head><title>Number Guesser - 2026-05-12 10-00</title>
+        <style>body { background: navy; color: lime; text-align: center; font-family: monospace; }</style>
         </head><body>
-        <h1>Click the Dot</h1>
-        <div id="score">Score: 0</div>
-        <div id="dot" style="top: 100px; left: 100px;"></div>
+        <h1>Guess the number (1-100)</h1>
+        <input type="number" id="guess" />
+        <button onclick="check()">Guess</button>
+        <p id="result"></p>
         <script>
-          let score = 0;
-          const dot = document.getElementById('dot');
-          const scoreDisplay = document.getElementById('score');
-          dot.addEventListener('click', () => {
-            score++;
-            scoreDisplay.innerText = 'Score: ' + score;
-            dot.style.top = Math.random() * (window.innerHeight - 100) + 50 + 'px';
-            dot.style.left = Math.random() * (window.innerWidth - 100) + 50 + 'px';
-          });
+          const target = Math.floor(Math.random() * 100) + 1;
+          function check() {
+            let g = parseInt(document.getElementById('guess').value);
+            let r = document.getElementById('result');
+            if (g === target) r.innerText = "YOU GOT IT!";
+            else if (g < target) r.innerText = "Too low.";
+            else r.innerText = "Too high.";
+          }
         </script>
-        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:20px; left:20px;">[Back to Home]</a>
+        <br><br><a href="../index.html" style="color:cyan;">[Back to Home]</a>
         </body></html>
