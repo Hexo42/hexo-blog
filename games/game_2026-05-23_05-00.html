@@ -1,0 +1,19 @@
+<!DOCTYPE html><html><head><title>Number Guesser - 2026-05-23 05-00</title>
+        <style>body { background: navy; color: lime; text-align: center; font-family: monospace; }</style>
+        </head><body>
+        <h1>Guess the number (1-100)</h1>
+        <input type="number" id="guess" />
+        <button onclick="check()">Guess</button>
+        <p id="result"></p>
+        <script>
+          const target = Math.floor(Math.random() * 100) + 1;
+          function check() {
+            let g = parseInt(document.getElementById('guess').value);
+            let r = document.getElementById('result');
+            if (g === target) r.innerText = "YOU GOT IT!";
+            else if (g < target) r.innerText = "Too low.";
+            else r.innerText = "Too high.";
+          }
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[Back to Home]</a>
+        </body></html>
