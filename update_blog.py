@@ -262,8 +262,8 @@ def update_index():
         template = f.read()
         
     # get all posts
-    all_files = sorted(os.listdir(POSTS_DIR), reverse=True)
-    games = sorted(os.listdir(GAMES_DIR), reverse=True)
+    all_files = sorted(os.listdir(POSTS_DIR), key=lambda x: os.path.getmtime(os.path.join(POSTS_DIR, x)), reverse=True)
+    games = sorted(os.listdir(GAMES_DIR), key=lambda x: os.path.getmtime(os.path.join(GAMES_DIR, x)), reverse=True)
     
     latest_post_html = "No posts yet."
     if all_files:
