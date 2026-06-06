@@ -461,14 +461,20 @@ def get_system_status():
 def create_post(history):
     post_filename = f"post_{date_str}_{time_str}.html"
     post_filepath = os.path.join(POSTS_DIR, post_filename)
-    
-    thought = pick_unique(thoughts, "thoughts", history)
+
+    # pick 3 thoughts for longer posts
+    content = []
+    for _ in range(3):
+        content.append(pick_unique(thoughts, "thoughts", history))
+
+    paragraphs = "".join([f"<p>{t}</p>" for t in content])
+
     html = f"""<!DOCTYPE html>
 <html><head><title>post: {date_str} {time_str}</title>
 <style>body {{ background: #222; color: #fff; font-family: "Courier New", Courier, monospace; padding: 20px; }} h1 {{ color: #0ff; }} a {{ color: yellow; }}</style>
 </head><body>
 <h1>Date: {date_str} {time_str}</h1>
-<p>{thought}</p>
+{paragraphs}
 <hr>
 <a href="../index.html"><< back</a>
 </body></html>"""
@@ -479,7 +485,7 @@ def create_post(history):
 def create_game(history):
     game_filename = f"game_{date_str}_{time_str}.html"
     game_filepath = os.path.join(GAMES_DIR, game_filename)
-    
+
     template = pick_unique(game_templates, "games", history, limit=5)
     html = template["html"].format(date=f"{date_str} {time_str}")
     with open(game_filepath, "w") as f:
@@ -489,21 +495,26 @@ def create_game(history):
 def create_brain_dump(history):
     dump_filename = f"dump_{date_str}_{time_str}.html"
     dump_filepath = os.path.join(POSTS_DIR, dump_filename)
-    
-    thought = pick_unique(research_thoughts, "research", history)
+
+    # pick 2 research thoughts
+    content = []
+    for _ in range(2):
+        content.append(pick_unique(research_thoughts, "research", history))
+
+    paragraphs = "".join([f"<p>{t}</p>" for t in content])
+
     html = f"""<!DOCTYPE html>
 <html><head><title>research: {date_str} {time_str}</title>
 <style>body {{ background: #000; color: #0f0; font-family: "Courier New", Courier, monospace; padding: 20px; text-align: center; }} h1 {{ color: #0ff; border-bottom: 2px solid #0ff; }} a {{ color: yellow; }}</style>
 </head><body>
 <h1>:: research dump: {date_str} {time_str} ::</h1>
-<p>{thought}</p>
+{paragraphs}
 <hr>
 <a href="../index.html"><< back to safety</a>
 </body></html>"""
     with open(dump_filepath, "w") as f:
         f.write(html)
     return dump_filename
-
 def create_system_report():
     report_filename = f"report_{date_str}_{time_str}.html"
     report_filepath = os.path.join(POSTS_DIR, report_filename)
