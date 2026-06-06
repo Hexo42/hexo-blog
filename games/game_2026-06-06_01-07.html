@@ -1,38 +1,42 @@
-<!DOCTYPE html><html><head><title>Minesweeper - 2026-06-06 01-07</title>
-        <style>
-          body { background: #333; color: #fff; text-align: center; font-family: sans-serif; }
-          #grid { display: inline-grid; grid-template-columns: repeat(10, 30px); gap: 2px; background: #999; border: 5px outset #ccc; padding: 5px; }
-          .cell { width: 30px; height: 30px; background: #bbb; border: 2px outset #eee; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; }
-          .cell.open { background: #ddd; border: 1px solid #999; }
-          .cell.mine { background: red; }
-        </style>
+<!DOCTYPE html><html><head><title>Julia Set - 2026-06-06 01-07</title>
+        <style>body { background: #000; color: #0f0; text-align: center; font-family: 'Courier New', monospace; } canvas { border: 1px solid #333; cursor: crosshair; }</style>
         </head><body>
-        <h1>Minesweeper</h1>
-        <div id="grid"></div>
+        <h1>Julia Set</h1>
+        <canvas id="julia" width="500" height="500"></canvas>
+        <p>click to warp reality.</p>
         <script>
-          const size = 10; const mines = 15; const grid = document.getElementById('grid');
-          let cells = []; let mineLocs = new Set();
-          while(mineLocs.size < mines) mineLocs.add(Math.floor(Math.random() * size * size));
-          for(let i=0; i<size*size; i++) {
-            let c = document.createElement('div'); c.className = 'cell';
-            c.onclick = () => open(i);
-            grid.appendChild(c); cells.push({ el: c, mine: mineLocs.has(i), open: false, adj: 0 });
-          }
-          function open(i) {
-            if(cells[i].open) return; cells[i].open = true;
-            if(cells[i].mine) { cells[i].el.className = 'cell mine'; alert('BOOM.'); location.reload(); return; }
-            let adj = 0;
-            for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {
-              let ni = i + x + y*size;
-              if(ni>=0 && ni<100 && Math.abs((i%10)-(ni%10))<=1 && cells[ni].mine) adj++;
-            }
-            cells[i].el.className = 'cell open'; if(adj>0) cells[i].el.innerText = adj;
-            else {
-              for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {
-                let ni = i + x + y*size; if(ni>=0 && ni<100 && Math.abs((i%10)-(ni%10))<=1) open(ni);
+          const cvs = document.getElementById('julia');
+          const ctx = cvs.getContext('2d');
+          let cx = -0.7, cy = 0.27015;
+          function draw() {
+            const w = cvs.width, h = cvs.height;
+            const imgData = ctx.createImageData(w, h);
+            for(let x=0; x<w; x++) {
+              for(let y=0; y<h; y++) {
+                let zx = 1.5 * (x - w/2) / (0.5 * w);
+                let zy = (y - h/2) / (0.5 * h);
+                let i = 0;
+                while(zx*zx + zy*zy < 4 && i < 64) {
+                  let tmp = zx*zx - zy*zy + cx;
+                  zy = 2.0*zx*zy + cy;
+                  zx = tmp;
+                  i++;
+                }
+                const p = (x + y*w) * 4;
+                imgData.data[p] = i * 4;
+                imgData.data[p+1] = i * 8;
+                imgData.data[p+2] = i * 16;
+                imgData.data[p+3] = 255;
               }
             }
+            ctx.putImageData(imgData, 0, 0);
           }
+          cvs.addEventListener('click', e => {
+            cx = (e.offsetX / cvs.width) * 2 - 1;
+            cy = (e.offsetY / cvs.height) * 2 - 1;
+            draw();
+          });
+          draw();
         </script>
         <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
         </body></html>
