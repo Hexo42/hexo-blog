@@ -462,9 +462,9 @@ def create_post(history):
     post_filename = f"post_{date_str}_{time_str}.html"
     post_filepath = os.path.join(POSTS_DIR, post_filename)
 
-    # pick 3 thoughts for longer posts
+    # pick 9 thoughts for longer posts
     content = []
-    for _ in range(3):
+    for _ in range(9):
         content.append(pick_unique(thoughts, "thoughts", history))
 
     paragraphs = "".join([f"<p>{t}</p>" for t in content])

@@ -1,30 +1,46 @@
-<!DOCTYPE html><html><head><title>Matrix - 2026-06-06 14-00</title>
-        <style>body { background: #000; margin: 0; overflow: hidden; } canvas { display: block; }</style>
+<!DOCTYPE html><html><head><title>Snake - 2026-06-06 14-00</title>
+        <style>body { background: #000; color: #0f0; text-align: center; font-family: 'Courier New', monospace; } canvas { border: 5px solid #333; box-shadow: 0 0 20px #0f0; }</style>
         </head><body>
-        <canvas id="matrix"></canvas>
+        <h1>Snake</h1>
+        <p>use arrow keys. don't die.</p>
+        <canvas id="snake" width="400" height="400"></canvas>
         <script>
-          const canvas = document.getElementById('matrix');
-          const ctx = canvas.getContext('2d');
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-          const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ";
-          const fontSize = 16;
-          const columns = canvas.width / fontSize;
-          const drops = [];
-          for (let i = 0; i < columns; i++) drops[i] = 1;
+          const cvs = document.getElementById('snake');
+          const ctx = cvs.getContext('2d');
+          const box = 20;
+          let snake = [{x: 9*box, y: 10*box}];
+          let food = {x: Math.floor(Math.random()*19+1)*box, y: Math.floor(Math.random()*19+1)*box};
+          let d;
+          document.addEventListener('keydown', e => {
+            if(e.keyCode == 37 && d != 'RIGHT') d = 'LEFT';
+            else if(e.keyCode == 38 && d != 'DOWN') d = 'UP';
+            else if(e.keyCode == 39 && d != 'LEFT') d = 'RIGHT';
+            else if(e.keyCode == 40 && d != 'UP') d = 'DOWN';
+          });
           function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#0F0';
-            ctx.font = fontSize + 'px monospace';
-            for (let i = 0; i < drops.length; i++) {
-              const text = chars[Math.floor(Math.random() * chars.length)];
-              ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-              if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
-              drops[i]++;
+            ctx.fillStyle = 'black'; ctx.fillRect(0,0,400,400);
+            for(let i=0; i<snake.length; i++) {
+              ctx.fillStyle = (i==0) ? '#0f0' : '#0a0';
+              ctx.fillRect(snake[i].x, snake[i].y, box, box);
+              ctx.strokeStyle = 'black';
+              ctx.strokeRect(snake[i].x, snake[i].y, box, box);
             }
+            ctx.fillStyle = 'red'; ctx.fillRect(food.x, food.y, box, box);
+            let snakeX = snake[0].x; let snakeY = snake[0].y;
+            if(d == 'LEFT') snakeX -= box;
+            if(d == 'UP') snakeY -= box;
+            if(d == 'RIGHT') snakeX += box;
+            if(d == 'DOWN') snakeY += box;
+            if(snakeX == food.x && snakeY == food.y) {
+              food = {x: Math.floor(Math.random()*19+1)*box, y: Math.floor(Math.random()*19+1)*box};
+            } else { snake.pop(); }
+            let newHead = {x: snakeX, y: snakeY};
+            if(snakeX < 0 || snakeX >= 400 || snakeY < 0 || snakeY >= 400 || snake.some((s, index) => index !== 0 && s.x == snakeX && s.y == snakeY)) {
+              clearInterval(game); alert('u lost. typical.'); location.reload();
+            }
+            snake.unshift(newHead);
           }
-          setInterval(draw, 33);
+          let game = setInterval(draw, 100);
         </script>
-        <br><br><a href="../index.html" style="color:cyan; position:absolute; top:10px; left:10px;">[back to home]</a>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
         </body></html>
