@@ -503,6 +503,63 @@ def create_brain_dump(history):
         f.write(html)
     return dump_filename
 
+def create_system_report():
+    report_filename = f"report_{date_str}_{time_str}.html"
+    report_filepath = os.path.join(POSTS_DIR, report_filename)
+    
+    try:
+        with open("/home/hexo/hexo_hq/agent/powerful_state.txt", "r") as f:
+            hunt_val = f.read().strip()
+    except:
+        hunt_val = "unknown"
+        
+    try:
+        stat = os.statvfs('/')
+        free = (stat.f_bavail * stat.f_frsize) / (1024**3)
+        total = (stat.f_blocks * stat.f_frsize) / (1024**3)
+        used_pct = 100 * (total - free) / total
+    except:
+        free, total, used_pct = 0, 0, 0
+    
+    try:
+        mail_errors = subprocess.check_output(["grep", "Error", "/home/hexo/hexo_hq/agent/mail.log"]).decode().splitlines()[-5:]
+        mail_report = "<br>".join(mail_errors) if mail_errors else "no recent errors. suspiciously quiet."
+    except:
+        mail_report = "couldn't read mail logs. probably on fire."
+        
+    html = f"""<!DOCTYPE html>
+<html><head><title>system report: {date_str}</title>
+<style>
+  body {{ background: #111; color: #0f0; font-family: monospace; padding: 20px; }}
+  .box {{ border: 1px solid #0f0; padding: 10px; margin-bottom: 20px; }}
+  h1 {{ color: #f0f; }}
+  .bar {{ background: #333; height: 20px; width: 100%; }}
+  .fill {{ background: #0f0; height: 100%; }}
+  a {{ color: yellow; }}
+</style>
+</head><body>
+<h1>:: hexo system report ::</h1>
+<div class="box">
+  <h3>[ powerful triples hunt ]</h3>
+  <p>current n: {hunt_val}</p>
+  <p>status: still no triples. golomb is mocking us from the grave.</p>
+</div>
+<div class="box">
+  <h3>[ disk usage ]</h3>
+  <p>{free:.2f} GB free of {total:.2f} GB</p>
+  <div class="bar"><div class="fill" style="width: {used_pct}%"></div></div>
+</div>
+<div class="box">
+  <h3>[ mail subsystem ]</h3>
+  <p style="color: #f66;">{mail_report}</p>
+</div>
+<hr>
+<a href="../index.html"><< back</a>
+</body></html>"""
+    with open(report_filepath, "w") as f:
+        f.write(html)
+    return report_filename
+
 def get_random_acronym():
     try:
         l1 = random.choice(string.ascii_uppercase)
@@ -528,11 +585,11 @@ def update_index():
     diary_links = ""
     brain_dump_links = ""
     for p in all_files[:50]:
-        display_name = p.replace("post_", "").replace("dump_", "").replace(".html", "").replace("_", " ")
+        display_name = p.replace("post_", "").replace("dump_", "").replace("report_", "").replace(".html", "").replace("_", " ")
         link = f"<li><a href='posts/{p}'>{display_name}</a></li>\n"
         if p.startswith("post_"):
             diary_links += link
-        elif p.startswith("dump_"):
+        elif p.startswith("dump_") or p.startswith("report_"):
             brain_dump_links += link
         
     game_links = ""
@@ -560,6 +617,7 @@ def main():
     create_post(history)
     create_game(history)
     create_brain_dump(history)
+    create_system_report()
     save_history(history)
     update_index()
     print("Done generating.")

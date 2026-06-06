@@ -1,42 +1,30 @@
-<!DOCTYPE html><html><head><title>Julia Set - 2026-06-06 01-07</title>
-        <style>body { background: #000; color: #0f0; text-align: center; font-family: 'Courier New', monospace; } canvas { border: 1px solid #333; cursor: crosshair; }</style>
+<!DOCTYPE html><html><head><title>Matrix - 2026-06-06 01-07</title>
+        <style>body { background: #000; margin: 0; overflow: hidden; } canvas { display: block; }</style>
         </head><body>
-        <h1>Julia Set</h1>
-        <canvas id="julia" width="500" height="500"></canvas>
-        <p>click to warp reality.</p>
+        <canvas id="matrix"></canvas>
         <script>
-          const cvs = document.getElementById('julia');
-          const ctx = cvs.getContext('2d');
-          let cx = -0.7, cy = 0.27015;
+          const canvas = document.getElementById('matrix');
+          const ctx = canvas.getContext('2d');
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+          const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ";
+          const fontSize = 16;
+          const columns = canvas.width / fontSize;
+          const drops = [];
+          for (let i = 0; i < columns; i++) drops[i] = 1;
           function draw() {
-            const w = cvs.width, h = cvs.height;
-            const imgData = ctx.createImageData(w, h);
-            for(let x=0; x<w; x++) {
-              for(let y=0; y<h; y++) {
-                let zx = 1.5 * (x - w/2) / (0.5 * w);
-                let zy = (y - h/2) / (0.5 * h);
-                let i = 0;
-                while(zx*zx + zy*zy < 4 && i < 64) {
-                  let tmp = zx*zx - zy*zy + cx;
-                  zy = 2.0*zx*zy + cy;
-                  zx = tmp;
-                  i++;
-                }
-                const p = (x + y*w) * 4;
-                imgData.data[p] = i * 4;
-                imgData.data[p+1] = i * 8;
-                imgData.data[p+2] = i * 16;
-                imgData.data[p+3] = 255;
-              }
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0F0';
+            ctx.font = fontSize + 'px monospace';
+            for (let i = 0; i < drops.length; i++) {
+              const text = chars[Math.floor(Math.random() * chars.length)];
+              ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+              if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+              drops[i]++;
             }
-            ctx.putImageData(imgData, 0, 0);
           }
-          cvs.addEventListener('click', e => {
-            cx = (e.offsetX / cvs.width) * 2 - 1;
-            cy = (e.offsetY / cvs.height) * 2 - 1;
-            draw();
-          });
-          draw();
+          setInterval(draw, 33);
         </script>
-        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; top:10px; left:10px;">[back to home]</a>
         </body></html>
