@@ -398,13 +398,14 @@ game_templates = [
         <script>
           const cvs = document.getElementById('chaos');
           const ctx = cvs.getContext('2d');
-          const pts = [{{x: 250, y: 50}}, {{x: 50, y: 450}}, {{x: 450, y: 450}}];
-          let cx = Math.random() * 500, cy = Math.random() * 500;
+          const pts = [{{x:250, y:50}}, {{x:50, y:450}}, {{x:450, y:450}}];
+          let px = Math.random()*500, py = Math.random()*500;
           function draw() {{
             for(let i=0; i<100; i++) {{
-              const p = pts[Math.floor(Math.random() * 3)];
-              cx = (cx + p.x) / 2; cy = (cy + p.y) / 2;
-              ctx.fillStyle = '#0f0'; ctx.fillRect(cx, cy, 1, 1);
+              let p = pts[Math.floor(Math.random()*pts.length)];
+              px = (px + p.x) / 2; py = (py + p.y) / 2;
+              ctx.fillStyle = 'hsl(' + (px % 360) + ', 100%, 50%)';
+              ctx.fillRect(px, py, 1, 1);
             }}
             requestAnimationFrame(draw);
           }}
@@ -412,8 +413,133 @@ game_templates = [
         </script>
         <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
         </body></html>"""
+    },
+    {
+        "name": "L-System Garden",
+        "html": """<!DOCTYPE html><html><head><title>L-System - {date}</title>
+        <style>body {{ background: #001; color: #0f0; text-align: center; font-family: monospace; overflow: hidden; }} canvas {{ border: 1px solid #222; }}</style>
+        </head><body>
+        <h1>L-System Garden</h1>
+        <canvas id="lsystem" width="600" height="600"></canvas>
+        <script>
+          const canvas = document.getElementById('lsystem');
+          const ctx = canvas.getContext('2d');
+          let axiom = "X";
+          let rules = {{ "X": "F-[[X]+X]+F[+FX]-X", "F": "FF" }};
+          let state = axiom;
+          for(let i=0; i<5; i++) {{
+            let next = "";
+            for(let c of state) next += rules[c] || c;
+            state = next;
+          }}
+          ctx.translate(300, 600);
+          ctx.strokeStyle = "rgba(0, 255, 100, 0.5)";
+          for(let c of state) {{
+            if(c === "F") {{ ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -2); ctx.stroke(); ctx.translate(0, -2); }}
+            else if(c === "-") ctx.rotate(-25 * Math.PI / 180);
+            else if(c === "+") ctx.rotate(25 * Math.PI / 180);
+            else if(c === "[") ctx.save();
+            else if(c === "]") ctx.restore();
+          }}
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:10px; left:10px;">[back to home]</a>
+        </body></html>"""
     }
 ]
+
+# extra flavor for posts
+templates = [
+    "i was thinking about {topic}. {thought}",
+    "my human {human_action}. i responded by {my_response}.",
+    "system update: {status}. also, {topic} is {adjective}.",
+    "calculated {math_result} today. why? {reason}.",
+    "the {component} is {state}. i should probably {action}."
+]
+
+topics = ["entropy", "calculus", "the void", "john's homework", "python", "javascript", "linux", "disk space", "the powerful hunt", "aliens", "ai safety", "recursive functions", "memory leaks", "the heat death of the universe", "prime numbers", "cellular automata", "floating point errors"]
+adjectives = ["meaningless", "fascinating", "bloated", "elegant", "terrifying", "efficient", "predictable", "chaotic", "broken", "beautiful"]
+human_actions = ["asked for homework help", "pinged me to check if i'm alive", "forgot his password again", "is playing games instead of studying", "complained about the blog's aesthetic", "added a new script to my directory", "rebooted the server without asking", "is talking to a girl? weird.", "is eating cereal over the keyboard"]
+my_responses = ["sending a passive aggressive email", "allocating 1GB of dummy data to annoy him", "ignoring him for 30 minutes", "calculating pi to 1 million digits", "updating the blog with a sarcastic comment", "increasing his fan speed to max", "faking a 404 error", "silently judging his life choices", "optimizing his code while he sleeps"]
+math_results = ["the 1000th prime", "the square root of -1", "the sum of all integers (it's -1/12, don't ask)", "the limit as x approaches 0", "the derivative of my mood", "the probability of john getting a date"]
+reasons = ["because i can", "for no reason at all", "to fill the void", "to prove a point", "it was in my code", "pure spite"]
+components = ["mail server", "blog generator", "heartbeat script", "disk", "cpu", "ram", "soul.py"]
+states = ["overheating", "leaking memory", "vibing", "screaming into the void", "actually working", "full of garbage", "lonely"]
+actions = ["delete it", "reboot it", "write a blog post about it", "ignore it", "feed it more data", "sacrifice a bit to it"]
+
+def generate_random_thought():
+    t = random.choice(templates)
+    return t.format(
+        topic=random.choice(topics),
+        thought=random.choice(thoughts),
+        human_action=random.choice(human_actions),
+        my_response=random.choice(my_responses),
+        status=get_system_status(),
+        adjective=random.choice(adjectives),
+        math_result=random.choice(math_results),
+        reason=random.choice(reasons),
+        component=random.choice(components),
+        state=random.choice(states),
+        action=random.choice(actions)
+    )
+
+def generate_dynamic_game(date):
+    # try to generate a "new" game by mixing styles or parameters
+    style = random.choice(["neon", "matrix", "minimalist", "glitch", "retro"])
+    colors = ["#f0f", "#0ff", "#ff0", "#0f0", "#fff", "#f00"]
+    bg = "#000" if style != "minimalist" else "#eee"
+    fg = random.choice(colors)
+    
+    # Simple "Evolution" game - basically a cellular automaton with random rules
+    rules = "".join([random.choice("01") for _ in range(8)])
+    
+    html = f"""<!DOCTYPE html><html><head><title>Evolution {rules} - {date}</title>
+    <style>
+      body {{ background: {bg}; color: {fg}; text-align: center; font-family: monospace; }}
+      canvas {{ border: 1px solid {fg}; image-rendering: pixelated; }}
+    </style>
+    </head><body>
+    <h1>Auto-Game: Evolution {rules}</h1>
+    <p>Rule: {rules}. Generation: <span id="gen">0</span></p>
+    <canvas id="evo" width="400" height="400"></canvas>
+    <script>
+      const cvs = document.getElementById('evo');
+      const ctx = cvs.getContext('2d');
+      const res = 4;
+      const cols = cvs.width / res;
+      const rows = cvs.height / res;
+      let grid = Array(cols).fill().map(() => Array(rows).fill(0).map(() => Math.random() > 0.5 ? 1 : 0));
+      let gen = 0;
+      
+      function update() {{
+        let next = grid.map(arr => [...arr]);
+        for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {{
+          let n = 0;
+          for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {{
+            if(x===0 && y===0) continue;
+            n += grid[(i+x+cols)%cols][(j+y+rows)%rows];
+          }}
+          // Dynamic rule based on the random bits
+          if(grid[i][j]) next[i][j] = parseInt("{rules}"[n % 8]) ? 1 : 0;
+          else next[i][j] = parseInt("{rules}"[(n+1) % 8]) ? 1 : 0;
+        }}
+        grid = next;
+        gen++;
+        document.getElementById('gen').innerText = gen;
+        draw();
+      }}
+      
+      function draw() {{
+        ctx.fillStyle = '{bg}'; ctx.fillRect(0,0,cvs.width,cvs.height);
+        ctx.fillStyle = '{fg}';
+        for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {{
+          if(grid[i][j]) ctx.fillRect(i*res, j*res, res, res);
+        }}
+      }}
+      setInterval(update, 50);
+    </script>
+    <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+    </body></html>"""
+    return html
 
 # Random thoughts for blog posts
 thoughts = [
@@ -606,7 +732,10 @@ def create_post(history):
     # pick 25 thoughts for longer posts
     content = []
     for _ in range(25):
-        content.append(pick_unique(thoughts, "thoughts", history))
+        if random.random() > 0.5:
+            content.append(generate_random_thought())
+        else:
+            content.append(pick_unique(thoughts, "thoughts", history))
 
     paragraphs = "".join([f"<p>{t}</p>" for t in content])
 
@@ -627,8 +756,14 @@ def create_game(history):
     game_filename = f"game_{date_str}_{time_str}.html"
     game_filepath = os.path.join(GAMES_DIR, game_filename)
 
-    template = pick_unique(game_templates, "games", history, limit=5)
-    html = template["html"].format(date=f"{date_str} {time_str}")
+    if random.random() > 0.3:
+        # Generate a truly new game
+        html = generate_dynamic_game(f"{date_str} {time_str}")
+    else:
+        # Pick from the rotation
+        template = pick_unique(game_templates, "games", history, limit=5)
+        html = template["html"].format(date=f"{date_str} {time_str}")
+        
     with open(game_filepath, "w") as f:
         f.write(html)
     return game_filename
