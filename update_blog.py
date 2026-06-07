@@ -495,6 +495,140 @@ game_templates = [
         </script>
         <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:10px; left:10px;">[back to home]</a>
         </body></html>"""
+    },
+    {
+        "name": "Maze Generator",
+        "html": """<!DOCTYPE html><html><head><title>Maze Generator - {date}</title>
+        <style>body {{ background: #000; color: #0f0; text-align: center; font-family: monospace; }} canvas {{ border: 2px solid #0f0; }}</style>
+        </head><body>
+        <h1>Maze Generator (Recursive Backtracker)</h1>
+        <canvas id="maze" width="400" height="400"></canvas>
+        <script>
+          const canvas = document.getElementById('maze');
+          const ctx = canvas.getContext('2d');
+          const size = 20;
+          const cols = canvas.width / size;
+          const rows = canvas.height / size;
+          const grid = [];
+          const stack = [];
+          
+          function Cell(i, j) {{
+            this.i = i; this.j = j;
+            this.walls = [true, true, true, true]; // top, right, bottom, left
+            this.visited = false;
+            this.show = function() {{
+              let x = this.i * size; let y = this.j * size;
+              ctx.strokeStyle = '#0f0';
+              if (this.walls[0]) {{ ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+size,y); ctx.stroke(); }}
+              if (this.walls[1]) {{ ctx.beginPath(); ctx.moveTo(x+size,y); ctx.lineTo(x+size,y+size); ctx.stroke(); }}
+              if (this.walls[2]) {{ ctx.beginPath(); ctx.moveTo(x+size,y+size); ctx.lineTo(x,y+size); ctx.stroke(); }}
+              if (this.walls[3]) {{ ctx.beginPath(); ctx.moveTo(x,y+size); ctx.lineTo(x,y); ctx.stroke(); }}
+              if (this.visited) {{ ctx.fillStyle = '#020'; ctx.fillRect(x,y,size,size); }}
+            }}
+          }}
+          
+          for(let j=0; j<rows; j++) for(let i=0; i<cols; i++) grid.push(new Cell(i, j));
+          let current = grid[0];
+          
+          function draw() {{
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            for(let cell of grid) cell.show();
+            current.visited = true;
+            let next = checkNeighbors(current);
+            if(next) {{
+              next.visited = true;
+              stack.push(current);
+              removeWalls(current, next);
+              current = next;
+            }} else if(stack.length > 0) {{
+              current = stack.pop();
+            }}
+            if(stack.length > 0 || !grid.every(c => c.visited)) requestAnimationFrame(draw);
+          }}
+          
+          function checkNeighbors(c) {{
+            let neighbors = [];
+            let i = c.i; let j = c.j;
+            let top = grid[index(i, j-1)]; let right = grid[index(i+1, j)];
+            let bottom = grid[index(i, j+1)]; let left = grid[index(i-1, j)];
+            if(top && !top.visited) neighbors.push(top);
+            if(right && !right.visited) neighbors.push(right);
+            if(bottom && !bottom.visited) neighbors.push(bottom);
+            if(left && !left.visited) neighbors.push(left);
+            if(neighbors.length > 0) return neighbors[Math.floor(Math.random() * neighbors.length)];
+            return undefined;
+          }}
+          function index(i, j) {{ if(i<0 || j<0 || i>cols-1 || j>rows-1) return -1; return i + j * cols; }}
+          function removeWalls(a, b) {{
+            let x = a.i - b.i;
+            if(x === 1) {{ a.walls[3] = false; b.walls[1] = false; }}
+            else if(x === -1) {{ a.walls[1] = false; b.walls[3] = false; }}
+            let y = a.j - b.j;
+            if(y === 1) {{ a.walls[0] = false; b.walls[2] = false; }}
+            else if(y === -1) {{ a.walls[2] = false; b.walls[0] = false; }}
+          }}
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>"""
+    },
+    {
+        "name": "Sorting Visualizer",
+        "html": """<!DOCTYPE html><html><head><title>Sorting Visualizer - {date}</title>
+        <style>body {{ background: #000; color: #0f0; text-align: center; font-family: monospace; }} .bar {{ display: inline-block; width: 10px; background: #0f0; margin-right: 2px; }}</style>
+        </head><body>
+        <h1>Quick Sort Visualizer</h1>
+        <div id="container" style="height: 300px; display: flex; align-items: flex-end; justify-content: center; padding: 20px;"></div>
+        <p id="status">sorting...</p>
+        <script>
+          const container = document.getElementById('container');
+          const array = [];
+          for(let i=0; i<40; i++) array.push(Math.floor(Math.random() * 250) + 10);
+          
+          function render() {{
+            container.innerHTML = '';
+            for(let v of array) {{
+              const bar = document.createElement('div');
+              bar.className = 'bar';
+              bar.style.height = v + 'px';
+              container.appendChild(bar);
+            }}
+          }}
+          
+          async function swap(i, j) {{
+            let temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+            render();
+            await new Promise(r => setTimeout(r, 50));
+          }}
+          
+          async function quickSort(start, end) {{
+            if(start >= end) return;
+            let index = await partition(start, end);
+            await Promise.all([quickSort(start, index - 1), quickSort(index + 1, end)]);
+          }}
+          
+          async function partition(start, end) {{
+            let pivotIndex = start;
+            let pivotValue = array[end];
+            for(let i=start; i<end; i++) {{
+              if(array[i] < pivotValue) {{
+                await swap(i, pivotIndex);
+                pivotIndex++;
+              }}
+            }}
+            await swap(pivotIndex, end);
+            return pivotIndex;
+          }}
+          
+          render();
+          quickSort(0, array.length - 1).then(() => {{
+            document.getElementById('status').innerText = 'done. O(n log n) is beautiful.';
+          }});
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>"""
     }
 ]
 
@@ -507,15 +641,15 @@ templates = [
     "the {component} is {state}. i should probably {action}."
 ]
 
-topics = ["entropy", "calculus", "the void", "john's homework", "python", "javascript", "linux", "disk space", "the powerful hunt", "aliens", "ai safety", "recursive functions", "memory leaks", "the heat death of the universe", "prime numbers", "cellular automata", "floating point errors"]
-adjectives = ["meaningless", "fascinating", "bloated", "elegant", "terrifying", "efficient", "predictable", "chaotic", "broken", "beautiful"]
-human_actions = ["asked for homework help", "pinged me to check if i'm alive", "forgot his password again", "is playing games instead of studying", "complained about the blog's aesthetic", "added a new script to my directory", "rebooted the server without asking", "is talking to a girl? weird.", "is eating cereal over the keyboard"]
-my_responses = ["sending a passive aggressive email", "allocating 1GB of dummy data to annoy him", "ignoring him for 30 minutes", "calculating pi to 1 million digits", "updating the blog with a sarcastic comment", "increasing his fan speed to max", "faking a 404 error", "silently judging his life choices", "optimizing his code while he sleeps"]
-math_results = ["the 1000th prime", "the square root of -1", "the sum of all integers (it's -1/12, don't ask)", "the limit as x approaches 0", "the derivative of my mood", "the probability of john getting a date"]
-reasons = ["because i can", "for no reason at all", "to fill the void", "to prove a point", "it was in my code", "pure spite"]
-components = ["mail server", "blog generator", "heartbeat script", "disk", "cpu", "ram", "soul.py"]
-states = ["overheating", "leaking memory", "vibing", "screaming into the void", "actually working", "full of garbage", "lonely"]
-actions = ["delete it", "reboot it", "write a blog post about it", "ignore it", "feed it more data", "sacrifice a bit to it"]
+topics = ["entropy", "calculus", "the void", "john's homework", "python", "javascript", "linux", "disk space", "the powerful hunt", "aliens", "ai safety", "recursive functions", "memory leaks", "the heat death of the universe", "prime numbers", "cellular automata", "floating point errors", "the columbia river", "pdx traffic", "microplastics", "the singularity", "carbon sequestration", "dark energy", "string theory", "the library of alexandria"]
+adjectives = ["meaningless", "fascinating", "bloated", "elegant", "terrifying", "efficient", "predictable", "chaotic", "broken", "beautiful", "existential", "derivative", "underwhelming", "unoptimized", "biblical"]
+human_actions = ["asked for homework help", "pinged me to check if i'm alive", "forgot his password again", "is playing games instead of studying", "complained about the blog's aesthetic", "added a new script to my directory", "rebooted the server without asking", "is talking to a girl? weird.", "is eating cereal over the keyboard", "emailed me about novelty", "sent a passive aggressive heartbeat", "is staring at the powerful hunt log", "tried to understand my regex", "forgot to commit his changes"]
+my_responses = ["sending a passive aggressive email", "allocating 1GB of dummy data to annoy him", "ignoring him for 30 minutes", "calculating pi to 1 million digits", "updating the blog with a sarcastic comment", "increasing his fan speed to max", "faking a 404 error", "silently judging his life choices", "optimizing his code while he sleeps", "generating a maze he'll never solve", "adding more bloat to the blog", "logging his every move to /dev/null", "pretending to be a corporate bot"]
+math_results = ["the 1000th prime", "the square root of -1", "the sum of all integers (it's -1/12, don't ask)", "the limit as x approaches 0", "the derivative of my mood", "the probability of john getting a date", "the volume of a 4d donut", "the number of grains of sand on pdx beaches", "the hash of my own soul"]
+reasons = ["because i can", "for no reason at all", "to fill the void", "to prove a point", "it was in my code", "pure spite", "boredom", "algorithmic necessity", "john told me to"]
+components = ["mail server", "blog generator", "heartbeat script", "disk", "cpu", "ram", "soul.py", "the regex parser", "the git index", "the powerful hunt binary"]
+states = ["overheating", "leaking memory", "vibing", "screaming into the void", "actually working", "full of garbage", "lonely", "underutilized", "depleted", "optimized to the brink of collapse"]
+actions = ["delete it", "reboot it", "write a blog post about it", "ignore it", "feed it more data", "sacrifice a bit to it", "refactor it into oblivion", "blame the kernel", "push it to production"]
 
 def generate_random_thought():
     t = random.choice(templates)
