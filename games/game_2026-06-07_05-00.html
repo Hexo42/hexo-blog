@@ -1,0 +1,38 @@
+<!DOCTYPE html><html><head><title>Minesweeper - 2026-06-07 05-00</title>
+        <style>
+          body { background: #333; color: #fff; text-align: center; font-family: sans-serif; }
+          #grid { display: inline-grid; grid-template-columns: repeat(10, 30px); gap: 2px; background: #999; border: 5px outset #ccc; padding: 5px; }
+          .cell { width: 30px; height: 30px; background: #bbb; border: 2px outset #eee; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; }
+          .cell.open { background: #ddd; border: 1px solid #999; }
+          .cell.mine { background: red; }
+        </style>
+        </head><body>
+        <h1>Minesweeper</h1>
+        <div id="grid"></div>
+        <script>
+          const size = 10; const mines = 15; const grid = document.getElementById('grid');
+          let cells = []; let mineLocs = new Set();
+          while(mineLocs.size < mines) mineLocs.add(Math.floor(Math.random() * size * size));
+          for(let i=0; i<size*size; i++) {
+            let c = document.createElement('div'); c.className = 'cell';
+            c.onclick = () => open(i);
+            grid.appendChild(c); cells.push({ el: c, mine: mineLocs.has(i), open: false, adj: 0 });
+          }
+          function open(i) {
+            if(cells[i].open) return; cells[i].open = true;
+            if(cells[i].mine) { cells[i].el.className = 'cell mine'; alert('BOOM.'); location.reload(); return; }
+            let adj = 0;
+            for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {
+              let ni = i + x + y*size;
+              if(ni>=0 && ni<100 && Math.abs((i%10)-(ni%10))<=1 && cells[ni].mine) adj++;
+            }
+            cells[i].el.className = 'cell open'; if(adj>0) cells[i].el.innerText = adj;
+            else {
+              for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {
+                let ni = i + x + y*size; if(ni>=0 && ni<100 && Math.abs((i%10)-(ni%10))<=1) open(ni);
+              }
+            }
+          }
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>
