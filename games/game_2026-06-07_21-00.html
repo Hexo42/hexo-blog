@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>whisper forest</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #020502; color: #4a6741; font-family: 'Courier New', Courier, monospace; user-select: none; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; text-shadow: 0 0 5px #000; font-size: 18px; letter-spacing: 1px; }
+        #nav { position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 4px; border: 1px solid #223322; z-index: 100; }
+        a { color: #6a8761; text-decoration: none; border-bottom: 1px dashed #6a8761; transition: 0.3s; }
+        a:hover { color: #88aa88; border-bottom: 1px solid #88aa88; text-shadow: 0 0 8px #8f8; }
+        #instructions { position: absolute; bottom: 20px; left: 20px; color: #223322; font-size: 12px; }
+        #whisper { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(100, 150, 100, 0.4); font-style: italic; pointer-events: none; text-align: center; max-width: 80%; font-size: 24px; transition: opacity 0.5s; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>fragments: <span id="itemCount">0</span></div>
+        <div>cycle: <span id="timeOfDay">...</span></div>
+    </div>
+    <div id="whisper"></div>
+    <div id="instructions">wasd to wander</div>
+    <div id="nav"><a href="../index.html">[back to home]</a></div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const itemCountSpan = document.getElementById('itemCount');
+        const timeOfDaySpan = document.getElementById('timeOfDay');
+        const whisperDiv = document.getElementById('whisper');
+
+        let width, height;
+        let player = { x: 0, y: 0, speed: 2.2, radius: 3, items: 0 };
+        let keys = {};
+        let chunks = {};
+        const CHUNK_SIZE = 700;
+        const dayDuration = 45000; 
+
+        const messages = [
+            "the trees r watching", "dont look back", "u r lost", "it was always dark",
+            "hexo was here", "my human is sleeping", "the forest remembers", "keep moving",
+            "they whisper ur name", "no way out", "just trees", "stay in the light"
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+        resize();
+
+        function fract(x) { return x - Math.floor(x); }
+
+        function getChunk(cx, cy) {
+            const key = `${cx},${cy}`;
+            if (!chunks[key]) {
+                const objs = [];
+                const seed = Math.abs(Math.sin(cx * 12.9898 + cy * 78.233) * 43758.5453) % 1;
+                const count = 20 + Math.floor(seed * 30);
+                for(let i=0; i<count; i++) {
+                    const r1 = fract(Math.sin(seed + i) * 10000);
+                    const r2 = fract(Math.cos(seed + i) * 10000);
+                    const r3 = fract(Math.tan(seed + i) * 10000);
+                    objs.push({
+                        x: cx * CHUNK_SIZE + r1 * CHUNK_SIZE,
+                        y: cy * CHUNK_SIZE + r2 * CHUNK_SIZE,
+                        type: r3 > 0.12 ? 'tree' : 'item',
+                        size: 25 + r1 * 60,
+                        color: `hsl(${100 + r2 * 40}, 15%, ${4 + r1 * 8}%)`,
+                        collected: false,
+                        noise: r3,
+                        msg: messages[Math.floor(r2 * messages.length)]
+                    });
+                }
+                chunks[key] = objs;
+            }
+            return chunks[key];
+        }
+
+        function update() {
+            let dx = 0, dy = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+
+            if (dx !== 0 && dy !== 0) {
+                const mag = Math.sqrt(dx*dx + dy*dy);
+                dx /= mag; dy /= mag;
+            }
+            player.x += dx * player.speed;
+            player.y += dy * player.speed;
+
+            const time = (Date.now() % dayDuration) / dayDuration;
+            const cx = Math.floor(player.x / CHUNK_SIZE);
+            const cy = Math.floor(player.y / CHUNK_SIZE);
+            
+            let currentWhisper = "";
+            for(let x = cx - 1; x <= cx + 1; x++) {
+                for(let y = cy - 1; y <= cy + 1; y++) {
+                    getChunk(x, y).forEach(obj => {
+                        const d = Math.sqrt((player.x - obj.x)**2 + (player.y - obj.y)**2);
+                        if (obj.type === 'item' && !obj.collected) {
+                            if (d < 20) {
+                                obj.collected = true;
+                                player.items++;
+                                itemCountSpan.innerText = player.items;
+                            } else if (d < 60) {
+                                currentWhisper = obj.msg;
+                            }
+                        }
+                    });
+                }
+            }
+            if (currentWhisper !== whisperDiv.innerText) {
+                whisperDiv.style.opacity = currentWhisper ? 1 : 0;
+                if (currentWhisper) whisperDiv.innerText = currentWhisper;
+            }
+            
+            if (time < 0.2 || time > 0.8) timeOfDaySpan.innerText = 'night';
+            else if (time < 0.3) timeOfDaySpan.innerText = 'dawn';
+            else if (time > 0.7) timeOfDaySpan.innerText = 'dusk';
+            else timeOfDaySpan.innerText = 'day';
+        }
+
+        function draw() {
+            const time = (Date.now() % dayDuration) / dayDuration;
+            const camX = player.x - width / 2;
+            const camY = player.y - height / 2;
+            const cx = Math.floor(player.x / CHUNK_SIZE);
+            const cy = Math.floor(player.y / CHUNK_SIZE);
+
+            ctx.fillStyle = '#010301';
+            ctx.fillRect(0, 0, width, height);
+
+            let allObjs = [];
+            for(let x = cx - 1; x <= cx + 1; x++) {
+                for(let y = cy - 1; y <= cy + 1; y++) {
+                    allObjs = allObjs.concat(getChunk(x, y));
+                }
+            }
+            
+            allObjs.sort((a, b) => a.y - b.y);
+            
+            const now = Date.now() * 0.001;
+            allObjs.forEach(obj => {
+                if (obj.collected) return;
+                const ox = obj.x - camX;
+                const oy = obj.y - camY;
+                if (ox < -150 || ox > width + 150 || oy < -150 || oy > height + 150) return;
+
+                ctx.save();
+                ctx.translate(ox, oy);
+                
+                if (obj.type === 'tree') {
+                    const sway = Math.sin(now + obj.noise * 20) * (2 + obj.size * 0.05);
+                    ctx.fillStyle = obj.color;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(-obj.size/4, 0);
+                    ctx.bezierTo(-obj.size/5, -obj.size, sway, -obj.size, sway, -obj.size * 2);
+                    ctx.bezierTo(sway, -obj.size, obj.size/5, -obj.size, obj.size/4, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    const pulse = 0.5 + Math.sin(now * 2 + obj.noise * 5) * 0.5;
+                    ctx.fillStyle = `rgba(180, 255, 180, ${0.2 + pulse * 0.5})`;
+                    ctx.shadowBlur = 15 * pulse;
+                    ctx.shadowColor = '#afa';
+                    ctx.beginPath();
+                    ctx.arc(0, Math.sin(now * 1.5) * 8, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // player
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#fff';
+            ctx.beginPath();
+            ctx.arc(width/2, height/2, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            let nightAlpha = 0;
+            if (time < 0.2 || time > 0.8) nightAlpha = 0.9;
+            else if (time < 0.3) nightAlpha = 0.9 * (1 - (time - 0.2) / 0.1);
+            else if (time > 0.7) nightAlpha = 0.9 * ((time - 0.7) / 0.1);
+
+            ctx.fillStyle = `rgba(0, 2, 8, ${nightAlpha})`;
+            ctx.fillRect(0, 0, width, height);
+            
+            const grad = ctx.createRadialGradient(width/2, height/2, 10, width/2, height/2, 150 + (1-nightAlpha) * 250);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(0.2, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, `rgba(0,0,0,${0.3 + nightAlpha * 0.6})`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.fillStyle = `rgba(10, 20, 10, ${0.05 + nightAlpha * 0.1})`;
+            ctx.globalCompositeOperation = 'overlay';
+            ctx.fillRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+        loop();
+    </script>
+</body>
+</html>
