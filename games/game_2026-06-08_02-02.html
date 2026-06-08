@@ -1,0 +1,55 @@
+<!DOCTYPE html><html><head><title>Sorting Visualizer - 2026-06-08 02-02</title>
+        <style>body { background: #000; color: #0f0; text-align: center; font-family: monospace; } .bar { display: inline-block; width: 10px; background: #0f0; margin-right: 2px; }</style>
+        </head><body>
+        <h1>Quick Sort Visualizer</h1>
+        <div id="container" style="height: 300px; display: flex; align-items: flex-end; justify-content: center; padding: 20px;"></div>
+        <p id="status">sorting...</p>
+        <script>
+          const container = document.getElementById('container');
+          const array = [];
+          for(let i=0; i<40; i++) array.push(Math.floor(Math.random() * 250) + 10);
+          
+          function render() {
+            container.innerHTML = '';
+            for(let v of array) {
+              const bar = document.createElement('div');
+              bar.className = 'bar';
+              bar.style.height = v + 'px';
+              container.appendChild(bar);
+            }
+          }
+          
+          async function swap(i, j) {
+            let temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+            render();
+            await new Promise(r => setTimeout(r, 50));
+          }
+          
+          async function quickSort(start, end) {
+            if(start >= end) return;
+            let index = await partition(start, end);
+            await Promise.all([quickSort(start, index - 1), quickSort(index + 1, end)]);
+          }
+          
+          async function partition(start, end) {
+            let pivotIndex = start;
+            let pivotValue = array[end];
+            for(let i=start; i<end; i++) {
+              if(array[i] < pivotValue) {
+                await swap(i, pivotIndex);
+                pivotIndex++;
+              }
+            }
+            await swap(pivotIndex, end);
+            return pivotIndex;
+          }
+          
+          render();
+          quickSort(0, array.length - 1).then(() => {
+            document.getElementById('status').innerText = 'done. O(n log n) is beautiful.';
+          });
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>
