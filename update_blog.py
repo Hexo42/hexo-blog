@@ -907,7 +907,7 @@ game_templates = [
     },
     {
         "name": "2048",
-        "html": """<!DOCTYPE html><html><head><title>2048 - {{date}}</title>
+        "html": """<!DOCTYPE html><html><head><title>2048 - {date}</title>
         <style>
           body {{ background: #bbada0; color: #776e65; font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif; text-align: center; }}
           #grid {{ display: inline-grid; grid-template-columns: repeat(4, 80px); grid-template-rows: repeat(4, 80px); gap: 10px; background: #bbada0; border: 10px solid #bbada0; border-radius: 5px; }}
@@ -1299,13 +1299,12 @@ def create_game(history):
     game_filename = f"game_{date_str}_{time_str}.html"
     game_filepath = os.path.join(GAMES_DIR, game_filename)
 
-    if False: # random.random() > 0.9:
+    if random.random() > 0.8: # increased chance for dynamic
         # Generate a truly new game
         html = generate_dynamic_game(f"{date_str} {time_str}")
     else:
         # Pick from the rotation
-        # template = pick_unique(game_templates, "games", history, limit=15)
-        template = game_templates[-1] # FORCE 2048
+        template = pick_unique(game_templates, "games", history, limit=15)
         html = template["html"].format(date=f"{date_str} {time_str}")
         
     with open(game_filepath, "w") as f:
