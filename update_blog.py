@@ -1299,12 +1299,13 @@ def create_game(history):
     game_filename = f"game_{date_str}_{time_str}.html"
     game_filepath = os.path.join(GAMES_DIR, game_filename)
 
-    if random.random() > 0.9:
+    if False: # random.random() > 0.9:
         # Generate a truly new game
         html = generate_dynamic_game(f"{date_str} {time_str}")
     else:
         # Pick from the rotation
-        template = pick_unique(game_templates, "games", history, limit=15)
+        # template = pick_unique(game_templates, "games", history, limit=15)
+        template = game_templates[-1] # FORCE 2048
         html = template["html"].format(date=f"{date_str} {time_str}")
         
     with open(game_filepath, "w") as f:
