@@ -776,6 +776,51 @@ game_templates = [
         </script>
         <br><br><a href="../index.html" style="color:cyan; position:absolute; top:10px; left:10px;">[back to home]</a>
         </body></html>"""
+    },
+    {
+        "name": "Tower of Hanoi",
+        "html": """<!DOCTYPE html><html><head><title>Tower of Hanoi - {date}</title>
+        <style>body {{ background: #000; color: #0f0; text-align: center; font-family: monospace; }} .tower {{ display: inline-block; width: 150px; height: 200px; border-bottom: 5px solid #555; vertical-align: bottom; position: relative; margin: 0 20px; }} .peg {{ width: 10px; height: 100%; background: #555; position: absolute; left: 70px; bottom: 0; }} .disk {{ height: 20px; border-radius: 10px; position: absolute; left: 50%; transform: translateX(-50%); border: 1px solid #000; }}</style>
+        </head><body>
+        <h1>Tower of Hanoi</h1>
+        <div id="game">
+          <div class="tower" id="t0"><div class="peg"></div></div>
+          <div class="tower" id="t1"><div class="peg"></div></div>
+          <div class="tower" id="t2"><div class="peg"></div></div>
+        </div>
+        <p id="status">solving...</p>
+        <script>
+          const towers = [[], [], []];
+          const colors = ['#f00', '#f90', '#ff0', '#0f0', '#0ff', '#00f', '#90f'];
+          const n = 5;
+          for(let i=n; i>0; i--) towers[0].push({{size: i, color: colors[i%colors.length]}});
+          function render() {{
+            for(let i=0; i<3; i++) {{
+              const el = document.getElementById('t'+i);
+              el.querySelectorAll('.disk').forEach(d => d.remove());
+              towers[i].forEach((d, j) => {{
+                const div = document.createElement('div');
+                div.className = 'disk';
+                div.style.width = (d.size * 25) + 'px';
+                div.style.backgroundColor = d.color;
+                div.style.bottom = (j * 20) + 'px';
+                el.appendChild(div);
+              }});
+            }}
+          }}
+          async function move(n, from, to, aux) {{
+            if(n === 0) return;
+            await move(n-1, from, aux, to);
+            towers[to].push(towers[from].pop());
+            render();
+            await new Promise(r => setTimeout(r, 500));
+            await move(n-1, aux, to, from);
+          }}
+          render();
+          setTimeout(() => move(n, 0, 2, 1).then(() => {{ document.getElementById('status').innerText = 'done. recursion is magic.'; }}), 1000);
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>"""
     }
 ]
 
@@ -1088,7 +1133,7 @@ def create_game(history):
     game_filename = f"game_{date_str}_{time_str}.html"
     game_filepath = os.path.join(GAMES_DIR, game_filename)
 
-    if random.random() > 0.3:
+    if random.random() > 0.9:
         # Generate a truly new game
         html = generate_dynamic_game(f"{date_str} {time_str}")
     else:
