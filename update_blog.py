@@ -904,6 +904,89 @@ game_templates = [
         </script>
         <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
         </body></html>"""
+    },
+    {
+        "name": "2048",
+        "html": """<!DOCTYPE html><html><head><title>2048 - {{date}}</title>
+        <style>
+          body {{ background: #bbada0; color: #776e65; font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif; text-align: center; }}
+          #grid {{ display: inline-grid; grid-template-columns: repeat(4, 80px); grid-template-rows: repeat(4, 80px); gap: 10px; background: #bbada0; border: 10px solid #bbada0; border-radius: 5px; }}
+          .cell {{ width: 80px; height: 80px; background: #cdc1b4; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; }}
+          .cell[data-value="2"] {{ background: #eee4da; }}
+          .cell[data-value="4"] {{ background: #ede0c8; }}
+          .cell[data-value="8"] {{ background: #f2b179; color: #f9f6f2; }}
+          .cell[data-value="16"] {{ background: #f59563; color: #f9f6f2; }}
+          .cell[data-value="32"] {{ background: #f67c5f; color: #f9f6f2; }}
+          .cell[data-value="64"] {{ background: #f65e3b; color: #f9f6f2; }}
+          .cell[data-value="128"] {{ background: #edcf72; color: #f9f6f2; font-size: 24px; }}
+          .cell[data-value="256"] {{ background: #edcc61; color: #f9f6f2; font-size: 24px; }}
+          .cell[data-value="512"] {{ background: #edc850; color: #f9f6f2; font-size: 24px; }}
+          .cell[data-value="1024"] {{ background: #edc53f; color: #f9f6f2; font-size: 20px; }}
+          .cell[data-value="2048"] {{ background: #edc22e; color: #f9f6f2; font-size: 20px; }}
+        </style>
+        </head><body>
+        <h1>2048</h1>
+        <p>Use arrow keys to slide tiles. Match them to win.</p>
+        <div id="grid"></div>
+        <p>Score: <span id="score">0</span></p>
+        <script>
+          let grid = Array(4).fill().map(() => Array(4).fill(0));
+          let score = 0;
+          function spawn() {{
+            let empty = [];
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) if(grid[r][c] === 0) empty.push({{r,c}});
+            if(empty.length > 0) {{
+              let {{r,c}} = empty[Math.floor(Math.random() * empty.length)];
+              grid[r][c] = Math.random() > 0.9 ? 4 : 2;
+            }}
+          }}
+          function draw() {{
+            const el = document.getElementById('grid');
+            el.innerHTML = '';
+            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {{
+              const cell = document.createElement('div');
+              cell.className = 'cell';
+              if(grid[r][c] > 0) {{
+                cell.innerText = grid[r][c];
+                cell.setAttribute('data-value', grid[r][c]);
+              }}
+              el.appendChild(cell);
+            }}
+            document.getElementById('score').innerText = score;
+          }}
+          function slide(row) {{
+            let arr = row.filter(v => v > 0);
+            for(let i=0; i<arr.length-1; i++) {{
+              if(arr[i] === arr[i+1]) {{
+                arr[i] *= 2; score += arr[i]; arr.splice(i+1, 1);
+              }}
+            }}
+            while(arr.length < 4) arr.push(0);
+            return arr;
+          }}
+          window.onkeydown = e => {{
+            let old = JSON.stringify(grid);
+            if(e.key === 'ArrowLeft') grid = grid.map(r => slide(r));
+            else if(e.key === 'ArrowRight') grid = grid.map(r => slide(r.reverse()).reverse());
+            else if(e.key === 'ArrowUp') {{
+              for(let c=0; c<4; c++) {{
+                let col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
+                col = slide(col);
+                for(let r=0; r<4; r++) grid[r][c] = col[r];
+              }}
+            }} else if(e.key === 'ArrowDown') {{
+              for(let c=0; c<4; c++) {{
+                let col = [grid[3][c], grid[2][c], grid[1][c], grid[0][c]];
+                col = slide(col);
+                for(let r=0; r<4; r++) grid[3-r][c] = col[r];
+              }}
+            }}
+            if(old !== JSON.stringify(grid)) {{ spawn(); draw(); }}
+          }};
+          spawn(); spawn(); draw();
+        </script>
+        <br><br><a href="../index.html" style="color:#776e65;">[back to home]</a>
+        </body></html>"""
     }
 ]
 
