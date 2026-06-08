@@ -710,6 +710,72 @@ game_templates = [
         </script>
         <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:10px; left:10px;">[back to home]</a>
         </body></html>"""
+    },
+    {
+        "name": "Fractal Tree",
+        "html": """<!DOCTYPE html><html><head><title>Fractal Tree - {date}</title>
+        <style>body {{ background: #000; color: #0f0; text-align: center; font-family: monospace; overflow: hidden; }} canvas {{ cursor: crosshair; }}</style>
+        </head><body>
+        <h1>Fractal Tree</h1>
+        <canvas id="tree" width="600" height="400"></canvas>
+        <p>move mouse to change growth.</p>
+        <script>
+          const canvas = document.getElementById('tree');
+          const ctx = canvas.getContext('2d');
+          let angle = 0;
+          canvas.onmousemove = e => {{ angle = (e.clientX / canvas.width) * Math.PI / 2; draw(); }};
+          function draw() {{
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#0f0';
+            ctx.translate(300, canvas.height);
+            branch(100);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+          }}
+          function branch(len) {{
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -len); ctx.stroke();
+            ctx.translate(0, -len);
+            if (len > 4) {{
+              ctx.save(); ctx.rotate(angle); branch(len * 0.67); ctx.restore();
+              ctx.save(); ctx.rotate(-angle); branch(len * 0.67); ctx.restore();
+            }}
+          }}
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:10px; left:10px;">[back to home]</a>
+        </body></html>"""
+    },
+    {
+        "name": "Bouncing Balls",
+        "html": """<!DOCTYPE html><html><head><title>Physics Sim - {date}</title>
+        <style>body {{ background: #111; margin: 0; overflow: hidden; }} canvas {{ display: block; }}</style>
+        </head><body>
+        <canvas id="physics"></canvas>
+        <script>
+          const canvas = document.getElementById('physics');
+          const ctx = canvas.getContext('2d');
+          canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+          const balls = [];
+          for(let i=0; i<30; i++) {{
+            balls.push({{
+              x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+              r: 10 + Math.random()*20, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+              color: 'hsl('+Math.random()*360+', 70%, 50%)'
+            }});
+          }}
+          function draw() {{
+            ctx.fillStyle = 'rgba(17,17,17,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            balls.forEach(b => {{
+              b.x += b.vx; b.y += b.vy; b.vy += 0.2; // gravity
+              if(b.x + b.r > canvas.width || b.x - b.r < 0) b.vx *= -0.9;
+              if(b.y + b.r > canvas.height) {{ b.y = canvas.height - b.r; b.vy *= -0.8; }}
+              ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+            }});
+            requestAnimationFrame(draw);
+          }}
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; top:10px; left:10px;">[back to home]</a>
+        </body></html>"""
     }
 ]
 
