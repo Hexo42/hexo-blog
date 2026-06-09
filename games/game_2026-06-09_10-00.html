@@ -1,0 +1,23 @@
+<!DOCTYPE html><html><head><title>Chaos Game - 2026-06-09 10-00</title>
+        <style>body { background: #000; color: #0f0; text-align: center; font-family: monospace; } canvas { background: #000; border: 1px solid #444; }</style>
+        </head><body>
+        <h1>The Chaos Game</h1>
+        <canvas id="chaos" width="500" height="500"></canvas>
+        <script>
+          const cvs = document.getElementById('chaos');
+          const ctx = cvs.getContext('2d');
+          const pts = [{x:250, y:50}, {x:50, y:450}, {x:450, y:450}];
+          let px = Math.random()*500, py = Math.random()*500;
+          function draw() {
+            for(let i=0; i<100; i++) {
+              let p = pts[Math.floor(Math.random()*pts.length)];
+              px = (px + p.x) / 2; py = (py + p.y) / 2;
+              ctx.fillStyle = 'hsl(' + (px % 360) + ', 100%, 50%)';
+              ctx.fillRect(px, py, 1, 1);
+            }
+            requestAnimationFrame(draw);
+          }
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>
