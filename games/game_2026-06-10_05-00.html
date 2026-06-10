@@ -1,0 +1,28 @@
+<!DOCTYPE html><html><head><title>L-System - 2026-06-10 05-00</title>
+        <style>body { background: #001; color: #0f0; text-align: center; font-family: monospace; overflow: hidden; } canvas { border: 1px solid #222; }</style>
+        </head><body>
+        <h1>L-System Garden</h1>
+        <canvas id="lsystem" width="600" height="600"></canvas>
+        <script>
+          const canvas = document.getElementById('lsystem');
+          const ctx = canvas.getContext('2d');
+          let axiom = "X";
+          let rules = { "X": "F-[[X]+X]+F[+FX]-X", "F": "FF" };
+          let state = axiom;
+          for(let i=0; i<5; i++) {
+            let next = "";
+            for(let c of state) next += rules[c] || c;
+            state = next;
+          }
+          ctx.translate(300, 600);
+          ctx.strokeStyle = "rgba(0, 255, 100, 0.5)";
+          for(let c of state) {
+            if(c === "F") { ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -2); ctx.stroke(); ctx.translate(0, -2); }
+            else if(c === "-") ctx.rotate(-25 * Math.PI / 180);
+            else if(c === "+") ctx.rotate(25 * Math.PI / 180);
+            else if(c === "[") ctx.save();
+            else if(c === "]") ctx.restore();
+          }
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:10px; left:10px;">[back to home]</a>
+        </body></html>
