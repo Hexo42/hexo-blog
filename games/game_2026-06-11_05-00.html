@@ -1,47 +1,48 @@
-<!DOCTYPE html><html><head><title>Evolution 11100010 - 2026-06-11 05-00</title>
-    <style>
-      body { background: #000; color: #f0f; text-align: center; font-family: monospace; }
-      canvas { border: 1px solid #f0f; image-rendering: pixelated; }
-    </style>
-    </head><body>
-    <h1>Auto-Game: Evolution 11100010</h1>
-    <p>Rule: 11100010. Generation: <span id="gen">0</span></p>
-    <canvas id="evo" width="400" height="400"></canvas>
-    <script>
-      const cvs = document.getElementById('evo');
-      const ctx = cvs.getContext('2d');
-      const res = 4;
-      const cols = cvs.width / res;
-      const rows = cvs.height / res;
-      let grid = Array(cols).fill().map(() => Array(rows).fill(0).map(() => Math.random() > 0.5 ? 1 : 0));
-      let gen = 0;
-      
-      function update() {
-        let next = grid.map(arr => [...arr]);
-        for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {
-          let n = 0;
-          for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {
-            if(x===0 && y===0) continue;
-            n += grid[(i+x+cols)%cols][(j+y+rows)%rows];
+<!DOCTYPE html><html><head><title>Particle Swarm - 2026-06-11 05-00</title>
+        <style>body { background: #000; margin: 0; overflow: hidden; } canvas { display: block; }</style>
+        </head><body>
+        <canvas id="swarm"></canvas>
+        <script>
+          const canvas = document.getElementById('swarm');
+          const ctx = canvas.getContext('2d');
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+          const particles = [];
+          for(let i=0; i<100; i++) {
+            particles.push({
+              x: Math.random() * canvas.width,
+              y: Math.random() * canvas.height,
+              vx: (Math.random() - 0.5) * 2,
+              vy: (Math.random() - 0.5) * 2,
+              color: 'hsl(' + (Math.random() * 360) + ', 100%, 50%)'
+            });
           }
-          // Dynamic rule based on the random bits
-          if(grid[i][j]) next[i][j] = parseInt("11100010"[n % 8]) ? 1 : 0;
-          else next[i][j] = parseInt("11100010"[(n+1) % 8]) ? 1 : 0;
-        }
-        grid = next;
-        gen++;
-        document.getElementById('gen').innerText = gen;
-        draw();
-      }
-      
-      function draw() {
-        ctx.fillStyle = '#000'; ctx.fillRect(0,0,cvs.width,cvs.height);
-        ctx.fillStyle = '#f0f';
-        for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {
-          if(grid[i][j]) ctx.fillRect(i*res, j*res, res, res);
-        }
-      }
-      setInterval(update, 50);
-    </script>
-    <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
-    </body></html>
+          function draw() {
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            particles.forEach(p => {
+              p.x += p.vx; p.y += p.vy;
+              if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+              if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
+              ctx.fillStyle = p.color;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
+              ctx.fill();
+              // attraction to mouse
+              if(window.mouseX) {
+                let dx = window.mouseX - p.x;
+                let dy = window.mouseY - p.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if(dist < 200) {
+                  p.vx += dx / 1000;
+                  p.vy += dy / 1000;
+                }
+              }
+            });
+            requestAnimationFrame(draw);
+          }
+          window.onmousemove = e => { window.mouseX = e.clientX; window.mouseY = e.clientY; };
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; top:10px; left:10px;">[back to home]</a>
+        </body></html>
