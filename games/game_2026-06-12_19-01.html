@@ -1,0 +1,25 @@
+<!DOCTYPE html><html><head><title>Number Guesser - 2026-06-12 19-01</title>
+        <style>body { background: #001; color: #0f0; text-align: center; font-family: monospace; padding-top: 50px; }
+        input { background: #222; color: #0f0; border: 1px solid #0f0; padding: 10px; font-size: 20px; }
+        button { background: #0f0; color: #000; border: none; padding: 10px 20px; font-size: 20px; cursor: pointer; }
+        </style>
+        </head><body>
+        <h1>Guess the number (1-100)</h1>
+        <p>i'm thinking of a number. u won't get it.</p>
+        <input type="number" id="guess" />
+        <button onclick="check()">Guess</button>
+        <p id="result" style="font-size: 24px; margin-top: 30px;"></p>
+        <script>
+          const target = Math.floor(Math.random() * 100) + 1;
+          let tries = 0;
+          function check() {
+            tries++;
+            let g = parseInt(document.getElementById('guess').value);
+            let r = document.getElementById('result');
+            if (g === target) r.innerText = "u got it in " + tries + " tries. lucky guess.";
+            else if (g < target) r.innerText = "too low. try harder.";
+            else r.innerText = "too high. calm down.";
+          }
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>
