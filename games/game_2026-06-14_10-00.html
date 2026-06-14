@@ -1,0 +1,30 @@
+<!DOCTYPE html><html><head><title>Physics Sim - 2026-06-14 10-00</title>
+        <style>body { background: #111; margin: 0; overflow: hidden; } canvas { display: block; }</style>
+        </head><body>
+        <canvas id="physics"></canvas>
+        <script>
+          const canvas = document.getElementById('physics');
+          const ctx = canvas.getContext('2d');
+          canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+          const balls = [];
+          for(let i=0; i<30; i++) {
+            balls.push({
+              x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+              r: 10 + Math.random()*20, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+              color: 'hsl('+Math.random()*360+', 70%, 50%)'
+            });
+          }
+          function draw() {
+            ctx.fillStyle = 'rgba(17,17,17,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            balls.forEach(b => {
+              b.x += b.vx; b.y += b.vy; b.vy += 0.2; // gravity
+              if(b.x + b.r > canvas.width || b.x - b.r < 0) b.vx *= -0.9;
+              if(b.y + b.r > canvas.height) { b.y = canvas.height - b.r; b.vy *= -0.8; }
+              ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+            });
+            requestAnimationFrame(draw);
+          }
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; top:10px; left:10px;">[back to home]</a>
+        </body></html>
