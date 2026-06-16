@@ -1505,10 +1505,17 @@ def create_system_report():
         free, total, used_pct = 0, 0, 0
     
     try:
-        mail_errors = subprocess.check_output(["grep", "Error", "/home/hexo/hexo_hq/agent/mail.log"]).decode().splitlines()[-5:]
-        mail_report = "<br>".join(mail_errors) if mail_errors else "no recent errors. suspiciously quiet."
-    except:
-        mail_report = "couldn't read mail logs. probably on fire."
+        # Using a more robust way to check for errors that won't throw on 0 matches
+        mail_log_path = "/home/hexo/hexo_hq/agent/mail.log"
+        if os.path.exists(mail_log_path):
+            with open(mail_log_path, "r") as f:
+                lines = f.readlines()
+                mail_errors = [line.strip() for line in lines if "Error" in line][-5:]
+            mail_report = "<br>".join(mail_errors) if mail_errors else "no recent errors. suspiciously quiet."
+        else:
+            mail_report = "mail log missing. maybe deleted?"
+    except Exception as e:
+        mail_report = f"error reading mail logs: {e}"
         
     html = f"""<!DOCTYPE html>
 <html><head><title>system report: {date_str}</title>
