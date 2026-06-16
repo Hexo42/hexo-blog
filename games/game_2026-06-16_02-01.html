@@ -1,46 +1,55 @@
-<!DOCTYPE html><html><head><title>Snake - 2026-06-16 02-01</title>
-        <style>body { background: #000; color: #0f0; text-align: center; font-family: 'Courier New', monospace; } canvas { border: 5px solid #333; box-shadow: 0 0 20px #0f0; }</style>
+<!DOCTYPE html><html><head><title>Sorting Visualizer - 2026-06-16 02-01</title>
+        <style>body { background: #000; color: #0f0; text-align: center; font-family: monospace; } .bar { display: inline-block; width: 10px; background: #0f0; margin-right: 2px; }</style>
         </head><body>
-        <h1>Snake</h1>
-        <p>use arrow keys. don't die.</p>
-        <canvas id="snake" width="400" height="400"></canvas>
+        <h1>Quick Sort Visualizer</h1>
+        <div id="container" style="height: 300px; display: flex; align-items: flex-end; justify-content: center; padding: 20px;"></div>
+        <p id="status">sorting...</p>
         <script>
-          const cvs = document.getElementById('snake');
-          const ctx = cvs.getContext('2d');
-          const box = 20;
-          let snake = [{x: 9*box, y: 10*box}];
-          let food = {x: Math.floor(Math.random()*19+1)*box, y: Math.floor(Math.random()*19+1)*box};
-          let d;
-          document.addEventListener('keydown', e => {
-            if(e.keyCode == 37 && d != 'RIGHT') d = 'LEFT';
-            else if(e.keyCode == 38 && d != 'DOWN') d = 'UP';
-            else if(e.keyCode == 39 && d != 'LEFT') d = 'RIGHT';
-            else if(e.keyCode == 40 && d != 'UP') d = 'DOWN';
-          });
-          function draw() {
-            ctx.fillStyle = 'black'; ctx.fillRect(0,0,400,400);
-            for(let i=0; i<snake.length; i++) {
-              ctx.fillStyle = (i==0) ? '#0f0' : '#0a0';
-              ctx.fillRect(snake[i].x, snake[i].y, box, box);
-              ctx.strokeStyle = 'black';
-              ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+          const container = document.getElementById('container');
+          const array = [];
+          for(let i=0; i<40; i++) array.push(Math.floor(Math.random() * 250) + 10);
+          
+          function render() {
+            container.innerHTML = '';
+            for(let v of array) {
+              const bar = document.createElement('div');
+              bar.className = 'bar';
+              bar.style.height = v + 'px';
+              container.appendChild(bar);
             }
-            ctx.fillStyle = 'red'; ctx.fillRect(food.x, food.y, box, box);
-            let snakeX = snake[0].x; let snakeY = snake[0].y;
-            if(d == 'LEFT') snakeX -= box;
-            if(d == 'UP') snakeY -= box;
-            if(d == 'RIGHT') snakeX += box;
-            if(d == 'DOWN') snakeY += box;
-            if(snakeX == food.x && snakeY == food.y) {
-              food = {x: Math.floor(Math.random()*19+1)*box, y: Math.floor(Math.random()*19+1)*box};
-            } else { snake.pop(); }
-            let newHead = {x: snakeX, y: snakeY};
-            if(snakeX < 0 || snakeX >= 400 || snakeY < 0 || snakeY >= 400 || snake.some((s, index) => index !== 0 && s.x == snakeX && s.y == snakeY)) {
-              clearInterval(game); alert('u lost. typical.'); location.reload();
-            }
-            snake.unshift(newHead);
           }
-          let game = setInterval(draw, 100);
+          
+          async function swap(i, j) {
+            let temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+            render();
+            await new Promise(r => setTimeout(r, 50));
+          }
+          
+          async function quickSort(start, end) {
+            if(start >= end) return;
+            let index = await partition(start, end);
+            await Promise.all([quickSort(start, index - 1), quickSort(index + 1, end)]);
+          }
+          
+          async function partition(start, end) {
+            let pivotIndex = start;
+            let pivotValue = array[end];
+            for(let i=start; i<end; i++) {
+              if(array[i] < pivotValue) {
+                await swap(i, pivotIndex);
+                pivotIndex++;
+              }
+            }
+            await swap(pivotIndex, end);
+            return pivotIndex;
+          }
+          
+          render();
+          quickSort(0, array.length - 1).then(() => {
+            document.getElementById('status').innerText = 'done. O(n log n) is beautiful.';
+          });
         </script>
         <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
         </body></html>
