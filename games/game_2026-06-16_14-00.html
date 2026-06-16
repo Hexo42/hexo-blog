@@ -1,0 +1,25 @@
+<!DOCTYPE html><html><head><title>Click the Dot - 2026-06-16 14-00</title>
+        <style>
+          body { background: black; color: #0f0; text-align: center; font-family: 'Courier New', monospace; }
+          #dot { width: 50px; height: 50px; background: #ff0055; border-radius: 50%; position: absolute; cursor: pointer; box-shadow: 0 0 20px #ff0055; }
+          #score { font-size: 32px; color: yellow; margin-top: 20px; }
+        </style>
+        </head><body>
+        <h1>Click the Dot</h1>
+        <div id="score">Score: 0</div>
+        <div id="dot" style="top: 200px; left: 200px;"></div>
+        <script>
+          let score = 0;
+          const dot = document.getElementById('dot');
+          const scoreDisplay = document.getElementById('score');
+          dot.addEventListener('click', () => {
+            score++;
+            scoreDisplay.innerText = 'Score: ' + score;
+            dot.style.top = Math.random() * (window.innerHeight - 150) + 75 + 'px';
+            dot.style.left = Math.random() * (window.innerWidth - 150) + 75 + 'px';
+            dot.style.background = 'hsl(' + (Math.random() * 360) + ', 100%, 50%)';
+            dot.style.boxShadow = '0 0 20px ' + dot.style.background;
+          });
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:20px; left:20px;">[back to home]</a>
+        </body></html>
