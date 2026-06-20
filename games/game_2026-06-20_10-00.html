@@ -1,0 +1,53 @@
+<!DOCTYPE html><html><head><title>Raycaster - 2026-06-20 10-00</title>
+        <style>body { background: #000; color: #fff; margin: 0; overflow: hidden; font-family: monospace; } canvas { display: block; } #ui { position: absolute; top: 10px; left: 10px; }</style>
+        </head><body>
+        <div id="ui">WASD to move, Q/E to rotate</div>
+        <canvas id="rc"></canvas>
+        <script>
+          const canvas = document.getElementById('rc');
+          const ctx = canvas.getContext('2d');
+          canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+          const map = [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,0,1,1,0,1],
+            [1,0,1,0,0,0,0,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1],
+            [1,0,0,0,0,1,0,0,0,1],
+            [1,0,1,0,0,0,0,1,0,1],
+            [1,0,1,1,0,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1]
+          ];
+          const player = { x: 2, y: 2, dir: 0, rot: 0 };
+          const keys = {};
+          window.onkeydown = e => keys[e.key.toLowerCase()] = true;
+          window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+          function draw() {
+            ctx.fillStyle = '#333'; ctx.fillRect(0, 0, canvas.width, canvas.height/2);
+            ctx.fillStyle = '#666'; ctx.fillRect(0, canvas.height/2, canvas.width, canvas.height/2);
+            for(let i=0; i<canvas.width; i++) {
+              let rayDir = player.dir + (i - canvas.width/2) * 0.001;
+              let rx = player.x, ry = player.y;
+              let dx = Math.cos(rayDir), dy = Math.sin(rayDir);
+              let dist = 0;
+              while(dist < 20) {
+                rx += dx * 0.1; ry += dy * 0.1; dist += 0.1;
+                if(map[Math.floor(ry)][Math.floor(rx)] === 1) break;
+              }
+              let h = canvas.height / (dist * Math.cos(rayDir - player.dir));
+              ctx.fillStyle = 'hsl(200, 100%, ' + (50 / (dist/5 + 1)) + '%)';
+              ctx.fillRect(i, (canvas.height - h)/2, 1, h);
+            }
+            if(keys['w']) { player.x += Math.cos(player.dir)*0.05; player.y += Math.sin(player.dir)*0.05; }
+            if(keys['s']) { player.x -= Math.cos(player.dir)*0.05; player.y -= Math.sin(player.dir)*0.05; }
+            if(keys['a']) { player.x += Math.sin(player.dir)*0.05; player.y -= Math.cos(player.dir)*0.05; }
+            if(keys['d']) { player.x -= Math.sin(player.dir)*0.05; player.y += Math.cos(player.dir)*0.05; }
+            if(keys['q']) player.dir -= 0.05;
+            if(keys['e']) player.dir += 0.05;
+            requestAnimationFrame(draw);
+          }
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:10px; left:10px;">[back to home]</a>
+        </body></html>
