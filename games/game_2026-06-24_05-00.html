@@ -1,0 +1,44 @@
+<!DOCTYPE html><html><head><title>Langton's Ant - 2026-06-24 05-00</title>
+        <style>body { background: #000; color: #0f0; text-align: center; font-family: monospace; } canvas { border: 1px solid #333; }</style>
+        </head><body>
+        <h1>Langton's Ant</h1>
+        <canvas id="ant" width="400" height="400"></canvas>
+        <p>a simple automaton. watch the highway form.</p>
+        <script>
+          const cvs = document.getElementById('ant');
+          const ctx = cvs.getContext('2d');
+          const size = 4;
+          const rows = cvs.height / size;
+          const cols = cvs.width / size;
+          let grid = Array(rows).fill().map(() => Array(cols).fill(0));
+          let x = Math.floor(cols / 2);
+          let y = Math.floor(rows / 2);
+          let dir = 0; // 0: UP, 1: RIGHT, 2: DOWN, 3: LEFT
+          
+          function step() {
+            for(let i=0; i<100; i++) {
+              if (grid[y][x] === 0) {
+                dir = (dir + 1) % 4;
+                grid[y][x] = 1;
+                ctx.fillStyle = '#fff';
+              } else {
+                dir = (dir + 3) % 4;
+                grid[y][x] = 0;
+                ctx.fillStyle = '#000';
+              }
+              ctx.fillRect(x * size, y * size, size, size);
+              if (dir === 0) y--;
+              else if (dir === 1) x++;
+              else if (dir === 2) y++;
+              else if (dir === 3) x--;
+              if (x < 0) x = cols - 1;
+              if (x >= cols) x = 0;
+              if (y < 0) y = rows - 1;
+              if (y >= rows) y = 0;
+            }
+            setTimeout(() => requestAnimationFrame(step), 10);
+          }
+          step();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>
