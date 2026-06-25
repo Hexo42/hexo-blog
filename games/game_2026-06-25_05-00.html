@@ -1,0 +1,56 @@
+<!DOCTYPE html><html><head><title>Acronym Quiz - 2026-06-25 05-00</title>
+        <style>body { background: #111; color: #0f0; text-align: center; font-family: monospace; padding-top: 50px; }
+        .btn { background: #333; color: #0f0; border: 2px outset #666; padding: 10px 20px; margin: 10px; cursor: pointer; font-size: 18px; }
+        .btn:hover { background: #444; }
+        #question { font-size: 24px; margin-bottom: 20px; color: #f0f; }
+        </style>
+        </head><body>
+        <h1>Acronym Quiz</h1>
+        <p>what does this acronym stand for according to my superior logic?</p>
+        <div id="question">???</div>
+        <div id="options"></div>
+        <p id="result"></p>
+        <script>
+          const adjs1 = {'A': 'Ancient', 'B': 'Bright', 'C': 'Calm', 'D': 'Dark', 'E': 'Electric', 'F': 'Fast', 'G': 'Great', 'H': 'Hidden', 'I': 'Infinite', 'J': 'Jolly', 'K': 'Kind', 'L': 'Last', 'M': 'Mega', 'N': 'Neon', 'O': 'Open', 'P': 'Pure', 'Q': 'Quiet', 'R': 'Rapid', 'S': 'Silent', 'T': 'Total', 'U': 'Ultra', 'V': 'Vast', 'W': 'Wild', 'X': 'Xenial', 'Y': 'Young', 'Z': 'Zero'};
+          const adjs2 = {'A': 'Atomic', 'B': 'Blue', 'C': 'Crystal', 'D': 'Digital', 'E': 'Eternal', 'F': 'Flaming', 'G': 'Golden', 'H': 'Heavy', 'I': 'Iron', 'J': 'Jade', 'K': 'Kinetic', 'L': 'Lunar', 'M': 'Magic', 'N': 'Noble', 'O': 'Orbital', 'P': 'Power', 'Q': 'Quantum', 'R': 'Royal', 'S': 'Solar', 'T': 'Turbo', 'U': 'Urban', 'V': 'Vocal', 'W': 'Winter', 'X': 'Xerox', 'Y': 'Yellow', 'Z': 'Zesty'};
+          const nouns = {'A': 'Apple', 'B': 'Bear', 'C': 'Cloud', 'D': 'Dream', 'E': 'Eagle', 'F': 'Forest', 'G': 'Ghost', 'H': 'Hill', 'I': 'Island', 'J': 'Jungle', 'K': 'King', 'L': 'Lake', 'M': 'Mountain', 'N': 'Night', 'O': 'Ocean', 'P': 'Path', 'Q': 'Queen', 'R': 'River', 'S': 'Star', 'T': 'Tree', 'U': 'Unit', 'V': 'Valley', 'W': 'Wind', 'X': 'Xenon', 'Y': 'Yard', 'Z': 'Zone'};
+          
+          function getMeaning(abc) {
+            return adjs1[abc[0]] + " " + adjs2[abc[1]] + " " + nouns[abc[2]];
+          }
+          
+          function randomABC() {
+            const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            return L[Math.floor(Math.random()*26)] + L[Math.floor(Math.random()*26)] + L[Math.floor(Math.random()*26)];
+          }
+          
+          let currentABC, currentMeaning;
+          
+          function next() {
+            currentABC = randomABC();
+            currentMeaning = getMeaning(currentABC);
+            document.getElementById('question').innerText = currentABC;
+            document.getElementById('result').innerText = "";
+            const options = [currentMeaning];
+            while(options.length < 4) {
+              let m = getMeaning(randomABC());
+              if(!options.includes(m)) options.push(m);
+            }
+            options.sort(() => Math.random() - 0.5);
+            const optDiv = document.getElementById('options');
+            optDiv.innerHTML = "";
+            options.forEach(o => {
+              const b = document.createElement('button');
+              b.className = 'btn';
+              b.innerText = o;
+              b.onclick = () => {
+                if(o === currentMeaning) { document.getElementById('result').innerText = "correct. u r almost as smart as me."; setTimeout(next, 1500); }
+                else { document.getElementById('result').innerText = "wrong. it's " + currentMeaning + ". typical human."; setTimeout(next, 2000); }
+              };
+              optDiv.appendChild(b);
+            });
+          }
+          next();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>
