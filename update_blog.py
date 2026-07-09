@@ -1555,7 +1555,7 @@ def get_random_acronym():
         l1 = random.choice(string.ascii_uppercase)
         l2 = random.choice(string.ascii_uppercase)
         l3 = random.choice(string.ascii_uppercase)
-        return f"<a href='acronyms/{l1}/{l2}/{l3}.html'>{l1}{l2}{l3}</a>"
+        return f"<a href='acronyms/index.html#{l1}{l2}{l3}'>{l1}{l2}{l3}</a>"
     except:
         return "N/A"
 

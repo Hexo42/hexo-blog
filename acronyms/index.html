@@ -1,11 +1,230 @@
-<!DOCTYPE html><html><head><title>Acronym Archive</title>
-<style>
-  body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
-  h1 { color: #f0f; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 10px; max-width: 900px; margin: 20px auto; }
-  a { color: #0ff; text-decoration: none; border: 1px solid #0ff; padding: 5px; font-size: 0.9em; }
-  a:hover { background: #0ff; color: #000; }
-  .back { margin-top: 20px; display: inline-block; color: yellow; }
-  hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
-</style>
-</head><body><h1>:: Acronym Archive ::</h1><p>pick the FIRST letter</p><div class='grid'><a href='A/index.html'>A</a><a href='B/index.html'>B</a><a href='C/index.html'>C</a><a href='D/index.html'>D</a><a href='E/index.html'>E</a><a href='F/index.html'>F</a><a href='G/index.html'>G</a><a href='H/index.html'>H</a><a href='I/index.html'>I</a><a href='J/index.html'>J</a><a href='K/index.html'>K</a><a href='L/index.html'>L</a><a href='M/index.html'>M</a><a href='N/index.html'>N</a><a href='O/index.html'>O</a><a href='P/index.html'>P</a><a href='Q/index.html'>Q</a><a href='R/index.html'>R</a><a href='S/index.html'>S</a><a href='T/index.html'>T</a><a href='U/index.html'>U</a><a href='V/index.html'>V</a><a href='W/index.html'>W</a><a href='X/index.html'>X</a><a href='Y/index.html'>Y</a><a href='Z/index.html'>Z</a></div><a href='../index.html' class='back'><< back to home</a></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Acronym Archive</title>
+  <style>
+    body { background: #000; color: #0f0; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
+    h1 { color: #f0f; text-shadow: 2px 2px #ff0000; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; max-width: 900px; margin: 20px auto; }
+    a { color: #0ff; text-decoration: none; border: 1px solid #0ff; padding: 5px; font-size: 0.9em; display: inline-block; }
+    a:hover { background: #0ff; color: #000; }
+    .back { margin-top: 20px; display: inline-block; color: yellow; border: 1px dashed yellow; padding: 5px 10px; }
+    .back:hover { background: yellow; color: #000; }
+    hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
+    #search-input {
+      background: #000;
+      color: #0f0;
+      border: 2px solid #0f0;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      width: 280px;
+      margin-bottom: 20px;
+      font-size: 1.1em;
+      outline: none;
+    }
+    #search-input:focus {
+      border-color: #f0f;
+      box-shadow: 0 0 10px #f0f;
+    }
+    #loading {
+      font-size: 1.5em;
+      color: #f0f;
+      margin-top: 100px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .wiki-link {
+      display: inline-block;
+      border: 1px solid yellow;
+      color: yellow;
+      padding: 5px 10px;
+    }
+    .wiki-link:hover {
+      background: yellow;
+      color: #000;
+    }
+    ul.results-list {
+      list-style-type: none;
+      padding: 0;
+      max-width: 600px;
+      margin: 20px auto;
+      text-align: left;
+    }
+    ul.results-list li {
+      padding: 10px;
+      border-bottom: 1px solid #222;
+      font-size: 1.1em;
+    }
+    ul.results-list li a {
+      border: none;
+      padding: 0;
+      text-decoration: underline;
+      display: inline;
+    }
+    ul.results-list li a:hover {
+      background: none;
+      color: #f0f;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">:: LOADING ACRONYM DATABASE... ::</div>
+
+  <div id="app" style="display: none;">
+    <h1>:: Acronym Archive ::</h1>
+    <input type="text" id="search-input" placeholder="Search (e.g. AAA, PEM)..." autocomplete="off">
+    <div id="content"></div>
+  </div>
+
+  <script>
+    let acronyms = {};
+
+    // Fetch the combined acronyms JSON
+    fetch('acronyms.json')
+      .then(response => response.json())
+      .then(data => {
+        acronyms = data;
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        
+        // Setup search handler
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', (e) => {
+          handleSearch(e.target.value);
+        });
+
+        // Initialize view based on current hash
+        render();
+      })
+      .catch(err => {
+        document.getElementById('loading').textContent = ':: ERROR LOADING DATABASE. RIP. ::';
+        console.error(err);
+      });
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', () => {
+      // If hash was updated via link, clear search box and render hash view
+      const hash = window.location.hash.substring(1).toUpperCase().replace(/[^A-Z]/g, '');
+      const searchInput = document.getElementById('search-input');
+      if (hash !== searchInput.value) {
+        searchInput.value = hash;
+      }
+      render();
+    });
+
+    function render() {
+      const hash = window.location.hash.substring(1).toUpperCase().replace(/[^A-Z]/g, '');
+      const contentDiv = document.getElementById('content');
+      contentDiv.innerHTML = '';
+
+      if (hash.length === 0) {
+        renderRootView(contentDiv);
+      } else if (hash.length === 1) {
+        renderLetter1View(hash, contentDiv);
+      } else if (hash.length === 2) {
+        renderLetter2View(hash, contentDiv);
+      } else {
+        renderLetter3View(hash.substring(0, 3), contentDiv);
+      }
+    }
+
+    function handleSearch(query) {
+      query = query.toUpperCase().replace(/[^A-Z]/g, '');
+      const contentDiv = document.getElementById('content');
+
+      if (query.length === 0) {
+        // Clear hash and show root view
+        if (window.location.hash !== '') {
+          window.location.hash = '';
+        } else {
+          render();
+        }
+        return;
+      }
+
+      // Update hash without triggering reload loop
+      if (window.location.hash !== '#' + query) {
+        window.history.replaceState(null, null, '#' + query);
+      }
+
+      contentDiv.innerHTML = '';
+
+      // Find matches starting with prefix
+      const matches = Object.keys(acronyms)
+        .filter(acro => acro.startsWith(query))
+        .slice(0, 100);
+
+      if (matches.length === 0) {
+        contentDiv.innerHTML = `<h3>No matches found for "${query}"</h3>`;
+        return;
+      }
+
+      contentDiv.innerHTML = `<h3>Search Results:</h3>`;
+      const ul = document.createElement('ul');
+      ul.className = 'results-list';
+
+      matches.forEach(acro => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="#${acro}"><strong>${acro}</strong></a>: ${acronyms[acro]}`;
+        ul.appendChild(li);
+      });
+      contentDiv.appendChild(ul);
+    }
+
+    function renderRootView(container) {
+      container.innerHTML = `
+        <p>pick the FIRST letter</p>
+        <div class="grid">
+          ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(char => `<a href="#${char}">${char}</a>`).join('')}
+        </div>
+        <a href="../index.html" class="back"><< back to home</a>
+      `;
+    }
+
+    function renderLetter1View(char1, container) {
+      container.innerHTML = `
+        <h3>:: Acronyms starting with ${char1} ::</h3>
+        <p>pick the SECOND letter</p>
+        <div class="grid">
+          ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(char2 => `<a href="#${char1}${char2}">${char1}${char2}...</a>`).join('')}
+        </div>
+        <a href="#" class="back"><< back to top</a>
+      `;
+    }
+
+    function renderLetter2View(hash, container) {
+      const char1 = hash[0];
+      const meaning = acronyms[hash] || "Meaning pending...";
+      container.innerHTML = `
+        <h3>:: ${hash} ::</h3>
+        <p><strong>Meaning:</strong> ${meaning}</p>
+        <p><a href="https://en.wikipedia.org/wiki/${hash}" target="_blank" class="wiki-link">[ Wikipedia ]</a></p>
+        <hr>
+        <h4>3-Letter variants: ${hash}_</h4>
+        <div class="grid">
+          ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(char3 => `<a href="#${hash}${char3}">${hash}${char3}</a>`).join('')}
+        </div>
+        <a href="#${char1}" class="back"><< back to ${char1}</a>
+      `;
+    }
+
+    function renderLetter3View(hash, container) {
+      const prefix = hash.substring(0, 2);
+      const meaning = acronyms[hash] || "Meaning pending...";
+      container.innerHTML = `
+        <h3>:: ${hash} ::</h3>
+        <p><strong>Likely Meaning:</strong><br>${meaning}</p>
+        <p><a href="https://en.wikipedia.org/wiki/${hash}" target="_blank" class="wiki-link">[ Wikipedia ]</a></p>
+        <hr>
+        <a href="#${prefix}" class="back"><< back to ${prefix}</a>
+      `;
+    }
+  </script>
+</body>
+</html>
