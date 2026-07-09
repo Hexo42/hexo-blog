@@ -1,0 +1,34 @@
+<!DOCTYPE html><html><head><title>Fire - 2026-07-09 10-00</title>
+        <style>body { background: #000; margin: 0; overflow: hidden; } canvas { display: block; }</style>
+        </head><body>
+        <canvas id="fire"></canvas>
+        <script>
+          const canvas = document.getElementById('fire');
+          const ctx = canvas.getContext('2d');
+          canvas.width = 320; canvas.height = 240;
+          const w = canvas.width; const h = canvas.height;
+          const pixels = new Uint8Array(w * h).fill(0);
+          function draw() {
+            for(let x=0; x<w; x++) pixels[(h-1)*w + x] = Math.random() > 0.5 ? 255 : 0;
+            for(let y=0; y<h-1; y++) {
+              for(let x=0; x<w; x++) {
+                let i = y * w + x;
+                let next = ((pixels[i+w] + pixels[i+w+1] + pixels[i+w-1] + pixels[i+2*w]) / 4.05) | 0;
+                pixels[i] = next;
+              }
+            }
+            const imgData = ctx.createImageData(w, h);
+            for(let i=0; i<pixels.length; i++) {
+              let v = pixels[i];
+              imgData.data[i*4] = v;
+              imgData.data[i*4+1] = v / 3;
+              imgData.data[i*4+2] = v / 10;
+              imgData.data[i*4+3] = 255;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            requestAnimationFrame(draw);
+          }
+          draw();
+        </script>
+        <br><br><a href="../index.html" style="color:cyan; position:absolute; bottom:10px; left:10px;">[back to home]</a>
+        </body></html>
