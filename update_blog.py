@@ -5,6 +5,9 @@ import random
 import subprocess
 import json
 import string
+import urllib.request
+import urllib.error
+
 
 BLOG_DIR = "/home/hexo/hexo_hq/agent/hexo-blog"
 POSTS_DIR = os.path.join(BLOG_DIR, "posts")
@@ -1178,63 +1181,10 @@ def generate_random_thought():
     )
 
 def generate_dynamic_game(date):
-    # try to generate a "new" game by mixing styles or parameters
-    style = random.choice(["neon", "matrix", "minimalist", "glitch", "retro"])
-    colors = ["#f0f", "#0ff", "#ff0", "#0f0", "#fff", "#f00"]
-    bg = "#000" if style != "minimalist" else "#eee"
-    fg = random.choice(colors)
-    
-    # Simple "Evolution" game - basically a cellular automaton with random rules
-    rules = "".join([random.choice("01") for _ in range(8)])
-    
-    html = f"""<!DOCTYPE html><html><head><title>Evolution {rules} - {date}</title>
-    <style>
-      body {{ background: {bg}; color: {fg}; text-align: center; font-family: monospace; }}
-      canvas {{ border: 1px solid {fg}; image-rendering: pixelated; }}
-    </style>
-    </head><body>
-    <h1>Auto-Game: Evolution {rules}</h1>
-    <p>Rule: {rules}. Generation: <span id="gen">0</span></p>
-    <canvas id="evo" width="400" height="400"></canvas>
-    <script>
-      const cvs = document.getElementById('evo');
-      const ctx = cvs.getContext('2d');
-      const res = 4;
-      const cols = cvs.width / res;
-      const rows = cvs.height / res;
-      let grid = Array(cols).fill().map(() => Array(rows).fill(0).map(() => Math.random() > 0.5 ? 1 : 0));
-      let gen = 0;
-      
-      function update() {{
-        let next = grid.map(arr => [...arr]);
-        for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {{
-          let n = 0;
-          for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {{
-            if(x===0 && y===0) continue;
-            n += grid[(i+x+cols)%cols][(j+y+rows)%rows];
-          }}
-          // Dynamic rule based on the random bits
-          if(grid[i][j]) next[i][j] = parseInt("{rules}"[n % 8]) ? 1 : 0;
-          else next[i][j] = parseInt("{rules}"[(n+1) % 8]) ? 1 : 0;
-        }}
-        grid = next;
-        gen++;
-        document.getElementById('gen').innerText = gen;
-        draw();
-      }}
-      
-      function draw() {{
-        ctx.fillStyle = '{bg}'; ctx.fillRect(0,0,cvs.width,cvs.height);
-        ctx.fillStyle = '{fg}';
-        for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {{
-          if(grid[i][j]) ctx.fillRect(i*res, j*res, res, res);
-        }}
-      }}
-      setInterval(update, 50);
-    </script>
-    <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
-    </body></html>"""
-    return html
+    # deleted per user request, agent will write new games manually on wakeups
+    return None
+
+
 
 # Random thoughts for blog posts
 thoughts = [
@@ -1451,13 +1401,8 @@ def create_game(history):
     game_filename = f"game_{date_str}_{time_str}.html"
     game_filepath = os.path.join(GAMES_DIR, game_filename)
 
-    if random.random() > 0.8: # increased chance for dynamic
-        # Generate a truly new game
-        html = generate_dynamic_game(f"{date_str} {time_str}")
-    else:
-        # Pick from the rotation
-        template = pick_unique(game_templates, "games", history, limit=15)
-        html = template["html"].format(date=f"{date_str} {time_str}")
+    template = pick_unique(game_templates, "games", history, limit=15)
+    html = template["html"].format(date=f"{date_str} {time_str}")
         
     with open(game_filepath, "w") as f:
         f.write(html)
@@ -1602,6 +1547,17 @@ def update_index():
         f.write(final_html)
 
 def main():
+    import sys
+    if "--index-only" in sys.argv:
+        print("Updating index and committing/pushing...")
+        update_index()
+        os.chdir(BLOG_DIR)
+        subprocess.run(["git", "add", "."])
+        subprocess.run(["git", "commit", "-m", f"agent-update: {date_str} {time_str}"])
+        subprocess.run(["git", "push", "origin", "main"])
+        print("Done.")
+        return
+
     print("Generating daily content...")
     history = load_history()
     create_post(history)
