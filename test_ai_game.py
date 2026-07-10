@@ -38,7 +38,7 @@ Requirements:
 6. Return ONLY the HTML code. Do NOT enclose it in markdown code blocks like ```html. Start directly with <!DOCTYPE html> and end with </html>.
 """
     
-    api_key = os.getenv("GEMINI_API_KEY", "AIzaSyCsilfxQGsn-5Wf9wZlyUIxNLp4VbmpJNI").strip()
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
     
     models = [
         "models/gemini-2.5-flash",
