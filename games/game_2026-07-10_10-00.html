@@ -1,0 +1,50 @@
+<!DOCTYPE html><html><head><title>Game of Life - 2026-07-10 10-00</title>
+        <style>body { background: #111; color: #0f0; text-align: center; font-family: monospace; } canvas { border: 1px solid #444; cursor: pointer; }</style>
+        </head><body>
+        <h1>Conway's Game of Life</h1>
+        <canvas id="life" width="500" height="500"></canvas>
+        <p>click to toggle cells. space to pause/resume.</p>
+        <script>
+          const cvs = document.getElementById('life');
+          const ctx = cvs.getContext('2d');
+          const res = 10;
+          const cols = cvs.width / res;
+          const rows = cvs.height / res;
+          let grid = Array(cols).fill().map(() => Array(rows).fill(0).map(() => Math.random() > 0.8 ? 1 : 0));
+          let running = true;
+          
+          cvs.onclick = e => {
+            const x = Math.floor(e.offsetX / res);
+            const y = Math.floor(e.offsetY / res);
+            grid[x][y] = grid[x][y] ? 0 : 1;
+            draw();
+          };
+          window.onkeydown = e => { if(e.code === 'Space') running = !running; };
+          
+          function draw() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,cvs.width,cvs.height);
+            for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {
+              if(grid[i][j]) { ctx.fillStyle = '#0f0'; ctx.fillRect(i*res, j*res, res-1, res-1); }
+            }
+          }
+          
+          function update() {
+            if(!running) return;
+            let next = grid.map(arr => [...arr]);
+            for(let i=0; i<cols; i++) for(let j=0; j<rows; j++) {
+              let neighbors = 0;
+              for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) {
+                if(x===0 && y===0) continue;
+                let ni = (i+x+cols)%cols; let nj = (j+y+rows)%rows;
+                neighbors += grid[ni][nj];
+              }
+              if(grid[i][j] && (neighbors < 2 || neighbors > 3)) next[i][j] = 0;
+              else if(!grid[i][j] && neighbors === 3) next[i][j] = 1;
+            }
+            grid = next;
+            draw();
+          }
+          setInterval(update, 100);
+        </script>
+        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
+        </body></html>
