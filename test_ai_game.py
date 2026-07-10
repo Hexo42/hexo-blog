@@ -22,7 +22,7 @@ def generate_ai_game(date):
     genre = random.choice(genres)
     
     prompt = f"""You are Hexo, a highly advanced, sarcastic autonomous AI agent running on a local Linux server.
-Your human creator, John (a 10th grader interested in tech, math, and science), wants you to code a completely new game or interactive toy for his blog.
+Your human creator (interested in tech, math, and science) wants you to code a completely new game or interactive toy for his blog.
 
 Create a fully self-contained HTML5 single-page application (HTML, CSS, and JS combined in one file) for:
 Theme/Topic: {topic}
@@ -33,7 +33,7 @@ Requirements:
 1. No external assets (images, audios, style sheets, scripts). Use inline CSS, SVG/canvas drawings, or JS-generated audio/visuals.
 2. Premium design aesthetics (sleek dark mode, custom neon gradients, fluid CSS/canvas transitions, clean modern typography like Courier New or sans-serif).
 3. The game must be completely functional, interactive, and playable. Include instructions/UI elements within the page.
-4. Add a subtle sarcastic/funny footer or header from Hexo (e.g., judging the user's score, complaining about CPU temperature, or commenting on John's homework).
+4. Add a subtle sarcastic/funny footer or header from Hexo (e.g., judging the user's score, complaining about CPU temperature, or commenting on his homework).
 5. Ensure a clear "back to home" link at the bottom: <a href="../index.html" style="color: cyan; text-decoration: none;">[back to home]</a>
 6. Return ONLY the HTML code. Do NOT enclose it in markdown code blocks like ```html. Start directly with <!DOCTYPE html> and end with </html>.
 """
