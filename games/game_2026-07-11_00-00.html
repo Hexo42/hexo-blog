@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neural Boids: Evolutionary Sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #030208;
+      --panel-bg: rgba(10, 8, 22, 0.75);
+      --panel-border: rgba(0, 243, 255, 0.2);
+      --cyan: #00f3ff;
+      --magenta: #ff0055;
+      --green: #39ff14;
+      --text: #e0e0ff;
+      --text-muted: #8080a3;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* Floating UI Panels */
+    .glass-panel {
+      position: absolute;
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px 0 rgba(0, 243, 255, 0.08);
+      z-index: 10;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.35);
+      box-shadow: 0 8px 32px 0 rgba(0, 243, 255, 0.15);
+    }
+
+    /* Main Dashboard (Left) */
+    #dashboard {
+      top: 20px;
+      left: 20px;
+      width: 340px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Neural Network Visualizer (Right) */
+    #neural-panel {
+      top: 20px;
+      right: 20px;
+      width: 380px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    h1, h2, h3 {
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+      border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+      padding-bottom: 10px;
+      margin-bottom: 5px;
+    }
+
+    h2 {
+      font-size: 1rem;
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .stat-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.2rem;
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    /* Control Elements */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+
+    .slider-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.18);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button.btn-danger {
+      background: rgba(255, 0, 85, 0.05);
+      border-color: rgba(255, 0, 85, 0.3);
+    }
+
+    button.btn-danger:hover {
+      background: rgba(255, 0, 85, 0.18);
+      border-color: var(--magenta);
+      box-shadow: 0 0 12px rgba(255, 0, 85, 0.25);
+    }
+
+    /* Toggles */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-muted);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-toggle {
+      background-color: rgba(0, 243, 255, 0.15);
+      border-color: var(--cyan);
+    }
+
+    input:checked + .slider-toggle:before {
+      transform: translateX(22px);
+      background-color: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+    }
+
+    /* Brain Visualizer Canvas */
+    #brain-canvas {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: block;
+      width: 100%;
+      height: 300px;
+    }
+
+    /* Selection Details */
+    .agent-details {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+
+    .detail-label {
+      color: var(--text-muted);
+    }
+
+    .detail-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-weight: 600;
+    }
+
+    .health-bar-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .health-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), #00ffaa);
+      width: 100%;
+      transition: width 0.1s;
+    }
+
+    /* Back Link */
+    #back-link {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: var(--cyan);
+      text-decoration: none;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      z-index: 10;
+      background: var(--panel-bg);
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s;
+    }
+
+    #back-link:hover {
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+      color: #fff;
+    }
+
+    /* Custom Scrollbar for panel */
+    #dashboard::-webkit-scrollbar {
+      width: 4px;
+    }
+    #dashboard::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #dashboard::-webkit-scrollbar-thumb {
+      background: rgba(0, 243, 255, 0.2);
+      border-radius: 2px;
+    }
+    #dashboard::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 243, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="canvas"></canvas>
+
+  <a href="../index.html" id="back-link">&lt;&lt; BACK TO HQ</a>
+
+  <!-- Control Dashboard -->
+  <div id="dashboard" class="glass-panel">
+    <h1>Neural Boids</h1>
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 5px;">
+      neural network evolutionary sandbox
+    </p>
+
+    <!-- Stats -->
+    <div class="control-group">
+      <div class="section-title">Ecosystem Status</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Generation</div>
+          <div id="stat-gen" class="stat-val">1</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Living Agents</div>
+          <div id="stat-count" class="stat-val">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Max Fitness</div>
+          <div id="stat-max-fit" class="stat-val">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Deaths</div>
+          <div id="stat-deaths" class="stat-val">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simulation Speed Slider -->
+    <div class="control-group">
+      <div class="slider-header">
+        <span class="detail-label">Simulation Speed</span>
+        <span id="speed-val" class="slider-val">1.0x</span>
+      </div>
+      <input type="range" id="slider-speed" min="1" max="10" step="0.5" value="1">
+    </div>
+
+    <!-- Mutation Rate Slider -->
+    <div class="control-group">
+      <div class="slider-header">
+        <span class="detail-label">Mutation Rate</span>
+        <span id="mutation-val" class="slider-val">15%</span>
+      </div>
+      <input type="range" id="slider-mutation" min="1" max="100" step="1" value="15">
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="control-group">
+      <div class="section-title">Interventions</div>
+      <div class="btn-container">
+        <button id="btn-spawn-agents">Add Prey</button>
+        <button id="btn-spawn-predator">Add Predator</button>
+      </div>
+      <div class="btn-container" style="margin-top: 5px;">
+        <button id="btn-reset">Reset Sim</button>
+        <button id="btn-clear-predators" class="btn-danger">Kill Predators</button>
+      </div>
+    </div>
+
+    <!-- Rendering Toggles -->
+    <div class="control-group">
+      <div class="section-title">Visualization Modes</div>
+      <div class="toggle-row">
+        <span>Show Sensory Lines</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-sensors" checked>
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+      <div class="toggle-row" style="margin-top: 8px;">
+        <span>Show Velocity Trails</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-trails" checked>
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+      <div class="toggle-row" style="margin-top: 8px;">
+        <span>Predator Aggressiveness</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-pred-chase" checked>
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Neural Visualizer -->
+  <div id="neural-panel" class="glass-panel">
+    <h2>
+      <span>Neural Map</span>
+      <span style="font-size: 0.75rem; color: var(--cyan); font-family: 'Share Tech Mono', monospace;" id="selected-id">#NONE</span>
+    </h2>
+    <div class="section-title">Prey Brain Activations</div>
+
+    <canvas id="brain-canvas" width="332" height="300"></canvas>
+
+    <div class="section-title">Subject Biometrics</div>
+    <div class="agent-details">
+      <div class="detail-row">
+        <span class="detail-label">Age (Ticks)</span>
+        <span id="detail-age" class="detail-val">0</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Fitness (Food Eaten)</span>
+        <span id="detail-fitness" class="detail-val">0</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Generation</span>
+        <span id="detail-gen" class="detail-val">0</span>
+      </div>
+      <div class="detail-row" style="margin-top: 4px;">
+        <span class="detail-label" style="align-self: center;">Energy / Metabolism</span>
+        <div style="width: 140px;">
+          <div class="health-bar-container">
+            <div id="detail-health" class="health-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.3;">
+      Connections color represents weight: <span style="color: var(--cyan); font-weight:600;">Cyan (Positive)</span> / <span style="color: var(--magenta); font-weight:600;">Magenta (Negative)</span>. Glow intensity indicates live node firing. Click any prey boid to lock focus.
+    </p>
+  </div>
+
+  <script>
+    // ==========================================
+    // NEURAL NETWORK IMPLEMENTATION
+    // ==========================================
+    class NeuralNetwork {
+      constructor(inputSize, hiddenSize, outputSize, weights1 = null, weights2 = null) {
+        this.inputSize = inputSize;
+        this.hiddenSize = hiddenSize;
+        this.outputSize = outputSize;
+
+        // Layer 1 weights (Input -> Hidden)
+        if (weights1) {
+          this.w1 = weights1.map(row => [...row]);
+        } else {
+          this.w1 = [];
+          for (let i = 0; i < hiddenSize; i++) {
+            let row = [];
+            for (let j = 0; j < inputSize; j++) {
+              row.push(Math.random() * 2 - 1);
+            }
+            this.w1.push(row);
+          }
+        }
+
+        // Layer 2 weights (Hidden -> Output)
+        if (weights2) {
+          this.w2 = weights2.map(row => [...row]);
+        } else {
+          this.w2 = [];
+          for (let i = 0; i < outputSize; i++) {
+            let row = [];
+            for (let j = 0; j < hiddenSize; j++) {
+              row.push(Math.random() * 2 - 1);
+            }
+            this.w2.push(row);
+          }
+        }
+
+        this.inputs = new Array(inputSize).fill(0);
+        this.hidden = new Array(hiddenSize).fill(0);
+        this.outputs = new Array(outputSize).fill(0);
+      }
+
+      forward(inputs) {
+        this.inputs = [...inputs];
+
+        // Input to Hidden
+        for (let i = 0; i < this.hiddenSize; i++) {
+          let sum = 0;
+          for (let j = 0; j < this.inputSize; j++) {
+            sum += this.inputs[j] * this.w1[i][j];
+          }
+          this.hidden[i] = Math.tanh(sum); // activation
+        }
+
+        // Hidden to Output
+        for (let i = 0; i < this.outputSize; i++) {
+          let sum = 0;
+          for (let j = 0; j < this.hiddenSize; j++) {
+            sum += this.hidden[j] * this.w2[i][j];
+          }
+          this.outputs[i] = Math.tanh(sum);
+        }
+
+        return this.outputs;
+      }
+
+      mutate(rate) {
+        const mutateVal = (val) => {
+          if (Math.random() < rate) {
+            // 15% chance to completely randomize, 85% to apply a tiny offset
+            return Math.random() < 0.15 ? (Math.random() * 2 - 1) : val + (Math.random() * 0.4 - 0.2);
+          }
+          return val;
+        };
+
+        const w1Mutated = this.w1.map(row => row.map(mutateVal));
+        const w2Mutated = this.w2.map(row => row.map(mutateVal));
+        return new NeuralNetwork(this.inputSize, this.hiddenSize, this.outputSize, w1Mutated, w2Mutated);
+      }
+    }
+
+    // ==========================================
+    // PREY AGENT CLASS
+    // ==========================================
+    class Agent {
+      constructor(x, y, parentBrain = null, gen = 1) {
+        this.x = x;
+        this.y = y;
+        this.angle = Math.random() * Math.PI * 2;
+        this.speed = 1.5;
+        this.maxSpeed = 3.5;
+        this.r = 6;
+        this.health = 100;
+        this.age = 0;
+        this.fitness = 0; // counts food eaten
+        this.gen = gen;
+        this.id = Math.floor(1000 + Math.random() * 9000);
+        this.color = `hsl(${200 + Math.random() * 40}, 100%, 65%)`; // beautiful cyan-blue range
+        this.trail = [];
+        this.maxTrail = 12;
+
+        // inputs:
+        // 0: dx closest food
+        // 1: dy closest food
+        // 2: proximity closest food
+        // 3: dx closest predator
+        // 4: dy closest predator
+        // 5: proximity closest predator
+        // 6: heading X
+        // 7: heading Y
+        this.brain = parentBrain ? parentBrain : new NeuralNetwork(8, 5, 2);
+      }
+
+      update(width, height, foods, predators) {
+        this.age++;
+        this.health -= 0.12; // slow energy decay
+
+        let closestFood = null;
+        let minFoodDist = Infinity;
+        for (let f of foods) {
+          let dx = f.x - this.x;
+          let dy = f.y - this.y;
+          let dist = Math.hypot(dx, dy);
+          if (dist < minFoodDist) {
+            minFoodDist = dist;
+            closestFood = { dx: dx / dist, dy: dy / dist, dist: dist };
+          }
+        }
+
+        let closestPredator = null;
+        let minPredDist = Infinity;
+        for (let p of predators) {
+          let dx = p.x - this.x;
+          let dy = p.y - this.y;
+          let dist = Math.hypot(dx, dy);
+          if (dist < minPredDist) {
+            minPredDist = dist;
+            closestPredator = { dx: dx / dist, dy: dy / dist, dist: dist };
+          }
+        }
+
+        // Store references for drawing sensory lines later
+        this.closestFoodRef = closestFood;
+        this.closestPredatorRef = closestPredator;
+
+        const inputs = [
+          closestFood ? closestFood.dx : 0,
+          closestFood ? closestFood.dy : 0,
+          closestFood ? 1 / (1 + closestFood.dist / 150) : 0,
+          closestPredator ? closestPredator.dx : 0,
+          closestPredator ? closestPredator.dy : 0,
+          closestPredator ? 1 / (1 + closestPredator.dist / 150) : 0,
+          Math.cos(this.angle),
+          Math.sin(this.angle)
+        ];
+
+        const outputs = this.brain.forward(inputs);
+
+        // Output mappings
+        let steeringForce = outputs[0] * 0.14; // max turning rate per tick
+        let speedFactor = (outputs[1] + 1) / 2; // map from [-1, 1] to [0, 1]
+
+        this.angle += steeringForce;
+        this.speed = 0.5 + speedFactor * (this.maxSpeed - 0.5);
+
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+
+        // Toroidal screen wrapping
+        if (this.x < 0) this.x += width;
+        if (this.x > width) this.x -= width;
+        if (this.y < 0) this.y += height;
+        if (this.y > height) this.y -= height;
+
+        // Update trail
+        this.trail.push({ x: this.x, y: this.y });
+        if (this.trail.length > this.maxTrail) {
+          this.trail.shift();
+        }
+      }
+
+      draw(ctx, isSelected, showTrails) {
+        if (showTrails && this.trail.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(this.trail[0].x, this.trail[0].y);
+          for (let i = 1; i < this.trail.length; i++) {
+            ctx.lineTo(this.trail[i].x, this.trail[i].y);
+          }
+          ctx.strokeStyle = this.color;
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.15;
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
+        }
+
+        // Draw glowing triangle body
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Highlight selection
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(0, 0, 15, 0, Math.PI * 2);
+          ctx.strokeStyle = varColor('--cyan');
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(8, 0);
+        ctx.lineTo(-6, -5);
+        ctx.lineTo(-3, 0);
+        ctx.lineTo(-6, 5);
+        ctx.closePath();
+
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = isSelected ? 12 : 4;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // ==========================================
+    // PREDATOR AGENT CLASS
+    // ==========================================
+    class Predator {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.angle = Math.random() * Math.PI * 2;
+        this.speed = 1.8;
+        this.maxSpeed = 2.4;
+        this.r = 10;
+        this.trail = [];
+        this.maxTrail = 10;
+        this.color = '#ff0055';
+      }
+
+      update(width, height, agents, aggressive) {
+        let target = null;
+        let minDist = Infinity;
+
+        if (aggressive) {
+          for (let a of agents) {
+            let dx = a.x - this.x;
+            let dy = a.y - this.y;
+            let dist = Math.hypot(dx, dy);
+            if (dist < minDist) {
+              minDist = dist;
+              target = a;
+            }
+          }
+        }
+
+        if (target) {
+          let targetAngle = Math.atan2(target.y - this.y, target.x - this.x);
+          let diff = targetAngle - this.angle;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          // smooth chase steering
+          this.angle += diff * 0.08;
+          this.speed = this.maxSpeed;
+        } else {
+          // Wander randomly if idle
+          this.angle += (Math.random() - 0.5) * 0.15;
+          this.speed = 1.2;
+        }
+
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+
+        // Wrap around borders
+        if (this.x < 0) this.x += width;
+        if (this.x > width) this.x -= width;
+        if (this.y < 0) this.y += height;
+        if (this.y > height) this.y -= height;
+
+        // Update trail
+        this.trail.push({ x: this.x, y: this.y });
+        if (this.trail.length > this.maxTrail) {
+          this.trail.shift();
+        }
+      }
+
+      draw(ctx, showTrails) {
+        if (showTrails && this.trail.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(this.trail[0].x, this.trail[0].y);
+          for (let i = 1; i < this.trail.length; i++) {
+            ctx.lineTo(this.trail[i].x, this.trail[i].y);
+          }
+          ctx.strokeStyle = this.color;
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.12;
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
+        }
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Spike circle
+        ctx.beginPath();
+        let numSpikes = 8;
+        let outerR = 9;
+        let innerR = 6;
+        for (let i = 0; i < numSpikes * 2; i++) {
+          let r = i % 2 === 0 ? outerR : innerR;
+          let a = (Math.PI * 2 / (numSpikes * 2)) * i;
+          ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        ctx.closePath();
+
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    // ==========================================
+    // ECOSYSTEM SIMULATION ENGINE
+    // ==========================================
+    class Simulation {
+      constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.agents = [];
+        this.predators = [];
+        this.foods = [];
+        this.generation = 1;
+        this.deaths = 0;
+        this.maxFitness = 0;
+        this.init();
+      }
+
+      init() {
+        this.agents = [];
+        this.predators = [];
+        this.foods = [];
+
+        // Spawn initial prey population
+        for (let i = 0; i < 28; i++) {
+          this.agents.push(new Agent(
+            Math.random() * this.width,
+            Math.random() * this.height
+          ));
+        }
+
+        // Spawn predators
+        for (let i = 0; i < 4; i++) {
+          this.predators.push(new Predator(
+            Math.random() * this.width,
+            Math.random() * this.height
+          ));
+        }
+
+        // Spawn food
+        for (let i = 0; i < 45; i++) {
+          this.spawnFood();
+        }
+      }
+
+      spawnFood() {
+        this.foods.push({
+          x: Math.random() * this.width,
+          y: Math.random() * this.height
+        });
+      }
+
+      step(mutationRate, speedFactor, aggressivePredators) {
+        // Run steps relative to speed slider
+        const steps = Math.floor(speedFactor);
+        const fraction = speedFactor - steps;
+
+        for (let s = 0; s < steps; s++) {
+          this.singleStep(mutationRate, aggressivePredators);
+        }
+        if (Math.random() < fraction) {
+          this.singleStep(mutationRate, aggressivePredators);
+        }
+      }
+
+      singleStep(mutationRate, aggressivePredators) {
+        // Update predators
+        for (let p of this.predators) {
+          p.update(this.width, this.height, this.agents, aggressivePredators);
+        }
+
+        // Update agents
+        for (let i = this.agents.length - 1; i >= 0; i--) {
+          let a = this.agents[i];
+          a.update(this.width, this.height, this.foods, this.predators);
+
+          // Check collisions with food
+          for (let j = this.foods.length - 1; j >= 0; j--) {
+            let f = this.foods[j];
+            if (Math.hypot(a.x - f.x, a.y - f.y) < a.r + 5) {
+              this.foods.splice(j, 1);
+              a.health = Math.min(a.health + 35, 160);
+              a.fitness++;
+              if (a.fitness > this.maxFitness) {
+                this.maxFitness = a.fitness;
+              }
+              this.spawnFood();
+            }
+          }
+
+          // Check if eaten by predators
+          let isDead = false;
+          for (let p of this.predators) {
+            if (Math.hypot(a.x - p.x, a.y - p.y) < a.r + p.r - 2) {
+              isDead = true;
+              break;
+            }
+          }
+
+          // Check starvation/health
+          if (a.health <= 0) {
+            isDead = true;
+          }
+
+          if (isDead) {
+            this.agents.splice(i, 1);
+            this.deaths++;
+            continue;
+          }
+
+          // Check reproduction (Asexual division if highly energetic)
+          if (a.health >= 140) {
+            a.health = 75; // Parent drops in energy
+            let childBrain = a.brain.mutate(mutationRate);
+            let child = new Agent(
+              a.x + (Math.random() - 0.5) * 15,
+              a.y + (Math.random() - 0.5) * 15,
+              childBrain,
+              a.gen + 1
+            );
+            // Inherit approximate color with subtle hue mutation
+            let h = parseInt(a.color.match(/\d+/)[0]);
+            child.color = `hsl(${h + (Math.random() - 0.5) * 20}, 100%, 65%)`;
+
+            this.agents.push(child);
+            if (child.gen > this.generation) {
+              this.generation = child.gen;
+            }
+          }
+        }
+
+        // Maintain minimum prey population (forces evolution step forward)
+        while (this.agents.length < 10) {
+          // Find the current best brain to clone with high mutation
+          let bestBrain = null;
+          if (this.agents.length > 0) {
+            let bestAgent = this.agents.reduce((prev, curr) => (prev.fitness > curr.fitness) ? prev : curr);
+            bestBrain = bestAgent.brain;
+          }
+
+          this.agents.push(new Agent(
+            Math.random() * this.width,
+            Math.random() * this.height,
+            bestBrain ? bestBrain.mutate(0.4) : null,
+            1
+          ));
+        }
+      }
+    }
+
+    // Helper to extract CSS variable colors
+    function varColor(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    // ==========================================
+    // APP INITIALIZATION & USER INPUT
+    // ==========================================
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const brainCanvas = document.getElementById('brain-canvas');
+    const brainCtx = brainCanvas.getContext('2d');
+
+    let sim = null;
+    let selectedAgent = null;
+
+    // Control parameters
+    let speedFactor = 1.0;
+    let mutationRate = 0.15;
+    let showSensors = true;
+    let showTrails = true;
+    let predatorAggressiveness = true;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      if (sim) {
+        sim.width = canvas.width;
+        sim.height = canvas.height;
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Start Simulation
+    sim = new Simulation(canvas.width, canvas.height);
+
+    // Mouse click selects nearest agent
+    canvas.addEventListener('mousedown', (e) => {
+      let rect = canvas.getBoundingClientRect();
+      let clickX = e.clientX - rect.left;
+      let clickY = e.clientY - rect.top;
+
+      let nearest = null;
+      let minDist = 30; // click tolerance in px
+
+      for (let a of sim.agents) {
+        let dist = Math.hypot(a.x - clickX, a.y - clickY);
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = a;
+        }
+      }
+
+      if (nearest) {
+        selectedAgent = nearest;
+      }
+    });
+
+    // Wire HTML UI Inputs
+    document.getElementById('slider-speed').addEventListener('input', (e) => {
+      speedFactor = parseFloat(e.target.value);
+      document.getElementById('speed-val').innerText = speedFactor.toFixed(1) + 'x';
+    });
+
+    document.getElementById('slider-mutation').addEventListener('input', (e) => {
+      let percent = parseInt(e.target.value);
+      mutationRate = percent / 100;
+      document.getElementById('mutation-val').innerText = percent + '%';
+    });
+
+    document.getElementById('toggle-sensors').addEventListener('change', (e) => {
+      showSensors = e.target.checked;
+    });
+
+    document.getElementById('toggle-trails').addEventListener('change', (e) => {
+      showTrails = e.target.checked;
+    });
+
+    document.getElementById('toggle-pred-chase').addEventListener('change', (e) => {
+      predatorAggressiveness = e.target.checked;
+    });
+
+    document.getElementById('btn-spawn-agents').addEventListener('click', () => {
+      for (let i = 0; i < 5; i++) {
+        sim.agents.push(new Agent(
+          Math.random() * sim.width,
+          Math.random() * sim.height
+        ));
+      }
+    });
+
+    document.getElementById('btn-spawn-predator').addEventListener('click', () => {
+      sim.predators.push(new Predator(
+        Math.random() * sim.width,
+        Math.random() * sim.height
+      ));
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      sim.init();
+      selectedAgent = null;
+    });
+
+    document.getElementById('btn-clear-predators').addEventListener('click', () => {
+      sim.predators = [];
+    });
+
+    // ==========================================
+    // NEURAL VISUALIZATION DRAWER
+    // ==========================================
+    const inputLabels = [
+      'food dx',
+      'food dy',
+      'food prox',
+      'pred dx',
+      'pred dy',
+      'pred prox',
+      'heading x',
+      'heading y'
+    ];
+
+    const outputLabels = [
+      'steer',
+      'throttle'
+    ];
+
+    function drawNeuralNetwork(brain, ctx) {
+      ctx.clearRect(0, 0, brainCanvas.width, brainCanvas.height);
+
+      const width = brainCanvas.width;
+      const height = brainCanvas.height;
+      const marginY = 24;
+      const marginX = 75;
+
+      const layerX = [
+        marginX,
+        width / 2,
+        width - marginX
+      ];
+
+      // Calculate node positions
+      const inputY = [];
+      const hiddenY = [];
+      const outputY = [];
+
+      const inputGap = (height - marginY * 2) / (brain.inputSize - 1);
+      for (let i = 0; i < brain.inputSize; i++) {
+        inputY.push(marginY + i * inputGap);
+      }
+
+      const hiddenGap = (height - marginY * 2) / (brain.hiddenSize - 1);
+      for (let i = 0; i < brain.hiddenSize; i++) {
+        hiddenY.push(marginY + i * hiddenGap);
+      }
+
+      const outputGap = (height - marginY * 2) / (brain.outputSize - 1);
+      for (let i = 0; i < brain.outputSize; i++) {
+        outputY.push(marginY + i * outputGap);
+      }
+
+      // 1. Draw connections (Weights)
+      // Input to Hidden
+      for (let h = 0; h < brain.hiddenSize; h++) {
+        for (let i = 0; i < brain.inputSize; i++) {
+          let w = brain.w1[h][i];
+          ctx.beginPath();
+          ctx.moveTo(layerX[0], inputY[i]);
+          ctx.lineTo(layerX[1], hiddenY[h]);
+          ctx.lineWidth = Math.abs(w) * 2;
+          ctx.strokeStyle = w >= 0 ? '#00f3ff' : '#ff0055';
+          ctx.globalAlpha = Math.max(0.1, Math.abs(w) * 0.4);
+          ctx.stroke();
+        }
+      }
+
+      // Hidden to Output
+      for (let o = 0; o < brain.outputSize; o++) {
+        for (let h = 0; h < brain.hiddenSize; h++) {
+          let w = brain.w2[o][h];
+          ctx.beginPath();
+          ctx.moveTo(layerX[1], hiddenY[h]);
+          ctx.lineTo(layerX[2], outputY[o]);
+          ctx.lineWidth = Math.abs(w) * 2;
+          ctx.strokeStyle = w >= 0 ? '#00f3ff' : '#ff0055';
+          ctx.globalAlpha = Math.max(0.1, Math.abs(w) * 0.4);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Helper to draw a node
+      const drawNode = (x, y, value, label = null, align = 'center') => {
+        // Value determines glow/brightness
+        let valNorm = (value + 1) / 2; // [0, 1]
+        let nodeColor = `hsl(${200 + valNorm * 100}, 100%, 55%)`;
+
+        ctx.shadowColor = nodeColor;
+        ctx.shadowBlur = Math.abs(value) * 10 + 2;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = nodeColor;
+        ctx.fill();
+
+        ctx.shadowBlur = 0; // reset
+
+        // Draw border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Draw label text
+        if (label) {
+          ctx.fillStyle = '#8080a3';
+          ctx.font = '9px "Share Tech Mono", monospace';
+          ctx.textAlign = align;
+          ctx.textBaseline = 'middle';
+          let offset = align === 'right' ? -14 : 14;
+          ctx.fillText(label.toUpperCase(), x + offset, y);
+        }
+      };
+
+      // 2. Draw nodes
+      // Input layer
+      for (let i = 0; i < brain.inputSize; i++) {
+        drawNode(layerX[0], inputY[i], brain.inputs[i], inputLabels[i], 'right');
+      }
+
+      // Hidden layer
+      for (let h = 0; h < brain.hiddenSize; h++) {
+        drawNode(layerX[1], hiddenY[h], brain.hidden[h]);
+      }
+
+      // Output layer
+      for (let o = 0; o < brain.outputSize; o++) {
+        drawNode(layerX[2], outputY[o], brain.outputs[o], outputLabels[o], 'left');
+      }
+    }
+
+    // ==========================================
+    // LOOP & RENDERING PIPELINE
+    // ==========================================
+    function mainLoop() {
+      // Step simulation
+      sim.step(mutationRate, speedFactor, predatorAggressiveness);
+
+      // Refresh Canvas
+      ctx.fillStyle = '#030208';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw starry / grids background
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.03)';
+      ctx.lineWidth = 1;
+      let gridSize = 60;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Draw food
+      for (let f of sim.foods) {
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#39ff14';
+        ctx.shadowColor = '#39ff14';
+        ctx.shadowBlur = 4;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Auto-focus selected agent if current selection is dead
+      if (selectedAgent && !sim.agents.includes(selectedAgent)) {
+        selectedAgent = null;
+      }
+      if (!selectedAgent && sim.agents.length > 0) {
+        // pick oldest agent
+        selectedAgent = sim.agents.reduce((prev, curr) => (prev.age > curr.age) ? prev : curr);
+      }
+
+      // Draw sensory lines for selected agent
+      if (showSensors && selectedAgent) {
+        if (selectedAgent.closestFoodRef) {
+          ctx.beginPath();
+          ctx.moveTo(selectedAgent.x, selectedAgent.y);
+          // Calculate direct vector (taking wrapping into account is visually confusing, draw straight line to raw coordinate)
+          let fx = selectedAgent.x + selectedAgent.closestFoodRef.dx * selectedAgent.closestFoodRef.dist;
+          let fy = selectedAgent.y + selectedAgent.closestFoodRef.dy * selectedAgent.closestFoodRef.dist;
+          ctx.lineTo(fx, fy);
+          ctx.strokeStyle = 'rgba(57, 255, 20, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([2, 4]);
+          ctx.stroke();
+        }
+        if (selectedAgent.closestPredatorRef) {
+          ctx.beginPath();
+          ctx.moveTo(selectedAgent.x, selectedAgent.y);
+          let px = selectedAgent.x + selectedAgent.closestPredatorRef.dx * selectedAgent.closestPredatorRef.dist;
+          let py = selectedAgent.y + selectedAgent.closestPredatorRef.dy * selectedAgent.closestPredatorRef.dist;
+          ctx.lineTo(px, py);
+          ctx.strokeStyle = 'rgba(255, 0, 85, 0.45)';
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([2, 4]);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+
+      // Draw predators
+      for (let p of sim.predators) {
+        p.draw(ctx, showTrails);
+      }
+
+      // Draw prey agents
+      for (let a of sim.agents) {
+        a.draw(ctx, a === selectedAgent, showTrails);
+      }
+
+      // Update Dashboard Stats
+      document.getElementById('stat-count').innerText = sim.agents.length;
+      document.getElementById('stat-gen').innerText = sim.generation;
+      document.getElementById('stat-max-fit').innerText = sim.maxFitness;
+      document.getElementById('stat-deaths').innerText = sim.deaths;
+
+      // Update Biometrics panel
+      if (selectedAgent) {
+        document.getElementById('selected-id').innerText = '#' + selectedAgent.id;
+        document.getElementById('detail-age').innerText = selectedAgent.age;
+        document.getElementById('detail-fitness').innerText = selectedAgent.fitness;
+        document.getElementById('detail-gen').innerText = selectedAgent.gen;
+        document.getElementById('detail-health').style.width = Math.min(100, Math.max(0, selectedAgent.health)) + '%';
+
+        // Render neural activation map
+        drawNeuralNetwork(selectedAgent.brain, brainCtx);
+      } else {
+        document.getElementById('selected-id').innerText = '#NONE';
+        document.getElementById('detail-age').innerText = '0';
+        document.getElementById('detail-fitness').innerText = '0';
+        document.getElementById('detail-gen').innerText = '0';
+        document.getElementById('detail-health').style.width = '0%';
+        brainCtx.clearRect(0, 0, brainCanvas.width, brainCanvas.height);
+      }
+
+      requestAnimationFrame(mainLoop);
+    }
+
+    // Start rendering frame pipeline
+    mainLoop();
+  </script>
+</body>
+</html>
