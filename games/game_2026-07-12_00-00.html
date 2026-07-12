@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether Flow: Neon Fluid & Vector Sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #040308;
+      --panel-bg: rgba(8, 6, 16, 0.75);
+      --panel-border: rgba(0, 243, 255, 0.15);
+      --cyan: #00f3ff;
+      --magenta: #ff0055;
+      --green: #39ff14;
+      --violet: #9d4edf;
+      --amber: #ffbe0b;
+      --text: #e2e2ff;
+      --text-muted: #7f7fa8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      cursor: crosshair;
+    }
+
+    /* Glassmorphism Panel base */
+    .glass-panel {
+      position: absolute;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 15px 0 rgba(0, 243, 255, 0.03);
+      z-index: 10;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7), 0 0 20px 0 rgba(0, 243, 255, 0.08);
+    }
+
+    /* Left Control Dashboard */
+    #dashboard {
+      top: 20px;
+      left: 20px;
+      width: 350px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--panel-border) transparent;
+    }
+
+    #dashboard::-webkit-scrollbar {
+      width: 4px;
+    }
+    #dashboard::-webkit-scrollbar-thumb {
+      background: var(--panel-border);
+      border-radius: 4px;
+    }
+
+    /* Top Stats Panel */
+    #stats-panel {
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      display: flex;
+      gap: 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .stat-val {
+      color: var(--cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+    }
+
+    /* Instructions Overlay */
+    #instructions {
+      bottom: 20px;
+      left: 390px;
+      right: 20px;
+      padding: 14px 24px;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .instruction-tag {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--cyan);
+      margin-right: 6px;
+    }
+
+    /* Headers */
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+      padding-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--violet);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 16px;
+    }
+
+    .panel-section:last-child {
+      border: none;
+      padding-bottom: 0;
+    }
+
+    /* Interactive Brush Tools Grid */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .tool-btn.active {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    }
+
+    .tool-icon {
+      font-size: 1.1rem;
+    }
+
+    /* Slider styling */
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .slider-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      margin: 8px 0;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--cyan);
+      transition: transform 0.1s ease;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Button styles */
+    .action-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn.primary {
+      background: linear-gradient(135deg, var(--violet), var(--magenta));
+      border: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    .action-btn.primary:hover {
+      box-shadow: 0 0 12px rgba(157, 78, 223, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    /* Preset list */
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preset-btn:hover {
+      background: rgba(157, 78, 223, 0.1);
+      border-color: rgba(157, 78, 223, 0.3);
+      padding-left: 16px;
+    }
+
+    .preset-btn span.tag {
+      font-size: 0.7rem;
+      color: var(--magenta);
+      background: rgba(255, 0, 85, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 0, 85, 0.2);
+    }
+
+    /* Color Palette Select */
+    .palette-container {
+      display: flex;
+      gap: 8px;
+    }
+
+    .palette-btn {
+      flex: 1;
+      height: 32px;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .palette-btn span {
+      flex: 1;
+      height: 100%;
+    }
+
+    .palette-btn.active {
+      border-color: #fff;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+      transform: scale(1.05);
+    }
+
+    /* Toggle Switches */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-muted);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: rgba(0, 243, 255, 0.2);
+      border-color: var(--cyan);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+      background-color: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="canvas"></canvas>
+
+  <!-- Left Dashboard -->
+  <div id="dashboard" class="glass-panel">
+    <h1>Aether Flow <span style="font-size: 0.8rem; color: var(--text-muted);">v1.2</span></h1>
+
+    <!-- Brush tools -->
+    <div class="panel-section">
+      <h2><span class="tool-icon">🛠️</span> Canvas Brush Tool</h2>
+      <div class="tools-grid">
+        <button class="tool-btn active" data-tool="emitter">
+          <span class="tool-icon" style="color: var(--green);">✨</span>
+          <span>Emitter</span>
+        </button>
+        <button class="tool-btn" data-tool="attractor">
+          <span class="tool-icon" style="color: var(--cyan);">🧲</span>
+          <span>Attractor</span>
+        </button>
+        <button class="tool-btn" data-tool="repeller">
+          <span class="tool-icon" style="color: var(--magenta);">💥</span>
+          <span>Repeller</span>
+        </button>
+        <button class="tool-btn" data-tool="vortex">
+          <span class="tool-icon" style="color: var(--violet);">🌀</span>
+          <span>Vortex</span>
+        </button>
+        <button class="tool-btn" data-tool="obstacle">
+          <span class="tool-icon" style="color: var(--amber);">🛑</span>
+          <span>Obstacle</span>
+        </button>
+        <button class="tool-btn" data-tool="eraser">
+          <span class="tool-icon" style="color: #ff3333;">❌</span>
+          <span>Eraser</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sliders -->
+    <div class="panel-section">
+      <h2><span>🎚️</span> Particle Settings</h2>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Particle Limit</span>
+          <span class="slider-val" id="limit-val">20000</span>
+        </div>
+        <input type="range" id="particle-limit" min="1000" max="40000" step="1000" value="20000">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Trail Length</span>
+          <span class="slider-val" id="trail-val">0.90</span>
+        </div>
+        <input type="range" id="trail-length" min="0.5" max="0.99" step="0.01" value="0.90">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Base Speed</span>
+          <span class="slider-val" id="speed-val">2.5</span>
+        </div>
+        <input type="range" id="particle-speed" min="0.5" max="8.0" step="0.1" value="2.5">
+      </div>
+    </div>
+
+    <!-- Physics & Noise -->
+    <div class="panel-section">
+      <h2><span>🌊</span> Aether Wind (Noise)</h2>
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Turbulence Scale</span>
+          <span class="slider-val" id="scale-val">2.5</span>
+        </div>
+        <input type="range" id="noise-scale" min="0.5" max="10.0" step="0.1" value="2.5">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Wind Strength</span>
+          <span class="slider-val" id="strength-val">1.2</span>
+        </div>
+        <input type="range" id="noise-strength" min="0.0" max="5.0" step="0.1" value="1.2">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Friction (Drag)</span>
+          <span class="slider-val" id="friction-val">0.02</span>
+        </div>
+        <input type="range" id="friction" min="0.0" max="0.1" step="0.005" value="0.02">
+      </div>
+    </div>
+
+    <!-- Visual rendering options -->
+    <div class="panel-section">
+      <h2><span>🎨</span> Visuals</h2>
+      <div class="slider-group">
+        <div class="slider-label" style="margin-bottom: 6px;">
+          <span>Color Palette</span>
+        </div>
+        <div class="palette-container">
+          <button class="palette-btn active" data-palette="cyberpunk" title="Cyberpunk">
+            <span style="background: #00f3ff;"></span>
+            <span style="background: #ff0055;"></span>
+            <span style="background: #9d4edf;"></span>
+          </button>
+          <button class="palette-btn" data-palette="aurora" title="Aurora">
+            <span style="background: #39ff14;"></span>
+            <span style="background: #00f3ff;"></span>
+            <span style="background: #0d2b45;"></span>
+          </button>
+          <button class="palette-btn" data-palette="inferno" title="Inferno">
+            <span style="background: #ffbe0b;"></span>
+            <span style="background: #ff0055;"></span>
+            <span style="background: #3d000f;"></span>
+          </button>
+          <button class="palette-btn" data-palette="electric" title="Electric Ocean">
+            <span style="background: #00f3ff;"></span>
+            <span style="background: #3a0ca3;"></span>
+            <span style="background: #03001e;"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="toggle-row" style="margin-top: 8px;">
+        <span>Show Flow Grid</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-grid">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <span>Glow Shader</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle-glow" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="panel-section">
+      <h2><span>🌀</span> Presets</h2>
+      <div class="preset-list">
+        <button class="preset-btn" data-preset="whirlpool">
+          <span>Galactic Whirlpool</span>
+          <span class="tag">Vortex</span>
+        </button>
+        <button class="preset-btn" data-preset="chaos">
+          <span>Turbulent Aurora</span>
+          <span class="tag">Noise</span>
+        </button>
+        <button class="preset-btn" data-preset="dipole">
+          <span>Magnetic Fields</span>
+          <span class="tag">Dipole</span>
+        </button>
+        <button class="preset-btn" data-preset="obstacles">
+          <span>River Flow</span>
+          <span class="tag">Physics</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- General Actions -->
+    <div class="panel-section">
+      <div class="btn-row">
+        <button class="action-btn" id="pause-btn">Pause</button>
+        <button class="action-btn" id="clear-particles">Clear Particles</button>
+      </div>
+      <button class="action-btn primary" id="reset-btn" style="width: 100%;">Reset Environment</button>
+    </div>
+  </div>
+
+  <!-- Top Right Stats -->
+  <div id="stats-panel" class="glass-panel">
+    <div>FPS: <span class="stat-val" id="fps-val">60</span></div>
+    <div>Particles: <span class="stat-val" id="particles-val">0</span></div>
+    <div>Fields: <span class="stat-val" id="fields-val">0</span></div>
+  </div>
+
+  <!-- Bottom Instructions -->
+  <div id="instructions" class="glass-panel">
+    <div><span class="instruction-tag">Left Click</span> Place/Interact with Field Objects</div>
+    <div><span class="instruction-tag">Drag</span> Move placed objects around</div>
+    <div><span class="instruction-tag">Spacebar</span> Pause simulation</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    // Simulation parameters
+    let isPaused = false;
+    let showGrid = false;
+    let useGlow = true;
+    let particleLimit = 20000;
+    let trailLength = 0.90;
+    let baseSpeed = 2.5;
+    let noiseScale = 2.5;
+    let noiseStrength = 1.2;
+    let friction = 0.02;
+    let activePalette = 'cyberpunk';
+    let currentTool = 'emitter';
+
+    let particles = [];
+    let tools = []; // attractors, repellers, vortexes, obstacles, emitters
+    let selectedTool = null;
+    let isDragging = false;
+    let time = 0;
+
+    // Palettes
+    const palettes = {
+      cyberpunk: {
+        bg: '#05040a',
+        colors: ['#00f3ff', '#ff0055', '#9d4edf', '#3a0ca3', '#150030'],
+        weights: [0.4, 0.3, 0.2, 0.08, 0.02]
+      },
+      aurora: {
+        bg: '#020608',
+        colors: ['#39ff14', '#00f3ff', '#10b981', '#065f46', '#021e17'],
+        weights: [0.35, 0.35, 0.15, 0.1, 0.05]
+      },
+      inferno: {
+        bg: '#080202',
+        colors: ['#ffbe0b', '#ff0055', '#fb5607', '#3d000f', '#1a0003'],
+        weights: [0.4, 0.3, 0.2, 0.08, 0.02]
+      },
+      electric: {
+        bg: '#010006',
+        colors: ['#00f3ff', '#0077b6', '#3a0ca3', '#03001e', '#00000a'],
+        weights: [0.4, 0.3, 0.2, 0.08, 0.02]
+      }
+    };
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    });
+
+    // Helper functions for pseudo-random noise field
+    function getFieldVector(x, y, t) {
+      const scaleX = x * 0.002 * noiseScale;
+      const scaleY = y * 0.002 * noiseScale;
+      
+      // Multi-octave turbulence
+      let angle = 0;
+      let amp = 1;
+      let freq = 1;
+      for (let i = 0; i < 3; i++) {
+        angle += Math.sin(scaleX * freq + t * 0.05) * Math.cos(scaleY * freq - t * 0.03) * amp;
+        amp *= 0.55;
+        freq *= 1.95;
+      }
+      // Wrap angle and convert to unit vector
+      angle *= Math.PI * 2;
+      return { x: Math.cos(angle), y: Math.sin(angle) };
+    }
+
+    // Particle class
+    class Particle {
+      constructor(x, y, isEmitterSpawned = false) {
+        this.x = x || Math.random() * width;
+        this.y = y || Math.random() * height;
+        this.px = this.x;
+        this.py = this.y;
+        this.vx = 0;
+        this.vy = 0;
+        this.speedLimit = baseSpeed * (2 + Math.random() * 2);
+        this.age = 0;
+        this.life = isEmitterSpawned ? 100 + Math.random() * 200 : Infinity;
+        this.colorIndex = this.getWeightedColor();
+        this.isEmitterSpawned = isEmitterSpawned;
+      }
+
+      getWeightedColor() {
+        const r = Math.random();
+        let cumulative = 0;
+        const weights = palettes[activePalette].weights;
+        for (let i = 0; i < weights.length; i++) {
+          cumulative += weights[i];
+          if (r <= cumulative) return i;
+        }
+        return 0;
+      }
+
+      update() {
+        this.px = this.x;
+        this.py = this.y;
+        this.age++;
+
+        // 1. Get base flow vector
+        let flow = getFieldVector(this.x, this.y, time);
+        let ax = flow.x * noiseStrength;
+        let ay = flow.y * noiseStrength;
+
+        // 2. Add forces from tools
+        for (let i = 0; i < tools.length; i++) {
+          const tool = tools[i];
+          const dx = tool.x - this.x;
+          const dy = tool.y - this.y;
+          const distSq = dx * dx + dy * dy;
+          const dist = Math.sqrt(distSq);
+
+          if (dist < 1) continue;
+
+          if (tool.type === 'attractor') {
+            const force = tool.strength * 45 / (distSq + 2000);
+            ax += (dx / dist) * force;
+            ay += (dy / dist) * force;
+          } 
+          else if (tool.type === 'repeller') {
+            const force = tool.strength * 45 / (distSq + 2000);
+            ax -= (dx / dist) * force;
+            ay -= (dy / dist) * force;
+          } 
+          else if (tool.type === 'vortex') {
+            const force = tool.strength * 45 / (distSq + 2000);
+            // Perpendicular vector
+            ax += (-dy / dist) * force;
+            ay += (dx / dist) * force;
+          } 
+          else if (tool.type === 'obstacle') {
+            if (dist < tool.radius) {
+              // Collide and slide/bounce
+              const pushX = (dx / dist);
+              const pushY = (dy / dist);
+              this.x = tool.x - pushX * (tool.radius + 1);
+              this.y = tool.y - pushY * (tool.radius + 1);
+              
+              // Reflect velocity vector
+              const dot = this.vx * pushX + this.vy * pushY;
+              this.vx = (this.vx - 2 * dot * pushX) * 0.4;
+              this.vy = (this.vy - 2 * dot * pushY) * 0.4;
+            }
+          }
+        }
+
+        // Apply acceleration
+        this.vx += ax;
+        this.vy += ay;
+
+        // Apply friction
+        this.vx *= (1 - friction);
+        this.vy *= (1 - friction);
+
+        // Limit speed
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        const currentLimit = this.speedLimit * (baseSpeed / 2.5);
+        if (speed > currentLimit) {
+          this.vx = (this.vx / speed) * currentLimit;
+          this.vy = (this.vy / speed) * currentLimit;
+        }
+
+        // Update position
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Wrap or respawn rules
+        if (this.isEmitterSpawned) {
+          if (this.age > this.life || this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
+            return false; // mark for deletion
+          }
+        } else {
+          if (this.x < 0) { this.x = width; this.px = width; }
+          else if (this.x > width) { this.x = 0; this.px = 0; }
+          if (this.y < 0) { this.y = height; this.py = height; }
+          else if (this.y > height) { this.y = 0; this.py = 0; }
+        }
+
+        return true;
+      }
+
+      draw() {
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        const palette = palettes[activePalette];
+        
+        // Dynamically select color based on speed/age
+        let col = palette.colors[this.colorIndex];
+        
+        // Dynamic speed overlay for fast particles (fade to first bright color)
+        if (speed > baseSpeed * 1.5) {
+          col = palette.colors[0]; // Primary bright color
+        }
+
+        ctx.strokeStyle = col;
+        ctx.lineWidth = speed > baseSpeed * 1.8 ? 1.6 : 1.0;
+        ctx.beginPath();
+        ctx.moveTo(this.px, this.py);
+        ctx.lineTo(this.x, this.y);
+        ctx.stroke();
+      }
+    }
+
+    // Tool class
+    class FieldTool {
+      constructor(type, x, y) {
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.radius = type === 'obstacle' ? 50 : 35;
+        this.strength = 1.0;
+        this.emitAngle = 0;
+      }
+
+      update() {
+        if (this.type === 'emitter') {
+          this.emitAngle += 0.05;
+          // Spawn particles
+          const spawnCount = Math.min(4, Math.floor((particleLimit - particles.length) / 5) + 1);
+          for (let i = 0; i < spawnCount; i++) {
+            if (particles.length < particleLimit) {
+              const angle = this.emitAngle + (i * Math.PI * 2 / spawnCount) + (Math.random() * 0.2 - 0.1);
+              const p = new Particle(this.x, this.y, true);
+              const spawnSpeed = 1.5 + Math.random() * 2;
+              p.vx = Math.cos(angle) * spawnSpeed;
+              p.vy = Math.sin(angle) * spawnSpeed;
+              particles.push(p);
+            }
+          }
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.shadowBlur = 10;
+        
+        // Distinct color based on type
+        let color = '#ffffff';
+        if (this.type === 'attractor') color = varStyle('--cyan');
+        else if (this.type === 'repeller') color = varStyle('--magenta');
+        else if (this.type === 'vortex') color = varStyle('--violet');
+        else if (this.type === 'obstacle') color = varStyle('--amber');
+        else if (this.type === 'emitter') color = varStyle('--green');
+
+        ctx.strokeStyle = color;
+        ctx.shadowColor = color;
+        ctx.lineWidth = 2;
+
+        // Draw tool representation
+        ctx.beginPath();
+        if (this.type === 'obstacle') {
+          // Draw solid ring
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 190, 11, 0.08)';
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          // Dashed orbit ring
+          ctx.setLineDash([4, 4]);
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          // Draw center core
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+
+          // Action decorators
+          ctx.beginPath();
+          if (this.type === 'attractor') {
+            // Draw inward points
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+              const rx1 = this.x + Math.cos(angle) * (this.radius - 2);
+              const ry1 = this.y + Math.sin(angle) * (this.radius - 2);
+              const rx2 = this.x + Math.cos(angle) * (this.radius - 8);
+              const ry2 = this.y + Math.sin(angle) * (this.radius - 8);
+              ctx.moveTo(rx1, ry1);
+              ctx.lineTo(rx2, ry2);
+            }
+            ctx.stroke();
+          } else if (this.type === 'repeller') {
+            // Draw outward triangles
+            for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+              const rx1 = this.x + Math.cos(angle) * (this.radius - 8);
+              const ry1 = this.y + Math.sin(angle) * (this.radius - 8);
+              const rx2 = this.x + Math.cos(angle) * (this.radius - 2);
+              const ry2 = this.y + Math.sin(angle) * (this.radius - 2);
+              ctx.moveTo(rx1, ry1);
+              ctx.lineTo(rx2, ry2);
+            }
+            ctx.stroke();
+          } else if (this.type === 'vortex') {
+            // Swirling curved marks
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius - 8, time * 0.02, time * 0.02 + Math.PI / 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius - 8, time * 0.02 + Math.PI, time * 0.02 + 1.5 * Math.PI);
+            ctx.stroke();
+          } else if (this.type === 'emitter') {
+            // Spinning arrows/lines
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x + Math.cos(this.emitAngle) * this.radius, this.y + Math.sin(this.emitAngle) * this.radius);
+            ctx.stroke();
+          }
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function varStyle(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    // Initialize random background particles
+    function initParticles() {
+      particles = [];
+      const count = Math.min(particleLimit, 15000);
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    // Render flow field direction lines
+    function drawFlowGrid() {
+      ctx.save();
+      const gridSpacing = 40;
+      ctx.lineWidth = 0.8;
+      
+      const palette = palettes[activePalette];
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+
+      for (let x = gridSpacing / 2; x < width; x += gridSpacing) {
+        for (let y = gridSpacing / 2; y < height; y += gridSpacing) {
+          const flow = getFieldVector(x, y, time);
+          
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + flow.x * 12, y + flow.y * 12);
+          ctx.stroke();
+
+          // Tiny flow arrowheads
+          ctx.fillStyle = 'rgba(0, 243, 255, 0.25)';
+          ctx.beginPath();
+          ctx.arc(x + flow.x * 12, y + flow.y * 12, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Simulation presets
+    const presets = {
+      whirlpool: () => {
+        tools = [];
+        particles = [];
+        // Center huge vortex
+        const v = new FieldTool('vortex', width / 2, height / 2);
+        v.radius = 120;
+        v.strength = 2.5;
+        tools.push(v);
+        
+        // Emitters surrounding it
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+          const ex = width / 2 + Math.cos(a) * 300;
+          const ey = height / 2 + Math.sin(a) * 300;
+          const em = new FieldTool('emitter', ex, ey);
+          em.radius = 25;
+          tools.push(em);
+        }
+
+        // Adjust settings
+        friction = 0.01;
+        baseSpeed = 4.0;
+        noiseStrength = 0.4;
+        noiseScale = 1.0;
+        activePalette = 'cyberpunk';
+        syncSliders();
+      },
+      chaos: () => {
+        tools = [];
+        particles = [];
+        // Pure high turbulence wind
+        friction = 0.005;
+        baseSpeed = 5.0;
+        noiseStrength = 2.8;
+        noiseScale = 4.5;
+        activePalette = 'aurora';
+        
+        // Place a central attractor to bunch chaos
+        const att = new FieldTool('attractor', width / 2, height / 2);
+        att.strength = 1.8;
+        att.radius = 60;
+        tools.push(att);
+
+        initParticles();
+        syncSliders();
+      },
+      dipole: () => {
+        tools = [];
+        particles = [];
+        // Magnet simulation (Positive attractor, Negative repeller)
+        const att = new FieldTool('attractor', width / 2 - 180, height / 2);
+        att.radius = 50;
+        att.strength = 2.5;
+        
+        const rep = new FieldTool('repeller', width / 2 + 180, height / 2);
+        rep.radius = 50;
+        rep.strength = 2.5;
+
+        tools.push(att);
+        tools.push(rep);
+
+        // Add side emitters
+        tools.push(new FieldTool('emitter', width / 2, height / 2 - 200));
+        tools.push(new FieldTool('emitter', width / 2, height / 2 + 200));
+
+        friction = 0.02;
+        baseSpeed = 3.0;
+        noiseStrength = 0.2;
+        noiseScale = 1.0;
+        activePalette = 'inferno';
+        syncSliders();
+      },
+      obstacles: () => {
+        tools = [];
+        particles = [];
+        // River flowing around rocks
+        noiseStrength = 0.5;
+        noiseScale = 1.0;
+        friction = 0.015;
+        baseSpeed = 4.5;
+        activePalette = 'electric';
+
+        // Giant river emitters on left
+        const e1 = new FieldTool('emitter', 40, height / 2 - 200);
+        const e2 = new FieldTool('emitter', 40, height / 2);
+        const e3 = new FieldTool('emitter', 40, height / 2 + 200);
+        e1.radius = e2.radius = e3.radius = 40;
+        tools.push(e1, e2, e3);
+
+        // Obstacles placed as barriers
+        const o1 = new FieldTool('obstacle', width / 2 - 100, height / 2 - 120);
+        const o2 = new FieldTool('obstacle', width / 2 + 100, height / 2 + 120);
+        const o3 = new FieldTool('obstacle', width / 2, height / 2);
+        o1.radius = 60;
+        o2.radius = 60;
+        o3.radius = 80;
+
+        tools.push(o1, o2, o3);
+        syncSliders();
+      }
+    };
+
+    function syncSliders() {
+      document.getElementById('particle-limit').value = particleLimit;
+      document.getElementById('limit-val').innerText = particleLimit;
+
+      document.getElementById('trail-length').value = trailLength;
+      document.getElementById('trail-val').innerText = trailLength.toFixed(2);
+
+      document.getElementById('particle-speed').value = baseSpeed;
+      document.getElementById('speed-val').innerText = baseSpeed.toFixed(1);
+
+      document.getElementById('noise-scale').value = noiseScale;
+      document.getElementById('scale-val').innerText = noiseScale.toFixed(1);
+
+      document.getElementById('noise-strength').value = noiseStrength;
+      document.getElementById('strength-val').innerText = noiseStrength.toFixed(1);
+
+      document.getElementById('friction').value = friction;
+      document.getElementById('friction-val').innerText = friction.toFixed(3);
+
+      document.querySelectorAll('.palette-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.palette === activePalette);
+      });
+    }
+
+    // UI Input event listeners
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        const el = e.currentTarget;
+        el.classList.add('active');
+        currentTool = el.dataset.tool;
+      });
+    });
+
+    document.getElementById('particle-limit').addEventListener('input', (e) => {
+      particleLimit = parseInt(e.target.value);
+      document.getElementById('limit-val').innerText = particleLimit;
+    });
+
+    document.getElementById('trail-length').addEventListener('input', (e) => {
+      trailLength = parseFloat(e.target.value);
+      document.getElementById('trail-val').innerText = trailLength.toFixed(2);
+    });
+
+    document.getElementById('particle-speed').addEventListener('input', (e) => {
+      baseSpeed = parseFloat(e.target.value);
+      document.getElementById('speed-val').innerText = baseSpeed.toFixed(1);
+    });
+
+    document.getElementById('noise-scale').addEventListener('input', (e) => {
+      noiseScale = parseFloat(e.target.value);
+      document.getElementById('scale-val').innerText = noiseScale.toFixed(1);
+    });
+
+    document.getElementById('noise-strength').addEventListener('input', (e) => {
+      noiseStrength = parseFloat(e.target.value);
+      document.getElementById('strength-val').innerText = noiseStrength.toFixed(1);
+    });
+
+    document.getElementById('friction').addEventListener('input', (e) => {
+      friction = parseFloat(e.target.value);
+      document.getElementById('friction-val').innerText = friction.toFixed(3);
+    });
+
+    document.querySelectorAll('.palette-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        activePalette = e.currentTarget.dataset.palette;
+      });
+    });
+
+    document.getElementById('toggle-grid').addEventListener('change', (e) => {
+      showGrid = e.target.checked;
+    });
+
+    document.getElementById('toggle-glow').addEventListener('change', (e) => {
+      useGlow = e.target.checked;
+    });
+
+    document.getElementById('pause-btn').addEventListener('click', togglePause);
+    
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById('pause-btn').innerText = isPaused ? 'Resume' : 'Pause';
+      document.getElementById('pause-btn').classList.toggle('primary', isPaused);
+    }
+
+    document.getElementById('clear-particles').addEventListener('click', () => {
+      particles = [];
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      tools = [];
+      initParticles();
+      noiseScale = 2.5;
+      noiseStrength = 1.2;
+      baseSpeed = 2.5;
+      trailLength = 0.90;
+      friction = 0.02;
+      activePalette = 'cyberpunk';
+      syncSliders();
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const p = e.currentTarget.dataset.preset;
+        if (presets[p]) presets[p]();
+      });
+    });
+
+    // Spacebar to pause
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      }
+    });
+
+    // Interaction handlers
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pos = getMousePos(e);
+
+      // Check if clicked close to an existing tool
+      let clickedToolIndex = -1;
+      for (let i = 0; i < tools.length; i++) {
+        const dx = tools[i].x - pos.x;
+        const dy = tools[i].y - pos.y;
+        if (dx * dx + dy * dy < tools[i].radius * tools[i].radius) {
+          clickedToolIndex = i;
+          break;
+        }
+      }
+
+      if (clickedToolIndex !== -1) {
+        if (currentTool === 'eraser') {
+          // Delete tool
+          tools.splice(clickedToolIndex, 1);
+        } else {
+          // Select tool for dragging
+          selectedTool = tools[clickedToolIndex];
+          isDragging = true;
+        }
+      } else {
+        // Place new tool
+        if (currentTool !== 'eraser') {
+          const newTool = new FieldTool(currentTool, pos.x, pos.y);
+          tools.push(newTool);
+          selectedTool = newTool;
+          isDragging = true;
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging && selectedTool) {
+        const pos = getMousePos(e);
+        selectedTool.x = pos.x;
+        selectedTool.y = pos.y;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      selectedTool = null;
+    });
+
+    // Main render loop
+    let lastTime = 0;
+    let fps = 60;
+    let fpsUpdateTimer = 0;
+
+    function animate(currentTime) {
+      requestAnimationFrame(animate);
+
+      if (lastTime) {
+        const dt = currentTime - lastTime;
+        fps = Math.round(1000 / dt);
+      }
+      lastTime = currentTime;
+
+      // Stats updater
+      fpsUpdateTimer++;
+      if (fpsUpdateTimer % 15 === 0) {
+        document.getElementById('fps-val').innerText = fps;
+        document.getElementById('particles-val').innerText = particles.length;
+        document.getElementById('fields-val').innerText = tools.length;
+      }
+
+      if (isPaused) return;
+
+      time += 0.5;
+
+      // 1. Semi-clear canvas to draw trails
+      ctx.fillStyle = palettes[activePalette].bg;
+      ctx.globalAlpha = 1 - trailLength;
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalAlpha = 1.0;
+
+      // Draw background flow vectors
+      if (showGrid) {
+        drawFlowGrid();
+      }
+
+      // Glow visual adjustments
+      if (useGlow) {
+        ctx.globalCompositeOperation = 'lighter';
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      // Update tools (emitters)
+      for (let i = 0; i < tools.length; i++) {
+        tools[i].update();
+      }
+
+      // Update and draw particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        const alive = p.update();
+        if (!alive) {
+          particles.splice(i, 1);
+        } else {
+          p.draw();
+        }
+      }
+
+      // Set blend mode back to normal to draw UI indicators
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Render tool locations
+      for (let i = 0; i < tools.length; i++) {
+        tools[i].draw();
+      }
+    }
+
+    // Boot execution
+    initParticles();
+    requestAnimationFrame(animate);
+
+  </script>
+</body>
+</html>
