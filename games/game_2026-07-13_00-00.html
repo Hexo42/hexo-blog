@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graviton: Spacetime Warp & Lensing Sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #030207;
+      --panel-bg: rgba(6, 4, 12, 0.78);
+      --panel-border: rgba(0, 243, 255, 0.15);
+      --cyan: #00f3ff;
+      --magenta: #ff0055;
+      --green: #39ff14;
+      --violet: #9d4edf;
+      --amber: #ffbe0b;
+      --white: #ffffff;
+      --text: #e5e5ff;
+      --text-muted: #7d7d9f;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      cursor: crosshair;
+    }
+
+    /* Glassmorphic panels */
+    .glass-panel {
+      position: absolute;
+      background: var(--panel-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7), 0 0 20px 0 rgba(0, 243, 255, 0.02);
+      z-index: 10;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.25);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), 0 0 25px 0 rgba(0, 243, 255, 0.05);
+    }
+
+    /* Control Panel (Left side) */
+    #dashboard {
+      top: 20px;
+      left: 20px;
+      width: 360px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--panel-border) transparent;
+    }
+
+    #dashboard::-webkit-scrollbar {
+      width: 4px;
+    }
+    #dashboard::-webkit-scrollbar-thumb {
+      background: var(--panel-border);
+      border-radius: 4px;
+    }
+
+    /* Stats Panel (Top right) */
+    #stats-panel {
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      display: flex;
+      gap: 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .stat-val {
+      color: var(--cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.4);
+    }
+
+    /* Interactive Instruction Bar */
+    #instruction-bar {
+      bottom: 20px;
+      left: 400px;
+      right: 20px;
+      padding: 14px 24px;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .key-tag {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--cyan);
+      margin-right: 6px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    /* Audio initialize overlay */
+    #audio-splash {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 2, 7, 0.9);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      transition: opacity 0.5s ease;
+    }
+
+    .splash-btn {
+      background: linear-gradient(135deg, var(--magenta), var(--violet));
+      border: none;
+      color: white;
+      padding: 16px 40px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 0 30px rgba(255, 0, 85, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .splash-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 40px rgba(255, 0, 85, 0.6), 0 0 15px rgba(157, 78, 223, 0.4);
+    }
+
+    /* Headings */
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+      border-bottom: 1px solid rgba(0, 243, 255, 0.15);
+      padding-bottom: 12px;
+      margin-bottom: 4px;
+    }
+
+    h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--violet);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 18px;
+    }
+
+    .panel-section:last-child {
+      border: none;
+      padding-bottom: 0;
+    }
+
+    /* Controls styling */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-val {
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.08);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Buttons */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .tool-btn.active {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.15), 0 0 8px rgba(0, 243, 255, 0.1);
+    }
+
+    .icon-marker {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .marker-schwarzschild { background-color: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+    .marker-kerr { background-color: var(--magenta); box-shadow: 0 0 6px var(--magenta); }
+    .marker-wormhole { background-color: var(--violet); box-shadow: 0 0 6px var(--violet); }
+    .marker-whitehole { background-color: var(--amber); box-shadow: 0 0 6px var(--amber); }
+    .marker-star { background-color: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* Custom Selection Styling */
+    select {
+      background: rgba(15, 12, 28, 0.85);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-family: 'Outfit', sans-serif;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    /* Switch Toggles */
+    .switch-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .switch-group label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 22px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-muted);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: rgba(0, 243, 255, 0.15);
+      border-color: var(--cyan);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+      background-color: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Audio Splash overlay to meet browsers' user-interaction requirements -->
+  <div id="audio-splash">
+    <h1 style="font-size: 2.5rem; text-align: center; margin-bottom: 5px;">GRAVITON</h1>
+    <p style="color: var(--text-muted); text-align: center; max-width: 500px; margin-bottom: 25px; line-height: 1.5;">
+      Welcome to the Gravitational Lensing & Spacetime warping sandbox.
+      Turn on audio to listen to event horizons collapsing and portal transitions.
+    </p>
+    <button class="splash-btn" id="start-btn">Initialize Core</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <!-- Left Control Dashboard -->
+  <div id="dashboard" class="glass-panel">
+    <h1>GRAVITON</h1>
+    <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: -15px;">SPACETIME WARP & LENSING SIMULATOR</p>
+
+    <!-- Celestial Objects Brush -->
+    <div class="panel-section">
+      <h2><span style="color: var(--magenta);">●</span> Celestial Brush</h2>
+      <div class="btn-grid">
+        <button class="tool-btn active" data-tool="schwarzschild">
+          <span class="icon-marker marker-schwarzschild"></span>
+          <span>Schwarzschild BH</span>
+        </button>
+        <button class="tool-btn" data-tool="kerr">
+          <span class="icon-marker marker-kerr"></span>
+          <span>Kerr BH (Spin)</span>
+        </button>
+        <button class="tool-btn" data-tool="wormhole">
+          <span class="icon-marker marker-wormhole"></span>
+          <span>Wormhole Portal</span>
+        </button>
+        <button class="tool-btn" data-tool="whitehole">
+          <span class="icon-marker marker-whitehole"></span>
+          <span>White Hole</span>
+        </button>
+        <button class="tool-btn" data-tool="neutron">
+          <span class="icon-marker marker-star"></span>
+          <span>Neutron Star</span>
+        </button>
+        <button class="tool-btn" data-tool="laser">
+          <span style="color: red; font-weight: bold;">⊕</span>
+          <span>Laser Emitter</span>
+        </button>
+        <button class="tool-btn" data-tool="move" style="grid-column: span 2;">
+          <span>✥ Drag / Modify Objects</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Emitter & Laser Controls -->
+    <div class="panel-section">
+      <h2><span style="color: var(--cyan);">●</span> Photon Emitter</h2>
+      <div class="control-group">
+        <div class="control-label">
+          <span>Laser Mode</span>
+        </div>
+        <select id="emitter-mode">
+          <option value="parallel">Parallel Beam Grid (Lensing)</option>
+          <option value="radial">Omnidirectional Pulsar</option>
+          <option value="cone">Targeted Laser Cone</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Laser Density</span>
+          <span class="control-val" id="density-val">150</span>
+        </div>
+        <input type="range" id="density-slider" min="10" max="600" value="150">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Cone Angle / Width</span>
+          <span class="control-val" id="angle-val">45°</span>
+        </div>
+        <input type="range" id="angle-slider" min="5" max="180" value="45">
+      </div>
+    </div>
+
+    <!-- Physics Constants -->
+    <div class="panel-section">
+      <h2><span style="color: var(--green);">●</span> Gravitational Field</h2>
+      <div class="control-group">
+        <div class="control-label">
+          <span>Gravity constant (G)</span>
+          <span class="control-val" id="g-val">2.5</span>
+        </div>
+        <input type="range" id="g-slider" min="0.1" max="10" step="0.1" value="2.5">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Speed of Light (c)</span>
+          <span class="control-val" id="c-val">5.0</span>
+        </div>
+        <input type="range" id="c-slider" min="2" max="12" step="0.2" value="5.0">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Selected Mass Weight</span>
+          <span class="control-val" id="mass-val">500</span>
+        </div>
+        <input type="range" id="mass-slider" min="50" max="2500" step="50" value="500">
+      </div>
+    </div>
+
+    <!-- Rendering Toggles -->
+    <div class="panel-section">
+      <h2><span style="color: var(--amber);">●</span> Visuals & Audio</h2>
+      <div class="switch-group">
+        <label>Deform Spacetime Grid</label>
+        <label class="switch">
+          <input type="checkbox" id="grid-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <label>Show Accretion Disks</label>
+        <label class="switch">
+          <input type="checkbox" id="disk-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <label>Quantum Tail Trails</label>
+        <label class="switch">
+          <input type="checkbox" id="tail-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <label>Lensing Heatmap</label>
+        <label class="switch">
+          <input type="checkbox" id="heatmap-toggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <label>Cosmic Audio Synthesizer</label>
+        <label class="switch">
+          <input type="checkbox" id="audio-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="panel-section">
+      <h2><span style="color: var(--white);">●</span> Presets</h2>
+      <select id="preset-select">
+        <option value="custom">-- Select System Preset --</option>
+        <option value="einstein">Einstein Ring (Lensing Deflection)</option>
+        <option value="binary">Binary Kerr Black Holes Merger</option>
+        <option value="wormhole-gate">Wormhole Gate Portal Bridge</option>
+        <option value="ergosphere">Ergosphere Frame-Dragging sling</option>
+        <option value="star-cluster">Cosmic Chaos (Multi-body Field)</option>
+      </select>
+      <button class="tool-btn" id="clear-btn" style="background: rgba(255,0,85,0.06); border-color: rgba(255,0,85,0.25); color: var(--magenta);">
+        ☢ Vaporize All Objects
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Panel -->
+  <div id="stats-panel" class="glass-panel">
+    <div>FPS: <span class="stat-val" id="fps-counter">60</span></div>
+    <div>PHOTONS: <span class="stat-val" id="photon-counter">0</span></div>
+    <div>WARP DEPTH: <span class="stat-val" id="warp-counter">0%</span></div>
+  </div>
+
+  <!-- Instructions Bar -->
+  <div id="instruction-bar" class="glass-panel">
+    <div>
+      <span class="key-tag">Left Click</span> Place brush / Fire laser beam
+    </div>
+    <div>
+      <span class="key-tag">Double Click</span> Vaporize individual mass
+    </div>
+    <div>
+      <span class="key-tag">Drag</span> Reposition celestial objects in real-time
+    </div>
+  </div>
+
+  <script>
+    // --- COSMIC SYNTHESIZER ENGINE (Web Audio API) ---
+    class CosmicSynth {
+      constructor() {
+        this.ctx = null;
+        this.masterVolume = null;
+        this.ambientOsc = null;
+        this.ambientLfo = null;
+        this.neutronOsc = null;
+        this.enabled = true;
+        this.initialized = false;
+      }
+
+      init() {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContextClass();
+          
+          this.masterVolume = this.ctx.createGain();
+          this.masterVolume.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          this.masterVolume.connect(this.ctx.destination);
+
+          // Deep cosmic background hum
+          this.ambientOsc = this.ctx.createOscillator();
+          this.ambientOsc.type = 'sawtooth';
+          this.ambientOsc.frequency.setValueAtTime(55, this.ctx.currentTime); // Low A
+
+          // Low pass filter to make it a deep rumble
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(120, this.ctx.currentTime);
+          filter.Q.setValueAtTime(4, this.ctx.currentTime);
+
+          // LFO to modulate filter cutoff
+          this.ambientLfo = this.ctx.createOscillator();
+          this.ambientLfo.frequency.setValueAtTime(0.15, this.ctx.currentTime); // Very slow
+          const lfoGain = this.ctx.createGain();
+          lfoGain.gain.setValueAtTime(30, this.ctx.currentTime);
+
+          this.ambientLfo.connect(lfoGain);
+          lfoGain.connect(filter.frequency);
+          
+          this.ambientOsc.connect(filter);
+          filter.connect(this.masterVolume);
+
+          this.ambientOsc.start();
+          this.ambientLfo.start();
+
+          this.initialized = true;
+        } catch(e) {
+          console.warn("Failed to initialize Web Audio API:", e);
+        }
+      }
+
+      toggle(state) {
+        this.enabled = state;
+        if (!this.initialized) return;
+        if (state) {
+          this.masterVolume.gain.setTargetAtTime(0.08, this.ctx.currentTime, 0.3);
+        } else {
+          this.masterVolume.gain.setTargetAtTime(0.0, this.ctx.currentTime, 0.3);
+        }
+      }
+
+      triggerHorizonCapture() {
+        if (!this.initialized || !this.enabled) return;
+        const now = this.ctx.currentTime;
+        
+        // Deep sub bass impact + low pass sweep
+        const osc = this.ctx.createOscillator();
+        const gainNode = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + 0.6);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200, now);
+        filter.frequency.exponentialRampToValueAtTime(40, now + 0.6);
+
+        gainNode.gain.setValueAtTime(0.3, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+        osc.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.masterVolume);
+
+        osc.start();
+        osc.stop(now + 0.7);
+      }
+
+      triggerPortalWarp() {
+        if (!this.initialized || !this.enabled) return;
+        const now = this.ctx.currentTime;
+
+        // Spacey resonant sweep up & down
+        const osc = this.ctx.createOscillator();
+        const gainNode = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        osc.frequency.exponentialRampToValueAtTime(330, now + 0.3);
+
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(500, now);
+        filter.frequency.exponentialRampToValueAtTime(2000, now + 0.15);
+        filter.Q.setValueAtTime(5, now);
+
+        gainNode.gain.setValueAtTime(0.12, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+
+        osc.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.masterVolume);
+
+        osc.start();
+        osc.stop(now + 0.35);
+      }
+
+      triggerCreation(mass) {
+        if (!this.initialized || !this.enabled) return;
+        const now = this.ctx.currentTime;
+        
+        // A nice ambient chime tone based on the mass size
+        const osc = this.ctx.createOscillator();
+        const gainNode = this.ctx.createGain();
+        
+        osc.type = 'sine';
+        // Inverse relationship: heavier mass -> lower frequency chime
+        const baseFreq = 440 * Math.pow(2, -Math.floor(mass / 400));
+        osc.frequency.setValueAtTime(baseFreq, now);
+        
+        gainNode.gain.setValueAtTime(0.15, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+        osc.connect(gainNode);
+        gainNode.connect(this.masterVolume);
+
+        osc.start();
+        osc.stop(now + 0.85);
+      }
+    }
+
+    const synth = new CosmicSynth();
+
+    // Splash click listener
+    document.getElementById('start-btn').addEventListener('click', () => {
+      synth.init();
+      const splash = document.getElementById('audio-splash');
+      splash.style.opacity = '0';
+      setTimeout(() => splash.style.display = 'none', 500);
+    });
+
+    // --- MAIN PHYSICS & RENDER ENGINE ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI elements references
+    const gSlider = document.getElementById('g-slider');
+    const gVal = document.getElementById('g-val');
+    const cSlider = document.getElementById('c-slider');
+    const cVal = document.getElementById('c-val');
+    const massSlider = document.getElementById('mass-slider');
+    const massVal = document.getElementById('mass-val');
+    const densitySlider = document.getElementById('density-slider');
+    const densityVal = document.getElementById('density-val');
+    const angleSlider = document.getElementById('angle-slider');
+    const angleVal = document.getElementById('angle-val');
+    const emitterModeSelect = document.getElementById('emitter-mode');
+    const presetSelect = document.getElementById('preset-select');
+    
+    const gridToggle = document.getElementById('grid-toggle');
+    const diskToggle = document.getElementById('disk-toggle');
+    const tailToggle = document.getElementById('tail-toggle');
+    const heatmapToggle = document.getElementById('heatmap-toggle');
+    const audioToggle = document.getElementById('audio-toggle');
+    const clearBtn = document.getElementById('clear-btn');
+
+    const fpsCounter = document.getElementById('fps-counter');
+    const photonCounter = document.getElementById('photon-counter');
+    const warpCounter = document.getElementById('warp-counter');
+
+    // Canvas resize
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      spacetimeGrid.rebuild();
+    });
+
+    // Physics Engine Settings
+    let G = parseFloat(gSlider.value);
+    let speedOfLight = parseFloat(cSlider.value);
+    let brushMass = parseFloat(massSlider.value);
+    let laserDensity = parseInt(densitySlider.value);
+    let laserConeAngle = parseInt(angleSlider.value) * Math.PI / 180;
+    let activeTool = 'schwarzschild'; // Options: schwarzschild, kerr, wormhole, whitehole, neutron, laser, move
+    
+    // Systems lists
+    let massiveBodies = [];
+    let photons = [];
+    let lasers = [];
+    let accretionParticles = [];
+
+    // Interaction State
+    let selectedBody = null;
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+    let dragTarget = null; // Can be a body or laser
+    let mousePos = { x: width/2, y: height/2 };
+    let isMouseDown = false;
+
+    // Laser Emitter class
+    class LaserEmitter {
+      constructor(x, y, angle) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.size = 14;
+        this.pulsarPhase = 0;
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        // Neon blue/violet emitter device
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#00f3ff';
+        ctx.fillStyle = 'rgba(0, 243, 255, 0.2)';
+        ctx.strokeStyle = '#00f3ff';
+        ctx.lineWidth = 2;
+
+        // Drawer emitter gun shape
+        ctx.beginPath();
+        ctx.moveTo(-15, -8);
+        ctx.lineTo(5, -8);
+        ctx.lineTo(12, 0);
+        ctx.lineTo(5, 8);
+        ctx.lineTo(-15, 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Battery chamber
+        ctx.fillStyle = '#ff0055';
+        ctx.shadowColor = '#ff0055';
+        ctx.beginPath();
+        ctx.arc(-5, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      spawnPhotons() {
+        const mode = emitterModeSelect.value;
+        const count = Math.ceil(laserDensity / 60);
+
+        if (mode === 'radial') {
+          // Circular fire
+          for (let i = 0; i < count * 4; i++) {
+            const a = Math.random() * Math.PI * 2;
+            photons.push(new Photon(
+              this.x + Math.cos(a) * 15,
+              this.y + Math.sin(a) * 15,
+              Math.cos(a) * speedOfLight,
+              Math.sin(a) * speedOfLight
+            ));
+          }
+        } else if (mode === 'cone') {
+          // Cone shoot
+          for (let i = 0; i < count; i++) {
+            const spread = (Math.random() - 0.5) * laserConeAngle;
+            const finalAngle = this.angle + spread;
+            photons.push(new Photon(
+              this.x + Math.cos(finalAngle) * 15,
+              this.y + Math.sin(finalAngle) * 15,
+              Math.cos(finalAngle) * speedOfLight,
+              Math.sin(finalAngle) * speedOfLight
+            ));
+          }
+        } else if (mode === 'parallel') {
+          // Parallel lensing grid
+          const step = 8;
+          const beamWidth = laserDensity / 1.5;
+          const perpAngle = this.angle + Math.PI / 2;
+          
+          for (let offset = -beamWidth/2; offset <= beamWidth/2; offset += step) {
+            const startX = this.x + Math.cos(perpAngle) * offset;
+            const startY = this.y + Math.sin(perpAngle) * offset;
+            photons.push(new Photon(
+              startX,
+              startY,
+              Math.cos(this.angle) * speedOfLight,
+              Math.sin(this.angle) * speedOfLight
+            ));
+          }
+        }
+      }
+    }
+
+    // Photon particle class
+    class Photon {
+      constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.history = [];
+        this.maxHistory = tailToggle.checked ? 18 : 0;
+        this.captured = false;
+        this.warped = false;
+        this.age = 0;
+        this.maxAge = 400; // Auto recycle if lost in deep space
+        this.color = 'cyan';
+      }
+
+      update() {
+        this.age++;
+        if (this.age > this.maxAge) return true;
+
+        if (this.maxHistory > 0) {
+          this.history.push({ x: this.x, y: this.y });
+          if (this.history.length > this.maxHistory) {
+            this.history.shift();
+          }
+        }
+
+        // Apply gravitational acceleration from all bodies
+        let totalAx = 0;
+        let totalAy = 0;
+
+        for (let body of massiveBodies) {
+          const dx = body.x - this.x;
+          const dy = body.y - this.y;
+          const distSq = dx * dx + dy * dy;
+          const dist = Math.sqrt(distSq);
+
+          if (dist < 4) continue; // Inside core singularity
+
+          // Schwarzschild event horizon check
+          if (body.type === 'schwarzschild' || body.type === 'kerr' || body.type === 'neutron') {
+            if (dist < body.eventHorizon) {
+              this.captured = true;
+              synth.triggerHorizonCapture();
+              break;
+            }
+          }
+
+          // Wormhole event portal check
+          if (body.type === 'wormhole') {
+            if (dist < body.radius) {
+              // Find companion portal
+              const exitPortal = massiveBodies.find(b => b.type === 'wormhole' && b !== body);
+              if (exitPortal) {
+                // Warp photon to target portal
+                // Translate position
+                const angleIn = Math.atan2(dy, dx) + Math.PI; // angle relative to portal A center
+                this.x = exitPortal.x + Math.cos(angleIn + exitPortal.spinAngle) * (body.radius + 6);
+                this.y = exitPortal.y + Math.sin(angleIn + exitPortal.spinAngle) * (body.radius + 6);
+
+                // Rotate velocity vector to match exit portal alignment
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                const velAngle = Math.atan2(this.vy, this.vx) + exitPortal.spinAngle;
+                this.vx = Math.cos(velAngle) * speed;
+                this.vy = Math.sin(velAngle) * speed;
+
+                this.history = []; // Clear tails to avoid weird crossing lines
+                synth.triggerPortalWarp();
+                this.warped = true;
+                break;
+              }
+            }
+          }
+
+          // Acceleration calculation
+          // Schwarzschild relativistic bending approximation: double Newtonian lensing
+          let factor = 1.0;
+          if (body.type === 'schwarzschild' || body.type === 'kerr') factor = 2.0; // Einstein deflection multiplier
+
+          let massVal = body.mass;
+          if (body.type === 'whitehole') massVal = -body.mass; // Repulsion
+
+          // Acceleration a = G * M / r^2
+          const force = (G * massVal * factor) / (distSq * dist);
+          totalAx += dx * force;
+          totalAy += dy * force;
+
+          // Kerr Frame Dragging (Ergosphere rotation effect)
+          if (body.type === 'kerr' && dist < body.ergosphereRadius) {
+            // Perpendicular force component drag along rotation direction
+            const spinDirection = body.spin; // 1 or -1
+            const dragForce = (body.mass * G * 1.5 * spinDirection) / (distSq * dist);
+            // Perpendicular vector: (-dy, dx)
+            totalAx += (-dy) * dragForce;
+            totalAy += dx * dragForce;
+          }
+
+          // Neutron Star rotating magnetic pulse jets (Pulsar beams)
+          if (body.type === 'neutron') {
+            // Jet vectors along magnetic poles (orthogonal to spin axis)
+            const poleAngle = body.spinAngle;
+            // Vector pointing to pole
+            const jetX = Math.cos(poleAngle);
+            const jetY = Math.sin(poleAngle);
+            
+            // Dot product to see if photon is close to the beam line
+            const proj = (dx * jetX + dy * jetY);
+            const perpX = dx - proj * jetX;
+            const perpY = dy - proj * jetY;
+            const perpDist = Math.sqrt(perpX * perpX + perpY * perpY);
+            
+            if (perpDist < 30 && Math.abs(proj) < 300) {
+              // Magnetically accelerate/deflect photon outwards
+              const pulseStrength = 8 / (perpDist + 1);
+              totalAx -= dx * pulseStrength * 0.05;
+              totalAy -= dy * pulseStrength * 0.05;
+            }
+          }
+        }
+
+        if (this.captured) return true; // Signal deletion
+
+        // Update positions with velocities and forces
+        this.vx += totalAx;
+        this.vy += totalAy;
+
+        // Enforce speed of light limit to avoid infinite velocity singularities
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > speedOfLight * 1.8) {
+          this.vx = (this.vx / speed) * speedOfLight * 1.8;
+          this.vy = (this.vy / speed) * speedOfLight * 1.8;
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Bounds check
+        if (this.x < -100 || this.x > width + 100 || this.y < -100 || this.y > height + 100) {
+          return true;
+        }
+        return false;
+      }
+
+      draw() {
+        if (this.captured) return;
+
+        // Choose color based on warp state or lensing deflection
+        let hue = 180; // Default cyan
+        if (this.warped) hue = 290; // Violet
+
+        // Draw trail tail
+        if (this.maxHistory > 0 && this.history.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(this.history[0].x, this.history[0].y);
+          for (let i = 1; i < this.history.length; i++) {
+            ctx.lineTo(this.history[i].x, this.history[i].y);
+          }
+          ctx.lineTo(this.x, this.y);
+          ctx.strokeStyle = `hsla(${hue}, 100%, 65%, 0.35)`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // Draw leading photon core
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `hsl(${hue}, 100%, 65%)`;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0; // Reset
+      }
+    }
+
+    // Celestial Bodies representation
+    class CelestialBody {
+      constructor(x, y, type, mass) {
+        this.x = x;
+        this.y = y;
+        this.type = type; // schwarzschild, kerr, wormhole, whitehole, neutron
+        this.mass = mass;
+        
+        // Calculate gravitational parameters
+        this.radius = Math.max(15, Math.min(50, Math.sqrt(mass) * 1.2));
+        this.eventHorizon = this.radius * 0.75;
+        this.ergosphereRadius = this.eventHorizon * 1.6;
+        this.spin = Math.random() > 0.5 ? 1 : -1; // 1 = CW, -1 = CCW rotation
+        this.spinAngle = 0;
+        this.magneticJetPulse = 0;
+      }
+
+      update() {
+        // Kerr frame-dragging rotation
+        if (this.type === 'kerr') {
+          this.spinAngle += 0.04 * this.spin;
+        }
+        // Neutron pulsar rotation
+        if (this.type === 'neutron') {
+          this.spinAngle += 0.025 * this.spin;
+          this.magneticJetPulse = Math.sin(Date.now() * 0.015) * 12;
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        ctx.shadowBlur = 0;
+
+        if (this.type === 'schwarzschild') {
+          // Event Horizon (perfect black sphere)
+          ctx.fillStyle = '#000000';
+          ctx.shadowColor = '#00f3ff';
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.arc(0, 0, this.eventHorizon, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Accretion disk boundary ring
+          ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius * 1.5, 0, Math.PI * 2);
+          ctx.stroke();
+
+        } else if (this.type === 'kerr') {
+          // Ergosphere boundary
+          ctx.fillStyle = 'rgba(255, 0, 85, 0.05)';
+          ctx.strokeStyle = 'rgba(255, 0, 85, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.arc(0, 0, this.ergosphereRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Flattened Kerr event horizon (simulated rotating shape)
+          ctx.fillStyle = '#000000';
+          ctx.shadowColor = '#ff0055';
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.eventHorizon * 1.1, this.eventHorizon * 0.9, this.spinAngle, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+        } else if (this.type === 'whitehole') {
+          // Glow center star repeller
+          ctx.shadowColor = '#ffbe0b';
+          ctx.shadowBlur = 25;
+          
+          const gradient = ctx.createRadialGradient(0, 0, 2, 0, 0, this.radius);
+          gradient.addColorStop(0, '#ffffff');
+          gradient.addColorStop(0.2, '#ffbe0b');
+          gradient.addColorStop(1, 'rgba(255, 190, 11, 0)');
+          
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+        } else if (this.type === 'neutron') {
+          // Highly magnetic dense glowing green neutron core
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = '#39ff14';
+          ctx.shadowBlur = 30;
+          ctx.beginPath();
+          ctx.arc(0, 0, this.eventHorizon, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Pulsar magnetic beams
+          ctx.rotate(this.spinAngle);
+          const gradient = ctx.createLinearGradient(-350, 0, 350, 0);
+          gradient.addColorStop(0, 'rgba(57, 255, 20, 0)');
+          gradient.addColorStop(0.4, 'rgba(57, 255, 20, 0.45)');
+          gradient.addColorStop(0.5, '#ffffff');
+          gradient.addColorStop(0.6, 'rgba(57, 255, 20, 0.45)');
+          gradient.addColorStop(1, 'rgba(57, 255, 20, 0)');
+
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          // Draw cone pulsar beam extending outwards
+          ctx.moveTo(-350, -4 - this.magneticJetPulse/2);
+          ctx.lineTo(350, -8 + this.magneticJetPulse/2);
+          ctx.lineTo(350, 8 - this.magneticJetPulse/2);
+          ctx.lineTo(-350, 4 + this.magneticJetPulse/2);
+          ctx.closePath();
+          ctx.fill();
+
+        } else if (this.type === 'wormhole') {
+          // Glowing violet swirl portal
+          ctx.rotate(this.spinAngle * 0.4);
+          ctx.strokeStyle = '#9d4edf';
+          ctx.shadowColor = '#9d4edf';
+          ctx.shadowBlur = 12;
+          ctx.lineWidth = 3;
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // Draw interior gate portal texture
+          ctx.fillStyle = 'rgba(157, 78, 223, 0.12)';
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius - 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Swirling spikes
+          ctx.strokeStyle = 'rgba(157, 78, 223, 0.6)';
+          ctx.lineWidth = 1.5;
+          for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius - 4, i * Math.PI/2, i * Math.PI/2 + Math.PI/3);
+            ctx.stroke();
+          }
+        }
+
+        ctx.restore();
+      }
+    }
+
+    // Accretion disk orbiting particle class
+    class AccretionParticle {
+      constructor(body, dist, speedFactor) {
+        this.body = body;
+        this.dist = dist;
+        this.angle = Math.random() * Math.PI * 2;
+        
+        // Speed formula based on gravity: v = sqrt(G*M / r)
+        const KeplerSpeed = Math.sqrt(G * body.mass / dist);
+        this.speed = KeplerSpeed * speedFactor;
+        
+        this.x = 0;
+        this.y = 0;
+      }
+
+      update() {
+        // Orbit around body
+        this.angle += (this.speed / this.dist) * this.body.spin;
+        
+        // Newtonian spiraling inward drag
+        this.dist -= 0.06;
+        if (this.dist < this.body.eventHorizon) {
+          // Recycle to outer boundary
+          this.dist = this.body.radius * (1.8 + Math.random() * 2);
+          this.angle = Math.random() * Math.PI * 2;
+        }
+
+        this.x = this.body.x + Math.cos(this.angle) * this.dist;
+        this.y = this.body.y + Math.sin(this.angle) * this.dist;
+      }
+
+      draw() {
+        // Doppler blue/red shifting effect depending on approach vector
+        // Clockwise rotation: particles at the bottom move left (approaching), top move right (receding)
+        // Adjust color based on y position offset relative to central body
+        const yOffset = this.y - this.body.y;
+        
+        let color = 'rgba(255, 0, 85, 0.5)'; // default magenta
+        if (yOffset * this.body.spin > 0) {
+          // Approaching - Doppler blue shifted
+          color = 'rgba(0, 243, 255, 0.65)';
+        } else {
+          // Receding - Doppler red shifted
+          color = 'rgba(255, 0, 85, 0.7)';
+        }
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Dynamic Spacetime Grid representation
+    class SpacetimeGrid {
+      constructor() {
+        this.spacing = 38;
+        this.nodes = [];
+        this.rebuild();
+      }
+
+      rebuild() {
+        this.nodes = [];
+        for (let x = 0; x < width + this.spacing; x += this.spacing) {
+          for (let y = 0; y < height + this.spacing; y += this.spacing) {
+            this.nodes.push({ origX: x, origY: y, x: x, y: y });
+          }
+        }
+      }
+
+      update() {
+        if (!gridToggle.checked) return;
+
+        // Apply spatial warping near massive bodies
+        for (let node of this.nodes) {
+          let warpX = 0;
+          let warpY = 0;
+
+          for (let body of massiveBodies) {
+            const dx = body.x - node.origX;
+            const dy = body.y - node.origY;
+            const distSq = dx * dx + dy * dy;
+            const dist = Math.sqrt(distSq);
+
+            if (dist < 10) continue;
+
+            // Gravity stretching warp equation
+            const pull = Math.min(dist - 5, (body.mass * 1.5) / (dist + 50));
+            warpX += (dx / dist) * pull;
+            warpY += (dy / dist) * pull;
+          }
+
+          node.x = node.origX + warpX;
+          node.y = node.origY + warpY;
+        }
+      }
+
+      draw() {
+        if (!gridToggle.checked) return;
+
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.06)';
+        ctx.lineWidth = 1.0;
+
+        // Drawing custom lines connecting warped grid nodes
+        const cols = Math.ceil(width / this.spacing) + 1;
+        const rows = Math.ceil(height / this.spacing) + 1;
+
+        for (let i = 0; i < cols; i++) {
+          ctx.beginPath();
+          for (let j = 0; j < rows; j++) {
+            const idx = i * rows + j;
+            if (idx >= this.nodes.length) break;
+            const node = this.nodes[idx];
+            if (j === 0) {
+              ctx.moveTo(node.x, node.y);
+            } else {
+              ctx.lineTo(node.x, node.y);
+            }
+          }
+          ctx.stroke();
+        }
+
+        for (let j = 0; j < rows; j++) {
+          ctx.beginPath();
+          for (let i = 0; i < cols; i++) {
+            const idx = i * rows + j;
+            if (idx >= this.nodes.length) break;
+            const node = this.nodes[idx];
+            if (i === 0) {
+              ctx.moveTo(node.x, node.y);
+            } else {
+              ctx.lineTo(node.x, node.y);
+            }
+          }
+          ctx.stroke();
+        }
+      }
+    }
+
+    const spacetimeGrid = new SpacetimeGrid();
+
+    // Populate default accretion disk particles
+    function buildAccretionDisk(body) {
+      if (body.type !== 'schwarzschild' && body.type !== 'kerr') return;
+      
+      const numParticles = 300;
+      for (let i = 0; i < numParticles; i++) {
+        // Orbit radius: between event horizon and 3.5x outer radius
+        const d = body.eventHorizon * (1.1 + Math.random() * 2.5);
+        accretionParticles.push(new AccretionParticle(body, d, 0.8 + Math.random() * 0.4));
+      }
+    }
+
+    // Build default Einstein ring setup
+    function setupEinsteinPreset() {
+      massiveBodies = [];
+      photons = [];
+      accretionParticles = [];
+      lasers = [];
+
+      // Emitter on left firing grid parallel beam rightwards
+      lasers.push(new LaserEmitter(80, height / 2, 0));
+      emitterModeSelect.value = 'parallel';
+      densitySlider.value = 240;
+      densityVal.innerText = '240';
+      
+      // Central massive black hole
+      const centralBh = new CelestialBody(width / 2, height / 2, 'schwarzschild', 1200);
+      massiveBodies.push(centralBh);
+      buildAccretionDisk(centralBh);
+
+      synth.triggerCreation(1200);
+    }
+
+    function setupBinaryPreset() {
+      massiveBodies = [];
+      photons = [];
+      accretionParticles = [];
+      lasers = [];
+
+      lasers.push(new LaserEmitter(100, 100, 0.3));
+      lasers.push(new LaserEmitter(100, height - 100, -0.3));
+      emitterModeSelect.value = 'cone';
+      densitySlider.value = 150;
+      densityVal.innerText = '150';
+
+      const bh1 = new CelestialBody(width/2 - 120, height/2, 'kerr', 700);
+      bh1.spin = 1;
+      const bh2 = new CelestialBody(width/2 + 120, height/2, 'kerr', 700);
+      bh2.spin = -1;
+
+      massiveBodies.push(bh1, bh2);
+      buildAccretionDisk(bh1);
+      buildAccretionDisk(bh2);
+
+      synth.triggerCreation(700);
+      synth.triggerCreation(700);
+    }
+
+    function setupWormholePreset() {
+      massiveBodies = [];
+      photons = [];
+      accretionParticles = [];
+      lasers = [];
+
+      // Two emitters targeting the portals
+      lasers.push(new LaserEmitter(120, height/2 - 120, 0.25));
+      lasers.push(new LaserEmitter(120, height/2 + 120, -0.25));
+      emitterModeSelect.value = 'cone';
+      
+      const portalA = new CelestialBody(width/2 - 150, height/2, 'wormhole', 600);
+      const portalB = new CelestialBody(width/2 + 150, height/2, 'wormhole', 600);
+      
+      // portal B's exit angle rotated 90 deg relative to portal A
+      portalA.spinAngle = 0;
+      portalB.spinAngle = Math.PI / 2;
+
+      massiveBodies.push(portalA, portalB);
+
+      synth.triggerCreation(600);
+    }
+
+    function setupErgospherePreset() {
+      massiveBodies = [];
+      photons = [];
+      accretionParticles = [];
+      lasers = [];
+
+      lasers.push(new LaserEmitter(150, height/2 - 60, 0.05));
+      emitterModeSelect.value = 'parallel';
+      densitySlider.value = 180;
+      densityVal.innerText = '180';
+
+      // Massive spinning black hole right in the way of the beam
+      const spinningBh = new CelestialBody(width/2 + 50, height/2, 'kerr', 1400);
+      spinningBh.spin = 1; // High CW spin drag
+      
+      massiveBodies.push(spinningBh);
+      buildAccretionDisk(spinningBh);
+
+      synth.triggerCreation(1400);
+    }
+
+    function setupChaosPreset() {
+      massiveBodies = [];
+      photons = [];
+      accretionParticles = [];
+      lasers = [];
+
+      // Radial laser pulsar in the center
+      lasers.push(new LaserEmitter(width/2, height/2, 0));
+      emitterModeSelect.value = 'radial';
+      densitySlider.value = 60;
+      densityVal.innerText = '60';
+
+      // Chaos distribution
+      massiveBodies.push(new CelestialBody(width/2 - 220, height/2 - 140, 'whitehole', 500));
+      massiveBodies.push(new CelestialBody(width/2 + 220, height/2 - 140, 'neutron', 800));
+      massiveBodies.push(new CelestialBody(width/2 - 220, height/2 + 140, 'schwarzschild', 900));
+      massiveBodies.push(new CelestialBody(width/2 + 220, height/2 + 140, 'kerr', 800));
+
+      buildAccretionDisk(massiveBodies[2]);
+      buildAccretionDisk(massiveBodies[3]);
+
+      synth.triggerCreation(800);
+    }
+
+    // Default Initialization
+    setupEinsteinPreset();
+
+    // --- INTERACTION EVENT LISTENERS ---
+
+    // Left sidebar buttons brush activation
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        const tool = e.currentTarget.getAttribute('data-tool');
+        activeTool = tool;
+        e.currentTarget.classList.add('active');
+      });
+    });
+
+    // Preset selector listener
+    presetSelect.addEventListener('change', () => {
+      const mode = presetSelect.value;
+      if (mode === 'einstein') setupEinsteinPreset();
+      else if (mode === 'binary') setupBinaryPreset();
+      else if (mode === 'wormhole-gate') setupWormholePreset();
+      else if (mode === 'ergosphere') setupErgospherePreset();
+      else if (mode === 'star-cluster') setupChaosPreset();
+    });
+
+    // Clear Canvas button
+    clearBtn.addEventListener('click', () => {
+      massiveBodies = [];
+      photons = [];
+      accretionParticles = [];
+      lasers = [];
+      presetSelect.value = 'custom';
+    });
+
+    // Gravity, Speed controls updates
+    gSlider.addEventListener('input', () => {
+      G = parseFloat(gSlider.value);
+      gVal.innerText = G;
+    });
+
+    cSlider.addEventListener('input', () => {
+      speedOfLight = parseFloat(cSlider.value);
+      cVal.innerText = speedOfLight.toFixed(1);
+    });
+
+    massSlider.addEventListener('input', () => {
+      brushMass = parseInt(massSlider.value);
+      massVal.innerText = brushMass;
+    });
+
+    densitySlider.addEventListener('input', () => {
+      laserDensity = parseInt(densitySlider.value);
+      densityVal.innerText = laserDensity;
+    });
+
+    angleSlider.addEventListener('input', () => {
+      const deg = parseInt(angleSlider.value);
+      laserConeAngle = deg * Math.PI / 180;
+      angleVal.innerText = deg + '°';
+    });
+
+    audioToggle.addEventListener('change', () => {
+      synth.toggle(audioToggle.checked);
+    });
+
+    // Mouse handlers on canvas
+    canvas.addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      mousePos = { x: clickX, y: clickY };
+
+      // Prevent interacting when using left sidebar panel controls
+      if (clickX < 400 && clickY < height - 20) return;
+
+      if (activeTool === 'move') {
+        // Check if clicked near an object to drag
+        let hit = false;
+        
+        // 1. Check celestial bodies
+        for (let body of massiveBodies) {
+          const dist = Math.hypot(body.x - clickX, body.y - clickY);
+          if (dist < body.radius + 10) {
+            isDragging = true;
+            dragTarget = body;
+            dragOffset.x = body.x - clickX;
+            dragOffset.y = body.y - clickY;
+            hit = true;
+            break;
+          }
+        }
+
+        // 2. Check laser emitters
+        if (!hit) {
+          for (let emitter of lasers) {
+            const dist = Math.hypot(emitter.x - clickX, emitter.y - clickY);
+            if (dist < emitter.size + 10) {
+              isDragging = true;
+              dragTarget = emitter;
+              dragOffset.x = emitter.x - clickX;
+              dragOffset.y = emitter.y - clickY;
+              hit = true;
+              break;
+            }
+          }
+        }
+
+      } else if (activeTool === 'laser') {
+        // Place new emitter facing target direction
+        lasers.push(new LaserEmitter(clickX, clickY, 0));
+        isDragging = true;
+        dragTarget = lasers[lasers.length - 1];
+        dragOffset.x = 0;
+        dragOffset.y = 0;
+
+      } else {
+        // Place massive celestial body
+        const newBody = new CelestialBody(clickX, clickY, activeTool, brushMass);
+        massiveBodies.push(newBody);
+        buildAccretionDisk(newBody);
+        synth.triggerCreation(brushMass);
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+      mousePos = { x: currentX, y: currentY };
+
+      if (isDragging && dragTarget) {
+        if (activeTool === 'laser') {
+          // Adjust rotation angle during placement
+          dragTarget.angle = Math.atan2(currentY - dragTarget.y, currentX - dragTarget.x);
+        } else {
+          // Drag and drop position
+          dragTarget.x = currentX + dragOffset.x;
+          dragTarget.y = currentY + dragOffset.y;
+        }
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isMouseDown = false;
+      isDragging = false;
+      dragTarget = null;
+    });
+
+    // Double click to remove objects
+    canvas.addEventListener('dblclick', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      // 1. Remove celestial bodies
+      for (let i = massiveBodies.length - 1; i >= 0; i--) {
+        const body = massiveBodies[i];
+        const dist = Math.hypot(body.x - clickX, body.y - clickY);
+        if (dist < body.radius + 15) {
+          // Clear associated accretion particles
+          accretionParticles = accretionParticles.filter(p => p.body !== body);
+          massiveBodies.splice(i, 1);
+          synth.triggerHorizonCapture(); // plays a cool gravity collapse bass
+          return;
+        }
+      }
+
+      // 2. Remove emitters
+      for (let i = lasers.length - 1; i >= 0; i--) {
+        const emitter = lasers[i];
+        const dist = Math.hypot(emitter.x - clickX, emitter.y - clickY);
+        if (dist < emitter.size + 15) {
+          lasers.splice(i, 1);
+          synth.triggerHorizonCapture();
+          return;
+        }
+      }
+    });
+
+    // --- GAME LOOP & ANIMATION RENDERING ---
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+
+    function renderLensingHeatmap() {
+      // Draw subtle color gradients representing gravitational potential
+      // Great visual aid for bending logic
+      if (!heatmapToggle.checked) return;
+
+      const resolution = 20; // 20px cell resolution
+      for (let x = 0; x < width; x += resolution) {
+        for (let y = 0; y < height; y += resolution) {
+          let potential = 0;
+          for (let body of massiveBodies) {
+            const dx = body.x - x;
+            const dy = body.y - y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            let massVal = body.mass;
+            if (body.type === 'whitehole') massVal = -body.mass;
+
+            potential += massVal / (dist + 35);
+          }
+
+          if (potential > 0.8) {
+            const alpha = Math.min(0.24, potential * 0.05);
+            ctx.fillStyle = `rgba(157, 78, 223, ${alpha})`;
+            ctx.fillRect(x, y, resolution, resolution);
+          } else if (potential < -0.2) {
+            const alpha = Math.min(0.24, Math.abs(potential) * 0.05);
+            ctx.fillStyle = `rgba(255, 190, 11, ${alpha})`;
+            ctx.fillRect(x, y, resolution, resolution);
+          }
+        }
+      }
+    }
+
+    function animate(currentTime) {
+      // 1. Calculate FPS
+      frameCount++;
+      if (currentTime - lastTime >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        lastTime = currentTime;
+        fpsCounter.innerText = fps;
+      }
+
+      // Background reset
+      ctx.fillStyle = 'rgba(3, 2, 7, 0.22)'; // Trail fade back-buffer
+      ctx.fillRect(0, 0, width, height);
+
+      // Render Gravitational Heatmap
+      renderLensingHeatmap();
+
+      // Update & Draw Spacetime Grid
+      spacetimeGrid.update();
+      spacetimeGrid.draw();
+
+      // Trigger Emitters to generate photons
+      for (let emitter of lasers) {
+        emitter.spawnPhotons();
+        emitter.draw();
+      }
+
+      // Update & Draw Accretion Disks
+      if (diskToggle.checked) {
+        for (let particle of accretionParticles) {
+          particle.update();
+          particle.draw();
+        }
+      }
+
+      // Update Celestial Bodies
+      for (let body of massiveBodies) {
+        body.update();
+        body.draw();
+      }
+
+      // Update & Draw Photons
+      let activeWarpedCount = 0;
+      for (let i = photons.length - 1; i >= 0; i--) {
+        const photon = photons[i];
+        const isRecycled = photon.update();
+        if (isRecycled) {
+          photons.splice(i, 1);
+        } else {
+          photon.draw();
+          if (photon.warped) activeWarpedCount++;
+        }
+      }
+
+      // Update stats counters
+      photonCounter.innerText = photons.length;
+      
+      const totalCapacity = photons.length > 0 ? (activeWarpedCount / photons.length) * 100 : 0;
+      warpCounter.innerText = totalCapacity.toFixed(0) + '%';
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+
+  </script>
+</body>
+</html>
