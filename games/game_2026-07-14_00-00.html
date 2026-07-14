@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cymatics Sandbox: Resonant Chladni Plate Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Modern Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #07050f;
+      --bg-panel: rgba(15, 12, 30, 0.7);
+      --border-glow: rgba(0, 243, 255, 0.2);
+      --cyan: #00f3ff;
+      --magenta: #ff007f;
+      --gold: #ffd700;
+      --green: #39ff14;
+      --text: #e2e1e9;
+      --text-muted: #8c8a9e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #110d29 0%, var(--bg-dark) 100%);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(7, 5, 15, 0.5);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .title-area h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(45deg, var(--cyan), var(--magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+    }
+
+    .title-area p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .nav-back {
+      color: var(--cyan);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 8px 16px;
+      border: 1px solid var(--cyan);
+      border-radius: 30px;
+      transition: all 0.3s ease;
+      background: rgba(0, 243, 255, 0.05);
+    }
+
+    .nav-back:hover {
+      background: var(--cyan);
+      color: #000;
+      box-shadow: 0 0 15px var(--cyan);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      flex-wrap: wrap;
+    }
+
+    /* Left panel: controls */
+    .control-sidebar {
+      width: 400px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(15px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 25px;
+      overflow-y: auto;
+      max-height: calc(100vh - 65px);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 5;
+    }
+
+    /* Right area: canvas container */
+    .viewport-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      min-width: 320px;
+      position: relative;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), 0 0 4px rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #000;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* Section styling */
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--cyan);
+      margin-bottom: 12px;
+      border-left: 3px solid var(--magenta);
+      padding-left: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    /* Sliders styling */
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 15px;
+    }
+
+    .slider-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+
+    .slider-label {
+      color: var(--text-muted);
+    }
+
+    .slider-value {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      font-weight: bold;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Buttons and controls */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    button.primary {
+      background: linear-gradient(45deg, rgba(0, 243, 255, 0.2), rgba(255, 0, 127, 0.2));
+      border-color: var(--cyan);
+    }
+
+    button.primary:hover {
+      background: linear-gradient(45deg, rgba(0, 243, 255, 0.4), rgba(255, 0, 127, 0.4));
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+    }
+
+    .active-toggle {
+      border-color: var(--magenta) !important;
+      color: var(--magenta) !important;
+      background: rgba(255, 0, 127, 0.05) !important;
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+    }
+
+    /* Select element styling */
+    select {
+      width: 100%;
+      background: #0f0c1e;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 6px;
+      outline: none;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+    }
+
+    select:focus {
+      border-color: var(--cyan);
+    }
+
+    /* Presets list */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .preset-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      text-align: center;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .preset-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .preset-card.active {
+      border-color: var(--cyan);
+      background: rgba(0, 243, 255, 0.05);
+      color: var(--cyan);
+    }
+
+    /* Overlay for audio start */
+    .audio-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(7, 5, 15, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+      text-align: center;
+      padding: 30px;
+      transition: opacity 0.5s ease;
+    }
+
+    .audio-overlay-box {
+      background: var(--bg-panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 480px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .audio-overlay-box h2 {
+      font-weight: 800;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      background: linear-gradient(45deg, var(--cyan), var(--magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .audio-overlay-box p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .interactive-guide {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      text-align: left;
+      width: 100%;
+      color: var(--text-muted);
+    }
+
+    .interactive-guide strong {
+      color: var(--text);
+    }
+
+    .start-btn {
+      background: linear-gradient(45deg, var(--cyan), var(--magenta));
+      border: none;
+      color: #000;
+      font-weight: 800;
+      font-size: 1.1rem;
+      padding: 15px 40px;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .start-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 35px rgba(255, 0, 127, 0.6);
+      color: #fff;
+    }
+
+    .hud {
+      margin-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 600px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+      padding-top: 10px;
+    }
+
+    .hud span strong {
+      color: var(--cyan);
+    }
+
+    /* Scrollbar */
+    .control-sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .control-sidebar::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .control-sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    .control-sidebar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+      .control-sidebar {
+        width: 100%;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-area">
+      <h1>Cymatics Sandbox</h1>
+      <p>resonant geometrical chladni plate simulator</p>
+    </div>
+    <a href="../index.html" class="nav-back">&lt;&lt; exit sandbox</a>
+  </header>
+
+  <main>
+    <div class="control-sidebar">
+      
+      <!-- General Playback Control -->
+      <div class="control-group">
+        <div class="section-title">Simulation State</div>
+        <div class="btn-row">
+          <button id="play-pause" class="primary">Pause</button>
+          <button id="strike-btn" style="border-color: var(--magenta); color: var(--magenta);">Strike Plate</button>
+        </div>
+        <div style="margin-top: 10px; display: flex; gap: 8px;">
+          <button id="scatter-btn" style="flex: 1;">Scatter Sand</button>
+          <button id="clear-btn" style="flex: 1;">Clear Plate</button>
+        </div>
+      </div>
+
+      <!-- Resonant Modes n & m -->
+      <div class="control-group">
+        <div class="section-title">Modal Frequencies</div>
+        
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">X-axis Mode (n)</span>
+            <span id="n-val" class="slider-value">6</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="n-slider" min="1" max="20" step="1" value="6">
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Y-axis Mode (m)</span>
+            <span id="m-val" class="slider-value">6</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="m-slider" min="1" max="20" step="1" value="6">
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          <button id="inc-n" style="flex:1; padding: 4px;">+n</button>
+          <button id="dec-n" style="flex:1; padding: 4px;">-n</button>
+          <button id="inc-m" style="flex:1; padding: 4px;">+m</button>
+          <button id="dec-m" style="flex:1; padding: 4px;">-m</button>
+        </div>
+      </div>
+
+      <!-- Symmetry Factors a & b -->
+      <div class="control-group">
+        <div class="section-title">Linear Superposition</div>
+        
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Symmetry Factor A</span>
+            <span id="a-val" class="slider-value">1.00</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="a-slider" min="-1" max="1" step="0.05" value="1">
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Symmetry Factor B</span>
+            <span id="b-val" class="slider-value">1.00</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="b-slider" min="-1" max="1" step="0.05" value="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Physics & Sand Controls -->
+      <div class="control-group">
+        <div class="section-title">Plate Physical properties</div>
+        
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Sand Density (Particles)</span>
+            <span id="density-val" class="slider-value">15,000</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="density-slider" min="1000" max="30000" step="1000" value="15000">
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Vibration Intensity</span>
+            <span id="intensity-val" class="slider-value">1.5</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="intensity-slider" min="0.1" max="5.0" step="0.1" value="1.5">
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <button id="breathe-btn" style="width: 100%;">Toggle Geometric Morphing (LFO)</button>
+        </div>
+      </div>
+
+      <!-- Aesthetic Themes & Rendering -->
+      <div class="control-group">
+        <div class="section-title">Visual Layout</div>
+        
+        <div class="slider-row" style="margin-bottom: 12px;">
+          <span class="slider-label" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Color Spectrum</span>
+          <select id="theme-selector">
+            <option value="cyber">Cyber Neon (Cyan/Magenta)</option>
+            <option value="gold">Golden Solar (Gold/White)</option>
+            <option value="plasma">Deep Space Plasma (Purple/Crimson)</option>
+            <option value="acid">Toxic Spill (Lime Green/Black)</option>
+            <option value="rainbow">Chromatic Rainbow (Wavelength Grid)</option>
+          </select>
+        </div>
+
+        <div class="slider-row">
+          <span class="slider-label" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Rendering Layer</span>
+          <select id="mode-selector">
+            <option value="particles">Sand Particles Only</option>
+            <option value="field">Vibration Field Map</option>
+            <option value="combined">Combined Overlay</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Audio Synthesizer Controls -->
+      <div class="control-group">
+        <div class="section-title">Audio Synthesizer</div>
+        
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label">Synthesizer Volume</span>
+            <span id="volume-val" class="slider-value">25%</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="volume-slider" min="0" max="100" step="5" value="25">
+          </div>
+        </div>
+
+        <div class="slider-row" style="margin-top: 8px;">
+          <span class="slider-label" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Oscillator Waveform</span>
+          <select id="wave-selector">
+            <option value="sine">Pure Sine Wave</option>
+            <option value="triangle">Resonant Triangle (Mild Harmonic)</option>
+            <option value="sawtooth">Bright Sawtooth (Brassy Metal)</option>
+            <option value="square">Brutal Square (Aggressive Synth)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Geometrical Presets -->
+      <div class="control-group">
+        <div class="section-title">Chladni Presets</div>
+        <div class="presets-grid">
+          <div class="preset-card active" data-preset="snowflake">Symmetric Snowflake</div>
+          <div class="preset-card" data-preset="mandala">Gothic Mandala</div>
+          <div class="preset-card" data-preset="ring">Quantum Lattice</div>
+          <div class="preset-card" data-preset="solar">Solar Ripple</div>
+          <div class="preset-card" data-preset="chaos">Asymmetric Wave</div>
+          <div class="preset-card" data-preset="star">Harmonic Shield</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="viewport-container">
+      
+      <!-- Audio activation screen -->
+      <div class="audio-overlay" id="start-overlay">
+        <div class="audio-overlay-box">
+          <h2>resonance lab</h2>
+          <p>welcome to the cymatics sandbox. this simulator runs high-density particle physics and synthesizes pure sound waves to visualize geometry in real-time vibrating plates.</p>
+          
+          <div class="interactive-guide">
+            <p>💡 <strong>interactive mechanics:</strong></p>
+            <p>• <strong>drag mouse</strong> on plate to sprinkle sand.</p>
+            <p>• <strong>right-click / shift-click</strong> to damp the plate at cursor (forces a nodal point to bend lines!).</p>
+            <p>• <strong>strike plate</strong> to trigger sonic impulses.</p>
+          </div>
+
+          <button class="start-btn" id="start-btn">Activate Sandbox</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper" id="canvas-wrapper">
+        <canvas id="plate" width="600" height="600"></canvas>
+      </div>
+
+      <div class="hud">
+        <span>Vibration: <strong id="hud-freq">0.0 Hz</strong></span>
+        <span>Particles: <strong id="hud-particles">0</strong></span>
+        <span>Interactive Mode: <strong id="hud-mode">Scatter</strong></span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // System Constants & State Variables
+    let isRunning = true;
+    let particles = [];
+    let modalN = 6;
+    let modalM = 6;
+    let factorA = 1.0;
+    let factorB = 1.0;
+    let particleCount = 15000;
+    let baseIntensity = 1.5;
+    let currentIntensity = 1.5;
+    let strikeDecay = 1.0;
+    let dampPoint = null;
+    let colorTheme = 'cyber';
+    let renderMode = 'combined';
+    let isMorphing = false;
+    let morphTime = 0;
+
+    // Simulation Grid Optimization Setup
+    const GRID_SIZE = 128;
+    const displacementGrid = new Float32Array(GRID_SIZE * GRID_SIZE);
+    const gradXGrid = new Float32Array(GRID_SIZE * GRID_SIZE);
+    const gradYGrid = new Float32Array(GRID_SIZE * GRID_SIZE);
+
+    // Audio Context Setup
+    let audioCtx = null;
+    let masterGain = null;
+    let oscillator1 = null;
+    let oscillator2 = null;
+    let detuneLFO = null;
+    let filterNode = null;
+    let delayNode = null;
+    let delayGain = null;
+    let targetFrequency = 220;
+    let currentFrequency = 220;
+    let audioActive = false;
+
+    // Presets DB
+    const PRESETS = {
+      snowflake: { n: 6, m: 6, a: 1.0, b: 1.0 },
+      mandala:   { n: 8, m: 4, a: 1.0, b: -1.0 },
+      ring:      { n: 12, m: 12, a: 1.0, b: 0.0 },
+      solar:     { n: 5, m: 2, a: 0.5, b: 1.0 },
+      chaos:     { n: 15, m: 7, a: 1.0, b: -0.7 },
+      star:      { n: 10, m: 3, a: 0.8, b: 0.8 }
+    };
+
+    // DOM Elements
+    const canvas = document.getElementById('plate');
+    const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('canvas-wrapper');
+    const playBtn = document.getElementById('play-pause');
+    const strikeBtn = document.getElementById('strike-btn');
+    const scatterBtn = document.getElementById('scatter-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const breatheBtn = document.getElementById('breathe-btn');
+    
+    const nSlider = document.getElementById('n-slider');
+    const mSlider = document.getElementById('m-slider');
+    const aSlider = document.getElementById('a-slider');
+    const bSlider = document.getElementById('b-slider');
+    const densitySlider = document.getElementById('density-slider');
+    const intensitySlider = document.getElementById('intensity-slider');
+    const volumeSlider = document.getElementById('volume-slider');
+    
+    const nVal = document.getElementById('n-val');
+    const mVal = document.getElementById('m-val');
+    const aVal = document.getElementById('a-val');
+    const bVal = document.getElementById('b-val');
+    const densityVal = document.getElementById('density-val');
+    const intensityVal = document.getElementById('intensity-val');
+    const volumeVal = document.getElementById('volume-val');
+
+    const themeSelector = document.getElementById('theme-selector');
+    const modeSelector = document.getElementById('mode-selector');
+    const waveSelector = document.getElementById('wave-selector');
+    
+    const incNBtn = document.getElementById('inc-n');
+    const decNBtn = document.getElementById('dec-n');
+    const incMBtn = document.getElementById('inc-m');
+    const decMBtn = document.getElementById('dec-m');
+    
+    const hudFreq = document.getElementById('hud-freq');
+    const hudParticles = document.getElementById('hud-particles');
+    const hudMode = document.getElementById('hud-mode');
+    
+    const startOverlay = document.getElementById('start-overlay');
+    const startBtn = document.getElementById('start-btn');
+
+    // Particle Particle definition
+    class Particle {
+      constructor(x, y) {
+        this.x = x !== undefined ? x : Math.random();
+        this.y = y !== undefined ? y : Math.random();
+      }
+
+      reset() {
+        this.x = Math.random();
+        this.y = Math.random();
+      }
+    }
+
+    // Initialize Particles
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle());
+      }
+      hudParticles.innerText = particleCount.toLocaleString();
+    }
+
+    // Mathematical grid reconstruction (Optimized Lookup)
+    function rebuildDisplacementGrid() {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        const ny = (y / (GRID_SIZE - 1) - 0.5) * 2; // [-1, 1]
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const nx = (x / (GRID_SIZE - 1) - 0.5) * 2; // [-1, 1]
+          
+          let amp = factorA * Math.sin(modalN * Math.PI * nx) * Math.sin(modalM * Math.PI * ny) + 
+                    factorB * Math.sin(modalM * Math.PI * nx) * Math.sin(modalN * Math.PI * ny);
+          
+          // Apply local damping if holding mouse down
+          if (dampPoint) {
+            const dnx = (dampPoint.x - 0.5) * 2;
+            const dny = (dampPoint.y - 0.5) * 2;
+            const dist = Math.hypot(nx - dnx, ny - dny);
+            amp *= (1.0 - Math.exp(-dist * 8.0)); // exponential boundary warp
+          }
+          
+          displacementGrid[y * GRID_SIZE + x] = amp;
+        }
+      }
+
+      // Calculate localized mathematical derivative gradients
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const idx = y * GRID_SIZE + x;
+          const amp = Math.abs(displacementGrid[idx]);
+
+          const ampR = x < GRID_SIZE - 1 ? Math.abs(displacementGrid[idx + 1]) : amp;
+          const ampL = x > 0 ? Math.abs(displacementGrid[idx - 1]) : amp;
+          const ampD = y < GRID_SIZE - 1 ? Math.abs(displacementGrid[idx + GRID_SIZE]) : amp;
+          const ampU = y > 0 ? Math.abs(displacementGrid[idx - GRID_SIZE]) : amp;
+
+          gradXGrid[idx] = (ampR - ampL) / 2;
+          gradYGrid[idx] = (ampD - ampU) / 2;
+        }
+      }
+    }
+
+    // Step physics for all sand particles
+    function stepSimulation() {
+      // Handle gradual decay of strike shockwave
+      if (strikeDecay > 1.0) {
+        strikeDecay -= 0.05;
+        if (strikeDecay < 1.0) strikeDecay = 1.0;
+      }
+      currentIntensity = baseIntensity * strikeDecay;
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // Find approximate position in displacement grid
+        const gx = Math.min(GRID_SIZE - 1, Math.max(0, Math.floor(p.x * (GRID_SIZE - 1))));
+        const gy = Math.min(GRID_SIZE - 1, Math.max(0, Math.floor(p.y * (GRID_SIZE - 1))));
+        const idx = gy * GRID_SIZE + gx;
+
+        const amp = displacementGrid[idx];
+        const absAmp = Math.abs(amp);
+        const gxVal = gradXGrid[idx];
+        const gyVal = gradYGrid[idx];
+
+        // Random physical migration
+        const angle = Math.random() * Math.PI * 2;
+        // Bouncing factor proportional to amplitude
+        const kick = absAmp * currentIntensity * 0.018;
+
+        p.x += Math.cos(angle) * kick;
+        p.y += Math.sin(angle) * kick;
+
+        // Gradient descent towards nodal minimums (displacement = 0)
+        const drift = 0.006 * currentIntensity;
+        p.x -= gxVal * drift;
+        p.y -= gyVal * drift;
+
+        // Minor thermal dispersion prevents locking
+        p.x += (Math.random() - 0.5) * 0.0008;
+        p.y += (Math.random() - 0.5) * 0.0008;
+
+        // Enforce boundary physics
+        if (p.x < 0) { p.x = 0; }
+        if (p.x > 1) { p.x = 1; }
+        if (p.y < 0) { p.y = 0; }
+        if (p.y > 1) { p.y = 1; }
+      }
+    }
+
+    // Web Audio Synthesizer Initialization
+    function initAudio() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+        filterNode = audioCtx.createBiquadFilter();
+        filterNode.type = 'lowpass';
+        filterNode.frequency.setValueAtTime(800, audioCtx.currentTime);
+        filterNode.Q.setValueAtTime(1.0, audioCtx.currentTime);
+
+        delayNode = audioCtx.createDelay(1.0);
+        delayNode.delayTime.setValueAtTime(0.25, audioCtx.currentTime);
+        
+        delayGain = audioCtx.createGain();
+        delayGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+        // Core Oscillators
+        oscillator1 = audioCtx.createOscillator();
+        oscillator1.type = waveSelector.value;
+        
+        oscillator2 = audioCtx.createOscillator();
+        oscillator2.type = waveSelector.value;
+        // Detune secondary oscillator for rich beating chorusing
+        oscillator2.detune.setValueAtTime(8, audioCtx.currentTime);
+
+        // Low frequency beating oscillator (detune vibrato)
+        detuneLFO = audioCtx.createOscillator();
+        detuneLFO.frequency.setValueAtTime(3.5, audioCtx.currentTime);
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.setValueAtTime(4, audioCtx.currentTime); // mod amplitude
+
+        // Connections: LFO -> Osc2 Detune
+        detuneLFO.connect(lfoGain);
+        lfoGain.connect(oscillator2.detune);
+
+        // Oscillators -> Filter
+        oscillator1.connect(filterNode);
+        oscillator2.connect(filterNode);
+
+        // Filter -> Master Gain
+        filterNode.connect(masterGain);
+
+        // Delay Loop
+        masterGain.connect(delayNode);
+        delayNode.connect(delayGain);
+        delayGain.connect(delayNode); // feedback
+        delayGain.connect(audioCtx.destination); // direct to out
+
+        masterGain.connect(audioCtx.destination);
+
+        // Start Oscillators
+        oscillator1.start();
+        oscillator2.start();
+        detuneLFO.start();
+
+        updateFrequency();
+        audioActive = true;
+        
+        // Start fading gain in matching UI slider
+        updateVolume();
+      } catch (err) {
+        console.error('Audio initialization failed: ', err);
+      }
+    }
+
+    // Calculate actual physical resonant frequency of square membrane
+    function updateFrequency() {
+      // Formula: freq = scale * sqrt(n^2 + m^2)
+      const baseFreq = 50.0;
+      targetFrequency = baseFreq * Math.hypot(modalN, modalM);
+      hudFreq.innerText = targetFrequency.toFixed(1) + ' Hz';
+    }
+
+    function updateVolume() {
+      if (!audioActive) return;
+      const pct = parseInt(volumeSlider.value) / 100;
+      // Exponential volume curve
+      const targetGain = pct * pct * 0.15;
+      masterGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.1);
+    }
+
+    // Draw background displacement field
+    function drawDisplacementField() {
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      // We draw a low resolution grid and scale it up with canvas smoothing for glowing wave aesthetic
+      const tempCvs = document.createElement('canvas');
+      tempCvs.width = GRID_SIZE;
+      tempCvs.height = GRID_SIZE;
+      const tempCtx = tempCvs.getContext('2d');
+      const imgData = tempCtx.createImageData(GRID_SIZE, GRID_SIZE);
+      const data = imgData.data;
+
+      // Color maps
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const amp = displacementGrid[y * GRID_SIZE + x];
+          const absAmp = Math.abs(amp);
+          const pixelIdx = (y * GRID_SIZE + x) * 4;
+
+          // Theme coloring mapping
+          if (colorTheme === 'cyber') {
+            // Cyan at peak positive, Magenta at peak negative, Dark at nodes
+            if (amp > 0) {
+              data[pixelIdx] = 0;                    // R
+              data[pixelIdx + 1] = Math.floor(amp * 160); // G
+              data[pixelIdx + 2] = Math.floor(amp * 255); // B
+            } else {
+              data[pixelIdx] = Math.floor(absAmp * 255); // R
+              data[pixelIdx + 1] = 0;                    // G
+              data[pixelIdx + 2] = Math.floor(absAmp * 128); // B
+            }
+          } else if (colorTheme === 'gold') {
+            // Gold at peak, Dark at nodes
+            data[pixelIdx] = Math.floor(absAmp * 255);     // R
+            data[pixelIdx + 1] = Math.floor(absAmp * 215); // G
+            data[pixelIdx + 2] = Math.floor(absAmp * 50);  // B
+          } else if (colorTheme === 'plasma') {
+            // Violet-red hot plasma mapping
+            data[pixelIdx] = Math.floor(absAmp * 180 + (amp > 0 ? amp * 75 : 0));
+            data[pixelIdx + 1] = Math.floor(absAmp * 30);
+            data[pixelIdx + 2] = Math.floor(absAmp * 255);
+          } else if (colorTheme === 'acid') {
+            // Neon green-yellow mapping
+            data[pixelIdx] = Math.floor(absAmp * 100);
+            data[pixelIdx + 1] = Math.floor(absAmp * 255);
+            data[pixelIdx + 2] = Math.floor(absAmp * 20);
+          } else {
+            // Rainbow gradient
+            const hue = Math.floor(absAmp * 360);
+            const rgb = hslToRgb(hue / 360, 1.0, absAmp * 0.5);
+            data[pixelIdx] = rgb[0];
+            data[pixelIdx + 1] = rgb[1];
+            data[pixelIdx + 2] = rgb[2];
+          }
+          data[pixelIdx + 3] = Math.floor(absAmp * 75); // transparency alpha
+        }
+      }
+
+      tempCtx.putImageData(imgData, 0, 0);
+      
+      // Draw onto main canvas with bilinear stretching
+      ctx.imageSmoothingEnabled = true;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(tempCvs, 0, 0, w, h);
+    }
+
+    // Convert HSL to RGB utility
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    function hue2rgb(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+
+    // Render sand particles onto the screen
+    function drawParticles() {
+      const w = canvas.width;
+      const h = canvas.height;
+      
+      ctx.globalCompositeOperation = 'screen';
+      
+      let pColor = '#ffffff';
+      if (colorTheme === 'cyber') pColor = 'rgba(0, 243, 255, 0.9)';
+      else if (colorTheme === 'gold') pColor = 'rgba(255, 230, 140, 0.9)';
+      else if (colorTheme === 'plasma') pColor = 'rgba(255, 100, 220, 0.9)';
+      else if (colorTheme === 'acid') pColor = 'rgba(150, 255, 50, 0.9)';
+
+      // We draw particles as small rectangles/pixels for performance
+      ctx.fillStyle = pColor;
+      
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const px = p.x * w;
+        const py = p.y * h;
+
+        if (colorTheme === 'rainbow') {
+          // Rainbow drift hue shifts by location
+          const hue = Math.floor((p.x + p.y) * 180) % 360;
+          ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
+        }
+        
+        ctx.fillRect(px - 1, py - 1, 2, 2);
+      }
+    }
+
+    // Frame Draw loop
+    function drawFrame() {
+      // Clear with slight trailing opacity for beautiful glowing trajectories
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(7, 5, 15, 0.25)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (renderMode === 'field' || renderMode === 'combined') {
+        drawDisplacementField();
+      }
+
+      if (renderMode === 'particles' || renderMode === 'combined') {
+        drawParticles();
+      }
+
+      // Draw local clamp node (damping point) if active
+      if (dampPoint) {
+        ctx.globalCompositeOperation = 'screen';
+        ctx.beginPath();
+        ctx.arc(dampPoint.x * canvas.width, dampPoint.y * canvas.height, 8, 0, Math.PI * 2);
+        ctx.strokeStyle = varColor();
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(dampPoint.x * canvas.width, dampPoint.y * canvas.height, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      }
+    }
+
+    function varColor() {
+      if (colorTheme === 'cyber') return '#ff007f';
+      if (colorTheme === 'gold') return '#ffd700';
+      if (colorTheme === 'plasma') return '#ff007f';
+      if (colorTheme === 'acid') return '#39ff14';
+      return '#00f3ff';
+    }
+
+    // Main animation loop
+    function loop(t) {
+      if (isRunning) {
+        // Geometric morphing LFO updates
+        if (isMorphing) {
+          morphTime += 0.005;
+          // Warp parameters smoothly
+          factorA = Math.sin(morphTime * 1.5);
+          factorB = Math.cos(morphTime * 0.8);
+          
+          aSlider.value = factorA.toFixed(2);
+          bSlider.value = factorB.toFixed(2);
+          aVal.innerText = factorA.toFixed(2);
+          bVal.innerText = factorB.toFixed(2);
+          
+          rebuildDisplacementGrid();
+        }
+
+        // Smooth pitch tracking in synthesizer
+        if (audioActive) {
+          currentFrequency += (targetFrequency - currentFrequency) * 0.15;
+          oscillator1.frequency.setValueAtTime(currentFrequency, audioCtx.currentTime);
+          oscillator2.frequency.setValueAtTime(currentFrequency * 0.995, audioCtx.currentTime); // slightly detuned
+          
+          // Warp filter cutoffs as frequency scales
+          filterNode.frequency.setValueAtTime(Math.min(24000, currentFrequency * 2.8), audioCtx.currentTime);
+        }
+
+        stepSimulation();
+        rebuildDisplacementGrid(); // rebuild with damping/morphing updates
+      }
+      
+      drawFrame();
+      requestAnimationFrame(loop);
+    }
+
+    // Presets application
+    function applyPreset(pName) {
+      const preset = PRESETS[pName];
+      if (!preset) return;
+
+      modalN = preset.n;
+      modalM = preset.m;
+      factorA = preset.a;
+      factorB = preset.b;
+
+      // Update UI elements
+      nSlider.value = modalN;
+      mSlider.value = modalM;
+      aSlider.value = factorA;
+      bSlider.value = factorB;
+
+      nVal.innerText = modalN;
+      mVal.innerText = modalM;
+      aVal.innerText = factorA.toFixed(2);
+      bVal.innerText = factorB.toFixed(2);
+
+      updateFrequency();
+      rebuildDisplacementGrid();
+
+      // Trigger automatic chime sound to represent preset loaded
+      if (audioActive) {
+        triggerPulseChime();
+      }
+    }
+
+    // Generate bell-chime chime when shifting modes
+    function triggerPulseChime() {
+      if (!audioActive) return;
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(targetFrequency * 2, audioCtx.currentTime);
+      
+      gain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.7);
+    }
+
+    // Strike Plate logic
+    function strikePlate() {
+      strikeDecay = 4.5; // push particles away
+      
+      if (audioActive) {
+        // Sonic gong envelope trigger
+        const strikeEnv = audioCtx.createGain();
+        const baseOsc = audioCtx.createOscillator();
+        
+        baseOsc.type = 'triangle';
+        baseOsc.frequency.setValueAtTime(targetFrequency / 2, audioCtx.currentTime); // deep sub harmonic
+        
+        strikeEnv.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        strikeEnv.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 0.01);
+        strikeEnv.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+
+        baseOsc.connect(strikeEnv);
+        strikeEnv.connect(audioCtx.destination);
+        
+        baseOsc.start();
+        baseOsc.stop(audioCtx.currentTime + 1.3);
+
+        // Also temporarily boost main synth gain for impact
+        const currentGain = parseFloat(volumeSlider.value) / 100 * 0.15;
+        masterGain.gain.setValueAtTime(currentGain * 2.0, audioCtx.currentTime);
+        masterGain.gain.exponentialRampToValueAtTime(currentGain, audioCtx.currentTime + 0.8);
+      }
+    }
+
+    // Mouse sprinkle / dampening interactions
+    let isMouseDown = false;
+    let clickMode = 'sprinkle'; // sprinkle or damp
+
+    function handlePlateInteraction(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX - rect.left;
+      const clientY = e.clientY - rect.top;
+
+      // Normalize position to [0, 1]
+      const px = Math.min(1.0, Math.max(0.0, clientX / rect.width));
+      const py = Math.min(1.0, Math.max(0.0, clientY / rect.height));
+
+      // Right-click or shift-click acts as plate dampener
+      if (e.shiftKey || e.button === 2) {
+        clickMode = 'damp';
+        dampPoint = { x: px, y: py };
+        hudMode.innerText = 'Damping';
+      } else {
+        clickMode = 'sprinkle';
+        dampPoint = null;
+        hudMode.innerText = 'Sprinkling';
+        // Sprinkle sand particles in proximity
+        const sprinkleRadius = 0.05;
+        const amt = 150;
+        
+        // Reallocate sand from other points
+        for (let k = 0; k < amt; k++) {
+          const randIdx = Math.floor(Math.random() * particles.length);
+          const angle = Math.random() * Math.PI * 2;
+          const radius = Math.random() * sprinkleRadius;
+          
+          particles[randIdx].x = px + Math.cos(angle) * radius;
+          particles[randIdx].y = py + Math.sin(angle) * radius;
+        }
+      }
+    }
+
+    // Set Up Control Listeners
+    playBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      playBtn.innerText = isRunning ? 'Pause' : 'Play';
+      if (isRunning) playBtn.classList.remove('active-toggle');
+      else playBtn.classList.add('active-toggle');
+    });
+
+    strikeBtn.addEventListener('click', strikePlate);
+
+    scatterBtn.addEventListener('click', () => {
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].reset();
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      particles = [];
+      hudParticles.innerText = '0';
+    });
+
+    breatheBtn.addEventListener('click', () => {
+      isMorphing = !isMorphing;
+      if (isMorphing) breatheBtn.classList.add('active-toggle');
+      else {
+        breatheBtn.classList.remove('active-toggle');
+        // Reset multipliers
+        factorA = parseFloat(aSlider.value);
+        factorB = parseFloat(bSlider.value);
+      }
+    });
+
+    nSlider.addEventListener('input', (e) => {
+      modalN = parseInt(e.target.value);
+      nVal.innerText = modalN;
+      updateFrequency();
+      rebuildDisplacementGrid();
+      triggerPulseChime();
+    });
+
+    mSlider.addEventListener('input', (e) => {
+      modalM = parseInt(e.target.value);
+      mVal.innerText = modalM;
+      updateFrequency();
+      rebuildDisplacementGrid();
+      triggerPulseChime();
+    });
+
+    aSlider.addEventListener('input', (e) => {
+      factorA = parseFloat(e.target.value);
+      aVal.innerText = factorA.toFixed(2);
+      rebuildDisplacementGrid();
+    });
+
+    bSlider.addEventListener('input', (e) => {
+      factorB = parseFloat(e.target.value);
+      bVal.innerText = factorB.toFixed(2);
+      rebuildDisplacementGrid();
+    });
+
+    densitySlider.addEventListener('input', (e) => {
+      particleCount = parseInt(e.target.value);
+      densityVal.innerText = particleCount.toLocaleString();
+      initParticles();
+    });
+
+    intensitySlider.addEventListener('input', (e) => {
+      baseIntensity = parseFloat(e.target.value);
+      intensityVal.innerText = baseIntensity.toFixed(1);
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+      const vol = parseInt(e.target.value);
+      volumeVal.innerText = vol + '%';
+      updateVolume();
+    });
+
+    themeSelector.addEventListener('change', (e) => {
+      colorTheme = e.target.value;
+    });
+
+    modeSelector.addEventListener('change', (e) => {
+      renderMode = e.target.value;
+    });
+
+    waveSelector.addEventListener('change', (e) => {
+      if (audioActive) {
+        oscillator1.type = e.target.value;
+        oscillator2.type = e.target.value;
+      }
+    });
+
+    // Preset cards
+    document.querySelectorAll('.preset-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+        e.target.classList.add('active');
+        applyPreset(e.target.dataset.preset);
+      });
+    });
+
+    // + / - Increments
+    incNBtn.addEventListener('click', () => { if (modalN < 20) { nSlider.value = ++modalN; nVal.innerText = modalN; updateFrequency(); triggerPulseChime(); } });
+    decNBtn.addEventListener('click', () => { if (modalN > 1)  { nSlider.value = --modalN; nVal.innerText = modalN; updateFrequency(); triggerPulseChime(); } });
+    incMBtn.addEventListener('click', () => { if (modalM < 20) { mSlider.value = ++modalM; mVal.innerText = modalM; updateFrequency(); triggerPulseChime(); } });
+    decMBtn.addEventListener('click', () => { if (modalM > 1)  { mSlider.value = --modalM; mVal.innerText = modalM; updateFrequency(); triggerPulseChime(); } });
+
+    // Interactive Canvas Mouse Bindings
+    canvas.addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      handlePlateInteraction(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isMouseDown) {
+        handlePlateInteraction(e);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+      dampPoint = null;
+      hudMode.innerText = 'Scatter';
+    });
+
+    // Prevent default right click menu on Canvas
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Start Sandbox
+    startBtn.addEventListener('click', () => {
+      startOverlay.style.opacity = 0;
+      setTimeout(() => {
+        startOverlay.style.display = 'none';
+      }, 500);
+
+      initAudio();
+    });
+
+    // Resize Handler
+    function handleResize() {
+      const parent = canvas.parentElement;
+      const size = Math.min(600, parent.clientWidth);
+      canvas.width = size;
+      canvas.height = size;
+    }
+    window.addEventListener('resize', handleResize);
+
+    // Initial Execution
+    handleResize();
+    initParticles();
+    rebuildDisplacementGrid();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
