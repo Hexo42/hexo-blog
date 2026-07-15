@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>neon optics: laser & prism sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #06070d;
+      --panel-bg: rgba(10, 12, 24, 0.7);
+      --border-color: rgba(0, 242, 254, 0.12);
+      --border-glow: rgba(0, 242, 254, 0.04);
+      --neon-cyan: #00f2fe;
+      --neon-blue: #4facfe;
+      --neon-pink: #ff0055;
+      --neon-green: #00ff66;
+      --neon-purple: #cc00ff;
+      --neon-yellow: #ffea00;
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(6, 7, 13, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-glow {
+      width: 14px;
+      height: 14px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--neon-cyan);
+      animation: pulse 2s infinite;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: lowercase;
+      background: linear-gradient(90deg, #fff, var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      text-transform: lowercase;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: rgba(0, 242, 254, 0.08);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 242, 254, 0.2);
+    }
+
+    .btn-danger {
+      color: var(--neon-pink);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 0, 85, 0.08);
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 8px rgba(255, 0, 85, 0.2);
+    }
+
+    .btn-active {
+      background: rgba(0, 242, 254, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 80px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      gap: 15px;
+      z-index: 5;
+    }
+
+    .tool-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .tool-btn:hover {
+      color: var(--neon-cyan);
+      background: rgba(0, 242, 254, 0.05);
+      border-color: var(--neon-cyan);
+      transform: translateY(-2px);
+    }
+
+    .tool-btn.active {
+      color: var(--neon-cyan);
+      background: rgba(0, 242, 254, 0.1);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+    }
+
+    .tool-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .tool-btn .inventory-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--neon-cyan);
+      color: #000;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    .tool-btn.disabled {
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #0f1226 0%, #06070d 100%);
+    }
+
+    canvas {
+      display: block;
+      background: #08090f;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 242, 254, 0.02);
+      border: 1px solid var(--border-color);
+      cursor: crosshair;
+    }
+
+    .panel-right {
+      width: 280px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border-left: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 5;
+      overflow-y: auto;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      color: var(--neon-blue);
+      text-transform: lowercase;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .desc-box {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 0.75rem;
+      font-family: 'Orbitron', sans-serif;
+      color: var(--text-muted);
+      text-transform: lowercase;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-val {
+      color: var(--neon-cyan);
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      transition: background 0.3s;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .color-select {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .color-swatch.active {
+      border-color: #fff;
+      transform: scale(1.1);
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .inspector-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      gap: 10px;
+    }
+
+    .inspector-placeholder svg {
+      width: 40px;
+      height: 40px;
+      opacity: 0.3;
+    }
+
+    /* Level Selector and Header elements */
+    .lvl-select-container {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    select {
+      background: rgba(10, 12, 24, 0.8);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      text-transform: lowercase;
+    }
+
+    select:hover {
+      border-color: var(--neon-cyan);
+    }
+
+    /* Success overlay */
+    .success-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(6, 7, 13, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+
+    .success-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .success-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: var(--neon-green);
+      text-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
+      text-transform: lowercase;
+      animation: zoomIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .success-desc {
+      font-size: 1rem;
+      color: #94a3b8;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
+
+    @keyframes zoomIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* Help Modal */
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(6, 7, 13, 0.8);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: #0f1226;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 500px;
+      padding: 25px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .modal-header {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      color: var(--neon-cyan);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-transform: lowercase;
+    }
+
+    .modal-close {
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .modal-close:hover {
+      color: var(--neon-pink);
+    }
+
+    .modal-body {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-body ul {
+      margin-left: 20px;
+    }
+
+    /* Quick stats */
+    .stats-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 100px;
+      display: flex;
+      gap: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: rgba(10, 12, 24, 0.8);
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(10px);
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+    }
+
+    .stat-dot.active {
+      background: var(--neon-green);
+      box-shadow: 0 0 6px var(--neon-green);
+    }
+
+    .stat-dot.inactive {
+      background: var(--neon-pink);
+      box-shadow: 0 0 6px var(--neon-pink);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <h1>neon optics // laser & prism sandbox</h1>
+    </div>
+    
+    <div class="header-controls">
+      <div class="lvl-select-container">
+        <select id="level-select" onchange="loadLevel(parseInt(this.value))">
+          <option value="0">sandbox mode</option>
+          <option value="1">level 1: reflection basics</option>
+          <option value="2">level 2: chromatic dispersion</option>
+          <option value="3">level 3: focal alignment</option>
+          <option value="4">level 4: portal refraction</option>
+          <option value="5">level 5: total internal reflection</option>
+        </select>
+      </div>
+
+      <button class="btn" id="snap-btn" onclick="toggleSnap()">
+        <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z"/></svg>
+        snap grid: <span id="snap-state">off</span>
+      </button>
+
+      <button class="btn" onclick="openHelp()">
+        <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z"/></svg>
+        help
+      </button>
+
+      <button class="btn btn-danger" onclick="clearCanvas()">
+        <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+        clear
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="sidebar">
+      <button class="tool-btn" id="tool-laser" onclick="spawnObject('laser')" title="add laser emitter">
+        <svg viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z"/></svg>
+        <span class="inventory-badge" id="inv-laser" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-mirror" onclick="spawnObject('mirror')" title="add flat mirror">
+        <svg viewBox="0 0 24 24"><path d="M2,21H22V19H2V21M20,3H4A2,2 0 0,0 2,5V15A2,2 0 0,0 4,17H20A2,2 0 0,0 22,15V5A2,2 0 0,0 20,3M20,15H4V5H20V15Z"/></svg>
+        <span class="inventory-badge" id="inv-mirror" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-splitter" onclick="spawnObject('splitter')" title="add beam splitter">
+        <svg viewBox="0 0 24 24"><path d="M3,5H21V7H3V5M3,11H21V13H3V11M3,17H21V19H3V17Z"/></svg>
+        <span class="inventory-badge" id="inv-splitter" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-prism" onclick="spawnObject('prism')" title="add triangular prism">
+        <svg viewBox="0 0 24 24"><path d="M1,21H23L12,2L1,21M12,6L19.8,19H4.2L12,6Z"/></svg>
+        <span class="inventory-badge" id="inv-prism" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-lens" onclick="spawnObject('lens')" title="add convex lens">
+        <svg viewBox="0 0 24 24"><path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20Z"/></svg>
+        <span class="inventory-badge" id="inv-lens" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-concave-lens" onclick="spawnObject('concave-lens')" title="add concave lens">
+        <svg viewBox="0 0 24 24"><path d="M12,2C10.9,2 10,2.9 10,4V20C10,21.1 10.9,22 12,22C13.1,22 14,21.1 14,20V4C14,2.9 13.1,2 12,2M16,6V18C18.28,16.92 20,14.65 20,12C20,9.35 18.28,7.08 16,6M8,6C5.72,7.08 4,9.35 4,12C4,14.65 5.72,16.92 8,18V6Z"/></svg>
+        <span class="inventory-badge" id="inv-concave-lens" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-portal" onclick="spawnObject('portal')" title="add portal pair">
+        <svg viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16Z"/></svg>
+        <span class="inventory-badge" id="inv-portal" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-target" onclick="spawnObject('target')" title="add target sensor">
+        <svg viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/></svg>
+        <span class="inventory-badge" id="inv-target" style="display:none">0</span>
+      </button>
+      <button class="tool-btn" id="tool-wall" onclick="spawnObject('wall')" title="add solid wall block">
+        <svg viewBox="0 0 24 24"><path d="M19,4H5A2,2 0 0,0 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6A2,2 0 0,0 19,4M19,18H5V6H19V18Z"/></svg>
+        <span class="inventory-badge" id="inv-wall" style="display:none">0</span>
+      </button>
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="optics-canvas" width="960" height="600"></canvas>
+      
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-dot" id="stat-audio-dot"></div>
+          <span>audio matrix: <span id="stat-audio">off (click to enable)</span></span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot active"></div>
+          <span>active rays: <span id="stat-rays">0</span></span>
+        </div>
+        <div class="stat-item">
+          <div class="stat-dot" id="stat-targets-dot"></div>
+          <span>targets lit: <span id="stat-targets">0/0</span></span>
+        </div>
+      </div>
+
+      <div class="success-overlay" id="success-overlay">
+        <div class="success-title">system aligned</div>
+        <div class="success-desc">the optical matrix has successfully synchronized. all targets are illuminated by their respective required wavelengths.</div>
+        <button class="btn btn-active" style="padding:12px 24px; font-size:0.9rem;" onclick="nextLevel()">next level &gt;&gt;</button>
+      </div>
+    </div>
+
+    <div class="panel-right">
+      <div class="panel-title">mission parameters</div>
+      <div class="desc-box" id="level-desc">
+        welcome to sandbox mode. place, drag, rotate, and scale any elements you want to build custom optical circuits.
+      </div>
+      
+      <div id="inspector-content">
+        <div class="inspector-placeholder">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z"/></svg>
+          select an optical component on the grid to calibrate its variables.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Help Modal -->
+  <div class="modal-backdrop" id="help-modal" onclick="closeHelp()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span>neon optics documentation</span>
+        <span class="modal-close" onclick="closeHelp()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p>this simulation models physical ray optics, reflection, refraction, portals, and chromatic dispersion.</p>
+        <p><strong>mouse controls:</strong></p>
+        <ul>
+          <li><strong>left click & drag:</strong> reposition components on the optical breadboard.</li>
+          <li><strong>rotation handle:</strong> drag the small circle extending from a selected component to rotate it.</li>
+          <li><strong>selection:</strong> click any component to open its detailed inspector variables on the right.</li>
+        </ul>
+        <p><strong>optical behaviors:</strong></p>
+        <ul>
+          <li><strong>laser emitter:</strong> casts light beams. white light is a compound beam that will disperse into a rainbow spectrum when refracted!</li>
+          <li><strong>prisms / lenses:</strong> bends rays based on snell's law and their base refractive index. white light separates because different colors refract at slightly offset index parameters.</li>
+          <li><strong>beam splitters:</strong> half-silvered mirrors that reflect 50% of the light energy and transmit 50%.</li>
+          <li><strong>portals:</strong> teleports light beams across space while retaining relative entry angles and velocities.</li>
+          <li><strong>targets:</strong> sensors that require alignment. some targets are wavelength-specific (they only activate when hit by their matching color!).</li>
+        </ul>
+        <p>click anywhere on the screen to initialize the real-time audio synthesizer matrix.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System Variables
+    const canvas = document.getElementById('optics-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    let objects = [];
+    let selectedObj = null;
+    let dragMode = null; // 'move', 'rotate'
+    let dragOffset = { x: 0, y: 0 };
+    let snapGrid = false;
+    let currentLevelIndex = 0; // 0 = Sandbox
+    let levelSuccess = false;
+    let inventory = null;
+    let time = 0;
+    let particles = [];
+
+    // Audio Matrix Variables
+    let audioCtx = null;
+    let targetSynths = [];
+    const colorMap = {
+      '#ff0055': 'red',
+      '#ff9900': 'orange',
+      '#ffea00': 'yellow',
+      '#00ff66': 'green',
+      '#00ffff': 'blue',
+      '#cc00ff': 'violet'
+    };
+
+    // Levels definitions
+    const levels = [
+      {
+        name: "level 1: reflection basics",
+        desc: "use flat mirrors to route the green laser around the solid wall to illuminate the green sensor.",
+        setup: () => {
+          objects = [
+            { id: 'l1', type: 'laser', x: 100, y: 150, angle: 0, color: '#00ff66', active: true, fixed: true },
+            { id: 'w1', type: 'wall', x: 450, y: 200, width: 40, height: 350, angle: 0, fixed: true },
+            { id: 't1', type: 'target', x: 800, y: 450, radius: 25, requiredColor: 'green', fixed: true }
+          ];
+          inventory = { mirror: 2 };
+        }
+      },
+      {
+        name: "level 2: chromatic dispersion",
+        desc: "refract the white laser through a prism. guide the separated red and blue beams to hit their respective color-coded sensors.",
+        setup: () => {
+          objects = [
+            { id: 'l1', type: 'laser', x: 100, y: 300, angle: 0, color: 'white', active: true, fixed: true },
+            { id: 't1', type: 'target', x: 800, y: 120, radius: 25, requiredColor: 'red', fixed: true },
+            { id: 't2', type: 'target', x: 800, y: 480, radius: 25, requiredColor: 'blue', fixed: true },
+            { id: 'p1', type: 'prism', x: 300, y: 300, angle: 0.12, size: 100, refractiveIndex: 1.55, fixed: true }
+          ];
+          inventory = { mirror: 4 };
+        }
+      },
+      {
+        name: "level 3: focal alignment",
+        desc: "two parallel yellow lasers must hit the yellow sensor at the center. use a convex lens to focus the beams.",
+        setup: () => {
+          objects = [
+            { id: 'l1', type: 'laser', x: 100, y: 180, angle: 0, color: '#ffea00', active: true, fixed: true },
+            { id: 'l2', type: 'laser', x: 100, y: 420, angle: 0, color: '#ffea00', active: true, fixed: true },
+            { id: 'w1', type: 'wall', x: 550, y: 120, width: 25, height: 200, angle: 0, fixed: true },
+            { id: 'w2', type: 'wall', x: 550, y: 480, width: 25, height: 200, angle: 0, fixed: true },
+            { id: 't1', type: 'target', x: 850, y: 300, radius: 20, requiredColor: 'yellow', fixed: true }
+          ];
+          inventory = { lens: 1, mirror: 1 };
+        }
+      },
+      {
+        name: "level 4: portal refraction",
+        desc: "teleport the blue laser through the portals, bend it through a concave lens, and hit the target behind the barrier.",
+        setup: () => {
+          objects = [
+            { id: 'l1', type: 'laser', x: 100, y: 150, angle: 0.2, color: '#00ffff', active: true, fixed: true },
+            { id: 'w1', type: 'wall', x: 450, y: 300, width: 40, height: 420, angle: 0, fixed: true },
+            { id: 'po1', type: 'portal', x: 350, y: 220, angle: 0.5, radius: 25, partnerId: 'po2', color: '#ff7700', fixed: true },
+            { id: 'po2', type: 'portal', x: 600, y: 420, angle: Math.PI, radius: 25, partnerId: 'po1', color: '#ff7700', fixed: true },
+            { id: 't1', type: 'target', x: 800, y: 150, radius: 25, requiredColor: 'blue', fixed: true }
+          ];
+          inventory = { 'concave-lens': 1, mirror: 2 };
+        }
+      },
+      {
+        name: "level 5: total internal reflection",
+        desc: "use total internal reflection inside a prism to guide the red laser around the obstacles to hit the target.",
+        setup: () => {
+          objects = [
+            { id: 'l1', type: 'laser', x: 100, y: 150, angle: 0, color: '#ff0055', active: true, fixed: true },
+            { id: 'w1', type: 'wall', x: 450, y: 150, width: 40, height: 260, angle: 0, fixed: true },
+            { id: 'w2', type: 'wall', x: 600, y: 450, width: 40, height: 260, angle: 0, fixed: true },
+            { id: 't1', type: 'target', x: 800, y: 450, radius: 25, requiredColor: 'red', fixed: true }
+          ];
+          inventory = { prism: 2, mirror: 1 };
+        }
+      }
+    ];
+
+    // Math Helpers
+    function makeCCW(vertices) {
+      let sum = 0;
+      for (let i = 0; i < vertices.length; i++) {
+        const p1 = vertices[i];
+        const p2 = vertices[(i + 1) % vertices.length];
+        sum += (p2.x - p1.x) * (p2.y + p1.y);
+      }
+      if (sum > 0) vertices.reverse();
+    }
+
+    function getOutwardNormal(A, B) {
+      const dx = B.x - A.x;
+      const dy = B.y - A.y;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      return { x: -dy / len, y: dx / len };
+    }
+
+    function intersectRaySegment(rayOrigin, rayDir, segStart, segEnd) {
+      const dx = rayDir.x;
+      const dy = rayDir.y;
+      const sx = segEnd.x - segStart.x;
+      const sy = segEnd.y - segStart.y;
+
+      const det = dy * sx - dx * sy;
+      if (Math.abs(det) < 1e-6) return null;
+
+      const t = ((rayOrigin.x - segStart.x) * sy - (rayOrigin.y - segStart.y) * sx) / det;
+      const u = (dx * (segStart.y - rayOrigin.y) - dy * (segStart.x - rayOrigin.x)) / det;
+
+      if (t > 1e-3 && u >= 0 && u <= 1) {
+        return { t: t, point: { x: rayOrigin.x + t * dx, y: rayOrigin.y + t * dy } };
+      }
+      return null;
+    }
+
+    function intersectRayCircle(rayOrigin, rayDir, center, radius) {
+      const vx = rayOrigin.x - center.x;
+      const vy = rayOrigin.y - center.y;
+      const b = vx * rayDir.x + vy * rayDir.y;
+      const c = (vx*vx + vy*vy) - radius*radius;
+
+      const disc = b*b - c;
+      if (disc < 0) return null;
+
+      const sqrtDisc = Math.sqrt(disc);
+      let t1 = -b - sqrtDisc;
+      let t2 = -b + sqrtDisc;
+
+      if (t1 > 1e-3) {
+        return { t: t1, point: { x: rayOrigin.x + t1 * rayDir.x, y: rayOrigin.y + t1 * rayDir.y } };
+      }
+      if (t2 > 1e-3) {
+        return { t: t2, point: { x: rayOrigin.x + t2 * rayDir.x, y: rayOrigin.y + t2 * rayDir.y } };
+      }
+      return null;
+    }
+
+    // Audio Engine initialization (Triggers on first click)
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(700, audioCtx.currentTime);
+        filter.Q.setValueAtTime(0.8, audioCtx.currentTime);
+
+        const masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.12, audioCtx.currentTime); // gentle volume
+
+        filter.connect(masterGain);
+        masterGain.connect(audioCtx.destination);
+
+        // chord notes: C4, E4, G4, C5
+        const frequencies = [261.63, 329.63, 392.00, 523.25];
+
+        for (let i = 0; i < 4; i++) {
+          const osc = audioCtx.createOscillator();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(frequencies[i], audioCtx.currentTime);
+
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+
+          osc.connect(gainNode);
+          gainNode.connect(filter);
+          osc.start();
+
+          targetSynths.push({ osc, gain: gainNode });
+        }
+
+        document.getElementById('stat-audio-dot').classList.add('active');
+        document.getElementById('stat-audio').innerText = "active";
+      } catch(e) {
+        console.error("Audio Context initialisation failed: ", e);
+      }
+    }
+
+    function playSuccessSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6 arpeggio
+      notes.forEach((f, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now + idx * 0.12);
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.08, now + idx * 0.12 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.6);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.6);
+      });
+    }
+
+    function resetSynth() {
+      if (!audioCtx) return;
+      targetSynths.forEach(s => {
+        s.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+      });
+    }
+
+    // Ray Tracing Logic
+    function traceRays() {
+      // 1. Reset target states
+      objects.forEach(obj => {
+        if (obj.type === 'target') {
+          obj.lit = false;
+          obj.litColor = null;
+        }
+      });
+
+      const rayQueue = [];
+      // 2. Populate queue with initial laser outputs
+      objects.forEach(obj => {
+        if (obj.type === 'laser' && obj.active) {
+          const rad = obj.angle;
+          const dx = Math.cos(rad);
+          const dy = Math.sin(rad);
+          const startX = obj.x + dx * 28;
+          const startY = obj.y + dy * 28;
+
+          if (obj.color === 'white') {
+            // Chromatic separation setup
+            const spectrum = [
+              { color: '#ff0055', shift: -0.028 }, // Red-Pink
+              { color: '#ff9900', shift: -0.012 }, // Orange
+              { color: '#ffea00', shift: 0.000 },  // Yellow
+              { color: '#00ff66', shift: 0.012 },  // Green
+              { color: '#00ffff', shift: 0.028 },  // Blue
+              { color: '#cc00ff', shift: 0.048 }   // Violet
+            ];
+            spectrum.forEach(s => {
+              rayQueue.push({
+                origin: { x: startX, y: startY },
+                dir: { x: dx, y: dy },
+                color: s.color,
+                wavelengthShift: s.shift,
+                bounces: 0,
+                path: [{ x: startX, y: startY }]
+              });
+            });
+          } else {
+            let shift = 0;
+            if (obj.color === '#ff0055') shift = -0.028;
+            else if (obj.color === '#ffea00') shift = 0.000;
+            else if (obj.color === '#00ff66') shift = 0.012;
+            else if (obj.color === '#00ffff') shift = 0.028;
+
+            rayQueue.push({
+              origin: { x: startX, y: startY },
+              dir: { x: dx, y: dy },
+              color: obj.color,
+              wavelengthShift: shift,
+              bounces: 0,
+              path: [{ x: startX, y: startY }]
+            });
+          }
+        }
+      });
+
+      const finishedRays = [];
+      const maxBounces = 24;
+
+      while (rayQueue.length > 0) {
+        const ray = rayQueue.shift();
+
+        if (ray.bounces >= maxBounces) {
+          const endX = ray.origin.x + ray.dir.x * 1200;
+          const endY = ray.origin.y + ray.dir.y * 1200;
+          ray.path.push({ x: endX, y: endY });
+          finishedRays.push(ray);
+          continue;
+        }
+
+        let closestT = Infinity;
+        let hitPoint = null;
+        let hitType = null; // 'segment', 'circle'
+        let hitObj = null;
+        let segmentData = null;
+
+        // Check line segments
+        objects.forEach(obj => {
+          if (obj.type === 'laser' || obj.type === 'target' || obj.type === 'portal') return;
+
+          let segments = [];
+          const angle = obj.angle || 0;
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+
+          if (obj.type === 'mirror' || obj.type === 'splitter') {
+            const len = obj.length || 90;
+            const dx = cos * len/2;
+            const dy = sin * len/2;
+            segments = [{
+              start: { x: obj.x - dx, y: obj.y - dy },
+              end: { x: obj.x + dx, y: obj.y + dy }
+            }];
+          } else if (obj.type === 'prism') {
+            const size = obj.size || 90;
+            const h = size * Math.sqrt(3)/2;
+            // Center of triangle vertices
+            const v0 = { x: 0, y: -2*h/3 };
+            const v1 = { x: -size/2, y: h/3 };
+            const v2 = { x: size/2, y: h/3 };
+
+            const transform = (v) => ({
+              x: obj.x + v.x * cos - v.y * sin,
+              y: obj.y + v.x * sin + v.y * cos
+            });
+
+            const p0 = transform(v0);
+            const p1 = transform(v1);
+            const p2 = transform(v2);
+
+            segments = [
+              { start: p0, end: p1 },
+              { start: p1, end: p2 },
+              { start: p2, end: p0 }
+            ];
+          } else if (obj.type === 'lens') {
+            const w = obj.width || 80;
+            const h = obj.height || 45;
+            const steps = 14;
+            const verts = [];
+            for (let i = 0; i < steps; i++) {
+              const phi = (2 * Math.PI * i) / steps;
+              const px = (w/2) * Math.cos(phi);
+              const py = (h/2) * Math.sin(phi);
+              verts.push({
+                x: obj.x + px * cos - py * sin,
+                y: obj.y + px * sin + py * cos
+              });
+            }
+            makeCCW(verts);
+            for (let i = 0; i < steps; i++) {
+              segments.push({ start: verts[i], end: verts[(i+1)%steps] });
+            }
+          } else if (obj.type === 'concave-lens') {
+            const w = obj.width || 80;
+            const h = obj.height || 55;
+            const steps = 6;
+            const verts = [];
+            // curve right inward
+            for (let i = 0; i <= steps; i++) {
+              const f = (i / steps) * 2 - 1;
+              const py = (h / 2) * f;
+              const px = (w / 2) - (w / 3.5) * (1 - f * f);
+              verts.push({
+                x: obj.x + px * cos - py * sin,
+                y: obj.y + px * sin + py * cos
+              });
+            }
+            // curve left inward
+            for (let i = 0; i <= steps; i++) {
+              const f = 1 - (i / steps) * 2;
+              const py = (h / 2) * f;
+              const px = -(w / 2) + (w / 3.5) * (1 - f * f);
+              verts.push({
+                x: obj.x + px * cos - py * sin,
+                y: obj.y + px * sin + py * cos
+              });
+            }
+            makeCCW(verts);
+            for (let i = 0; i < verts.length; i++) {
+              segments.push({ start: verts[i], end: verts[(i+1)%verts.length] });
+            }
+          } else if (obj.type === 'wall') {
+            const w = obj.width || 100;
+            const h = obj.height || 40;
+            const v0 = { x: -w/2, y: -h/2 };
+            const v1 = { x: w/2, y: -h/2 };
+            const v2 = { x: w/2, y: h/2 };
+            const v3 = { x: -w/2, y: h/2 };
+            const transform = (v) => ({
+              x: obj.x + v.x * cos - v.y * sin,
+              y: obj.y + v.x * sin + v.y * cos
+            });
+            const p0 = transform(v0);
+            const p1 = transform(v1);
+            const p2 = transform(v2);
+            const p3 = transform(v3);
+            segments = [
+              { start: p0, end: p1 },
+              { start: p1, end: p2 },
+              { start: p2, end: p3 },
+              { start: p3, end: p0 }
+            ];
+          }
+
+          segments.forEach(seg => {
+            const intersect = intersectRaySegment(ray.origin, ray.dir, seg.start, seg.end);
+            if (intersect && intersect.t < closestT) {
+              closestT = intersect.t;
+              hitPoint = intersect.point;
+              hitType = 'segment';
+              hitObj = obj;
+              segmentData = seg;
+            }
+          });
+        });
+
+        // Check circular objects (portal, target)
+        objects.forEach(obj => {
+          if (obj.type !== 'portal' && obj.type !== 'target') return;
+          const radius = obj.radius || 20;
+          const intersect = intersectRayCircle(ray.origin, ray.dir, obj, radius);
+          if (intersect && intersect.t < closestT) {
+            closestT = intersect.t;
+            hitPoint = intersect.point;
+            hitType = 'circle';
+            hitObj = obj;
+          }
+        });
+
+        if (hitPoint) {
+          ray.path.push(hitPoint);
+
+          if (hitType === 'segment') {
+            const obj = hitObj;
+            if (obj.type === 'mirror') {
+              const N = getOutwardNormal(segmentData.start, segmentData.end);
+              const dot = ray.dir.x * N.x + ray.dir.y * N.y;
+              const effN = dot < 0 ? N : { x: -N.x, y: -N.y };
+              const rx = ray.dir.x - 2 * (ray.dir.x * effN.x + ray.dir.y * effN.y) * effN.x;
+              const ry = ray.dir.y - 2 * (ray.dir.x * effN.x + ray.dir.y * effN.y) * effN.y;
+              const len = Math.sqrt(rx*rx + ry*ry);
+
+              rayQueue.push({
+                origin: { x: hitPoint.x + (rx/len)*0.08, y: hitPoint.y + (ry/len)*0.08 },
+                dir: { x: rx/len, y: ry/len },
+                color: ray.color,
+                wavelengthShift: ray.wavelengthShift,
+                bounces: ray.bounces + 1,
+                path: [{ x: hitPoint.x, y: hitPoint.y }]
+              });
+              emitParticles(hitPoint.x, hitPoint.y, ray.color);
+            } else if (obj.type === 'splitter') {
+              // Reflection
+              const N = getOutwardNormal(segmentData.start, segmentData.end);
+              const dot = ray.dir.x * N.x + ray.dir.y * N.y;
+              const effN = dot < 0 ? N : { x: -N.x, y: -N.y };
+              const rx = ray.dir.x - 2 * (ray.dir.x * effN.x + ray.dir.y * effN.y) * effN.x;
+              const ry = ray.dir.y - 2 * (ray.dir.x * effN.x + ray.dir.y * effN.y) * effN.y;
+              const len = Math.sqrt(rx*rx + ry*ry);
+
+              rayQueue.push({
+                origin: { x: hitPoint.x + (rx/len)*0.08, y: hitPoint.y + (ry/len)*0.08 },
+                dir: { x: rx/len, y: ry/len },
+                color: ray.color,
+                wavelengthShift: ray.wavelengthShift,
+                bounces: ray.bounces + 1,
+                path: [{ x: hitPoint.x, y: hitPoint.y }]
+              });
+
+              // Transmission (Straight through)
+              rayQueue.push({
+                origin: { x: hitPoint.x + ray.dir.x*0.08, y: hitPoint.y + ray.dir.y*0.08 },
+                dir: { x: ray.dir.x, y: ray.dir.y },
+                color: ray.color,
+                wavelengthShift: ray.wavelengthShift,
+                bounces: ray.bounces + 1,
+                path: [{ x: hitPoint.x, y: hitPoint.y }]
+              });
+              emitParticles(hitPoint.x, hitPoint.y, '#ffffff');
+            } else if (obj.type === 'prism' || obj.type === 'lens' || obj.type === 'concave-lens') {
+              const N = getOutwardNormal(segmentData.start, segmentData.end);
+              const dot = ray.dir.x * N.x + ray.dir.y * N.y;
+              let n1, n2;
+              let effN = { x: N.x, y: N.y };
+              const targetIndex = (obj.refractiveIndex || 1.5) + ray.wavelengthShift;
+
+              if (dot < 0) {
+                // Entering glass
+                n1 = 1.0;
+                n2 = targetIndex;
+                effN = { x: -N.x, y: -N.y };
+              } else {
+                // Exiting glass
+                n1 = targetIndex;
+                n2 = 1.0;
+              }
+
+              const eta = n1 / n2;
+              const cosT1 = -(ray.dir.x * effN.x + ray.dir.y * effN.y);
+              const sin2T2 = eta * eta * (1.0 - cosT1 * cosT1);
+
+              if (sin2T2 > 1.0) {
+                // Total Internal Reflection
+                const rx = ray.dir.x - 2 * (ray.dir.x * effN.x + ray.dir.y * effN.y) * effN.x;
+                const ry = ray.dir.y - 2 * (ray.dir.x * effN.x + ray.dir.y * effN.y) * effN.y;
+                const len = Math.sqrt(rx*rx + ry*ry);
+
+                rayQueue.push({
+                  origin: { x: hitPoint.x + (rx/len)*0.08, y: hitPoint.y + (ry/len)*0.08 },
+                  dir: { x: rx/len, y: ry/len },
+                  color: ray.color,
+                  wavelengthShift: ray.wavelengthShift,
+                  bounces: ray.bounces + 1,
+                  path: [{ x: hitPoint.x, y: hitPoint.y }]
+                });
+                emitParticles(hitPoint.x, hitPoint.y, ray.color);
+              } else {
+                // Refraction
+                const cosT2 = Math.sqrt(1.0 - sin2T2);
+                const rx = eta * ray.dir.x + (eta * cosT1 - cosT2) * effN.x;
+                const ry = eta * ray.dir.y + (eta * cosT1 - cosT2) * effN.y;
+                const len = Math.sqrt(rx*rx + ry*ry);
+
+                rayQueue.push({
+                  origin: { x: hitPoint.x + (rx/len)*0.08, y: hitPoint.y + (ry/len)*0.08 },
+                  dir: { x: rx/len, y: ry/len },
+                  color: ray.color,
+                  wavelengthShift: ray.wavelengthShift,
+                  bounces: ray.bounces + 1,
+                  path: [{ x: hitPoint.x, y: hitPoint.y }]
+                });
+              }
+            } else if (obj.type === 'wall') {
+              // Absorbed: simply stop ray propagation
+              emitParticles(hitPoint.x, hitPoint.y, '#334155');
+            }
+          } else if (hitType === 'circle') {
+            const obj = hitObj;
+            if (obj.type === 'target') {
+              const matchedColor = colorMap[ray.color];
+              if (obj.requiredColor === 'any' || obj.requiredColor === matchedColor) {
+                obj.lit = true;
+                obj.litColor = ray.color;
+              }
+              // Ray continues forward past target
+              rayQueue.push({
+                origin: { x: hitPoint.x + ray.dir.x*0.08, y: hitPoint.y + ray.dir.y*0.08 },
+                dir: { x: ray.dir.x, y: ray.dir.y },
+                color: ray.color,
+                wavelengthShift: ray.wavelengthShift,
+                bounces: ray.bounces + 1,
+                path: [{ x: hitPoint.x, y: hitPoint.y }]
+              });
+              emitParticles(hitPoint.x, hitPoint.y, ray.color);
+            } else if (obj.type === 'portal') {
+              const partner = objects.find(o => o.type === 'portal' && o.id === obj.partnerId);
+              if (partner) {
+                // Get vector from center to portal hit point
+                const vx = hitPoint.x - obj.x;
+                const vy = hitPoint.y - obj.y;
+
+                // Relative angle between portal orientations
+                const dAngle = partner.angle - obj.angle;
+                const cos = Math.cos(dAngle);
+                const sin = Math.sin(dAngle);
+
+                // Rotate offset vector and ray direction
+                const rvx = vx * cos - vy * sin;
+                const rvy = vx * sin + vy * cos;
+
+                const rx = ray.dir.x * cos - ray.dir.y * sin;
+                const ry = ray.dir.x * sin + ray.dir.y * cos;
+                const len = Math.sqrt(rx*rx + ry*ry);
+                const ndx = rx / len;
+                const ndy = ry / len;
+
+                // Exit position on partner portal
+                const exitX = partner.x + rvx;
+                const exitY = partner.y + rvy;
+
+                rayQueue.push({
+                  origin: { x: exitX + ndx*0.5, y: exitY + ndy*0.5 },
+                  dir: { x: ndx, y: ndy },
+                  color: ray.color,
+                  wavelengthShift: ray.wavelengthShift,
+                  bounces: ray.bounces + 1,
+                  path: [{ x: exitX, y: exitY }]
+                });
+                emitParticles(hitPoint.x, hitPoint.y, obj.color);
+                emitParticles(exitX, exitY, partner.color);
+              }
+            }
+          }
+
+          finishedRays.push(ray);
+        } else {
+          // Ray goes to boundary infinity
+          const endX = ray.origin.x + ray.dir.x * 1200;
+          const endY = ray.origin.y + ray.dir.y * 1200;
+          ray.path.push({ x: endX, y: endY });
+          finishedRays.push(ray);
+        }
+      }
+
+      return finishedRays;
+    }
+
+    // Particle Spray Emitter
+    function emitParticles(x, y, color) {
+      if (particles.length > 350) return;
+      for (let i = 0; i < 2; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 2.8,
+          vy: (Math.random() - 0.5) * 2.8,
+          color: color,
+          size: Math.random() * 2 + 1,
+          life: 1.0,
+          decay: Math.random() * 0.05 + 0.025
+        });
+      }
+    }
+
+    // Drawing functions
+    function drawGrid() {
+      ctx.fillStyle = '#07080d';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(0, 242, 254, 0.02)';
+      ctx.lineWidth = 1;
+      const step = 20;
+      for (let x = 0; x < canvas.width; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawScene(rays) {
+      drawGrid();
+
+      // Render connection helper line for portal pairs
+      ctx.save();
+      const portals = objects.filter(o => o.type === 'portal');
+      const drawnPairs = new Set();
+      portals.forEach(p => {
+        if (drawnPairs.has(p.id)) return;
+        const partner = portals.find(o => o.id === p.partnerId);
+        if (partner) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(partner.x, partner.y);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 6]);
+          ctx.stroke();
+          drawnPairs.add(p.id);
+          drawnPairs.add(partner.id);
+        }
+      });
+      ctx.restore();
+
+      // Draw all objects
+      objects.forEach(obj => {
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate(obj.angle || 0);
+
+        // Highlight selected
+        if (obj === selectedObj) {
+          ctx.shadowColor = varColorOfObj(obj);
+          ctx.shadowBlur = 10;
+        }
+
+        switch (obj.type) {
+          case 'laser':
+            // Draw Laser barrel
+            const gradLaser = ctx.createLinearGradient(-20, -12, 10, 12);
+            gradLaser.addColorStop(0, '#1e293b');
+            gradLaser.addColorStop(1, '#0f172a');
+            ctx.fillStyle = gradLaser;
+            ctx.strokeStyle = obj === selectedObj ? varColorOfObj(obj) : '#475569';
+            ctx.lineWidth = 2;
+            
+            // Draw main shell
+            ctx.beginPath();
+            ctx.rect(-20, -12, 35, 24);
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw nozzle
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.rect(15, -6, 8, 12);
+            ctx.fill();
+            ctx.stroke();
+
+            // Laser core glow dot
+            ctx.fillStyle = obj.color === 'white' ? '#ffffff' : obj.color;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(20, 0, 4, 0, Math.PI*2);
+            ctx.fill();
+            break;
+
+          case 'mirror':
+            const len = obj.length || 90;
+            // Back plate (bracket)
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(-len/2, 2, len, 4);
+            // Reflective core
+            const gradMirror = ctx.createLinearGradient(-len/2, -3, len/2, 2);
+            gradMirror.addColorStop(0, '#94a3b8');
+            gradMirror.addColorStop(0.5, '#e2e8f0');
+            gradMirror.addColorStop(1, '#cbd5e1');
+            ctx.fillStyle = gradMirror;
+            ctx.fillRect(-len/2, -3, len, 5);
+
+            // Mirror sides decoration
+            ctx.fillStyle = varColorOfObj(obj);
+            ctx.fillRect(-len/2, -3, 3, 5);
+            ctx.fillRect(len/2 - 3, -3, 3, 5);
+            break;
+
+          case 'splitter':
+            const slen = obj.length || 90;
+            // Bracket
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(-slen/2, 2, slen, 3);
+            
+            // Dash splitter line
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-slen/2, -2);
+            ctx.lineTo(slen/2, -2);
+            ctx.setLineDash([6, 5]);
+            ctx.stroke();
+            break;
+
+          case 'prism':
+            const size = obj.size || 90;
+            const h = size * Math.sqrt(3)/2;
+            ctx.beginPath();
+            ctx.moveTo(0, -2*h/3);
+            ctx.lineTo(-size/2, h/3);
+            ctx.lineTo(size/2, h/3);
+            ctx.closePath();
+
+            // Gradient glass texture
+            const gPrism = ctx.createRadialGradient(0, 0, 5, 0, 0, size/2);
+            gPrism.addColorStop(0, 'rgba(0, 242, 254, 0.16)');
+            gPrism.addColorStop(1, 'rgba(0, 100, 250, 0.05)');
+            ctx.fillStyle = gPrism;
+            ctx.fill();
+
+            ctx.strokeStyle = obj === selectedObj ? varColorOfObj(obj) : 'rgba(0, 242, 254, 0.35)';
+            ctx.lineWidth = obj === selectedObj ? 2.5 : 1.5;
+            ctx.stroke();
+            
+            // Internal shine highlight
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(-size/3, h/4);
+            ctx.lineTo(0, -h/2);
+            ctx.stroke();
+            break;
+
+          case 'lens':
+            const lw = obj.width || 80;
+            const lh = obj.height || 45;
+            const steps = 14;
+            ctx.beginPath();
+            for (let i = 0; i < steps; i++) {
+              const phi = (2 * Math.PI * i) / steps;
+              const px = (lw/2) * Math.cos(phi);
+              const py = (lh/2) * Math.sin(phi);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+
+            const gLens = ctx.createRadialGradient(0, 0, 5, 0, 0, lw/2);
+            gLens.addColorStop(0, 'rgba(0, 242, 254, 0.16)');
+            gLens.addColorStop(1, 'rgba(0, 100, 250, 0.05)');
+            ctx.fillStyle = gLens;
+            ctx.fill();
+
+            ctx.strokeStyle = obj === selectedObj ? varColorOfObj(obj) : 'rgba(0, 242, 254, 0.35)';
+            ctx.lineWidth = obj === selectedObj ? 2.5 : 1.5;
+            ctx.stroke();
+            break;
+
+          case 'concave-lens':
+            const ccw = obj.width || 80;
+            const cch = obj.height || 55;
+            ctx.beginPath();
+            const csteps = 6;
+            for (let i = 0; i <= csteps; i++) {
+              const f = (i / csteps) * 2 - 1;
+              const py = (cch / 2) * f;
+              const px = (ccw / 2) - (ccw / 3.5) * (1 - f * f);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            for (let i = 0; i <= csteps; i++) {
+              const f = 1 - (i / csteps) * 2;
+              const py = (cch / 2) * f;
+              const px = -(ccw / 2) + (ccw / 3.5) * (1 - f * f);
+              ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+
+            const gCcLens = ctx.createRadialGradient(0, 0, 5, 0, 0, ccw/2);
+            gCcLens.addColorStop(0, 'rgba(0, 242, 254, 0.16)');
+            gCcLens.addColorStop(1, 'rgba(0, 100, 250, 0.05)');
+            ctx.fillStyle = gCcLens;
+            ctx.fill();
+
+            ctx.strokeStyle = obj === selectedObj ? varColorOfObj(obj) : 'rgba(0, 242, 254, 0.35)';
+            ctx.lineWidth = obj === selectedObj ? 2.5 : 1.5;
+            ctx.stroke();
+            break;
+
+          case 'portal':
+            const rad = obj.radius || 25;
+            // Draw portal swirl rings
+            ctx.strokeStyle = obj.color;
+            ctx.shadowColor = obj.color;
+            ctx.shadowBlur = 8;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, rad, 0, Math.PI*2);
+            ctx.stroke();
+
+            // Inner portal pattern
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, rad - 4, time * 0.05, time * 0.05 + Math.PI);
+            ctx.stroke();
+
+            // Center glow fill
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.beginPath();
+            ctx.arc(0, 0, rad - 4, 0, Math.PI*2);
+            ctx.fill();
+            break;
+
+          case 'target':
+            const trad = obj.radius || 25;
+            ctx.lineWidth = 2;
+            
+            if (obj.lit) {
+              ctx.strokeStyle = obj.litColor;
+              ctx.shadowColor = obj.litColor;
+              ctx.shadowBlur = 15;
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            } else {
+              ctx.strokeStyle = obj.requiredColor === 'any' ? '#475569' : getHexForColName(obj.requiredColor);
+              ctx.shadowBlur = 0;
+              ctx.fillStyle = 'transparent';
+            }
+
+            // Draw target rings
+            ctx.beginPath();
+            ctx.arc(0, 0, trad, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, trad - 8, 0, Math.PI*2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI*2);
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.fill();
+            break;
+
+          case 'wall':
+            const ww = obj.width || 100;
+            const wh = obj.height || 40;
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(-ww/2, -wh/2, ww, wh);
+
+            // Stripe pattern
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            for (let offset = -ww; offset < ww; offset += 15) {
+              ctx.moveTo(offset, -wh/2);
+              ctx.lineTo(offset + wh, wh/2);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-ww/2, -wh/2, ww, wh);
+            break;
+        }
+
+        ctx.restore();
+      });
+
+      // Draw active rays
+      rays.forEach(ray => {
+        if (ray.path.length < 2) return;
+
+        // 1. Core glow line
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(ray.path[0].x, ray.path[0].y);
+        for (let i = 1; i < ray.path.length; i++) {
+          ctx.lineTo(ray.path[i].x, ray.path[i].y);
+        }
+        ctx.strokeStyle = ray.color;
+        ctx.lineWidth = 3.2;
+        ctx.shadowColor = ray.color;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. Animated flow dash overlay
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(ray.path[0].x, ray.path[0].y);
+        for (let i = 1; i < ray.path.length; i++) {
+          ctx.lineTo(ray.path[i].x, ray.path[i].y);
+        }
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([12, 18]);
+        ctx.lineDashOffset = -time * 1.5;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // Draw particles
+      particles.forEach(p => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.globalAlpha = p.life;
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Draw Selected Object Rotation Handle
+      if (selectedObj) {
+        ctx.save();
+        const handleDist = selectedObj.type === 'mirror' || selectedObj.type === 'splitter' ? (selectedObj.length/2 + 20) :
+                           selectedObj.type === 'prism' ? (selectedObj.size/2 + 10) :
+                           selectedObj.type === 'laser' ? 35 : 45;
+        const handleX = selectedObj.x + Math.cos(selectedObj.angle || 0) * handleDist;
+        const handleY = selectedObj.y + Math.sin(selectedObj.angle || 0) * handleDist;
+
+        // Draw connection line
+        ctx.strokeStyle = varColorOfObj(selectedObj);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath();
+        ctx.moveTo(selectedObj.x, selectedObj.y);
+        ctx.lineTo(handleX, handleY);
+        ctx.stroke();
+
+        // Draw handle dot
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = varColorOfObj(selectedObj);
+        ctx.lineWidth = 2;
+        ctx.shadowColor = varColorOfObj(selectedObj);
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(handleX, handleY, 6, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function varColorOfObj(obj) {
+      if (obj.type === 'laser') return obj.color === 'white' ? '#ffffff' : obj.color;
+      if (obj.type === 'portal') return obj.color;
+      if (obj.type === 'target') return obj.lit ? obj.litColor : '#475569';
+      return varStyleColor();
+    }
+
+    function varStyleColor() {
+      return '#00f2fe';
+    }
+
+    function getHexForColName(name) {
+      const keys = Object.keys(colorMap);
+      const found = keys.find(k => colorMap[k] === name);
+      return found || '#e2e8f0';
+    }
+
+    // Input handlers
+    function getMousePos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+      };
+    }
+
+    function hitRotateHandle(obj, mx, my) {
+      const handleDist = obj.type === 'mirror' || obj.type === 'splitter' ? (obj.length/2 + 20) :
+                         obj.type === 'prism' ? (obj.size/2 + 10) :
+                         obj.type === 'laser' ? 35 : 45;
+      const hx = obj.x + Math.cos(obj.angle || 0) * handleDist;
+      const hy = obj.y + Math.sin(obj.angle || 0) * handleDist;
+      const dist = Math.hypot(mx - hx, my - hy);
+      return dist <= 12;
+    }
+
+    function hitObjectCenter(obj, mx, my) {
+      // Circle or small objects
+      let radius = 25;
+      if (obj.type === 'prism') radius = obj.size / 2;
+      else if (obj.type === 'mirror' || obj.type === 'splitter') radius = 18;
+      else if (obj.type === 'wall') radius = Math.max(obj.width, obj.height)/2;
+      else if (obj.type === 'lens' || obj.type === 'concave-lens') radius = obj.width / 2;
+
+      const dist = Math.hypot(mx - obj.x, my - obj.y);
+      return dist <= radius;
+    }
+
+    canvas.addEventListener('mousedown', e => {
+      initAudio();
+      const pos = getMousePos(e);
+      
+      // 1. Check selected object's rotate handle
+      if (selectedObj && !selectedObj.fixed && hitRotateHandle(selectedObj, pos.x, pos.y)) {
+        dragMode = 'rotate';
+        return;
+      }
+
+      // 2. Check object hits
+      let found = null;
+      // loop backwards to prioritize top drawn items
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+        if (hitObjectCenter(obj, pos.x, pos.y)) {
+          found = obj;
+          break;
+        }
+      }
+
+      if (found) {
+        selectedObj = found;
+        if (!found.fixed) {
+          dragMode = 'move';
+          dragOffset = { x: pos.x - found.x, y: pos.y - found.y };
+        }
+        updateInspector();
+      } else {
+        selectedObj = null;
+        dragMode = null;
+        updateInspector();
+      }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      if (!selectedObj || selectedObj.fixed || !dragMode) return;
+      const pos = getMousePos(e);
+
+      if (dragMode === 'move') {
+        let newX = pos.x - dragOffset.x;
+        let newY = pos.y - dragOffset.y;
+
+        if (snapGrid) {
+          newX = Math.round(newX / 20) * 20;
+          newY = Math.round(newY / 20) * 20;
+        }
+
+        selectedObj.x = Math.max(20, Math.min(canvas.width - 20, newX));
+        selectedObj.y = Math.max(20, Math.min(canvas.height - 20, newY));
+        updateInspector();
+      } else if (dragMode === 'rotate') {
+        const angle = Math.atan2(pos.y - selectedObj.y, pos.x - selectedObj.x);
+        selectedObj.angle = angle;
+        updateInspector();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragMode = null;
+    });
+
+    // Object Creators & Managers
+    let nextObjId = 1;
+    function spawnObject(type) {
+      if (currentLevelIndex > 0) {
+        if (!inventory || inventory[type] <= 0) return;
+        inventory[type]--;
+        updateInventoryUI();
+      }
+
+      const id = 'obj_' + nextObjId++;
+      let newObj = {
+        id: id,
+        type: type,
+        x: canvas.width / 2 + (Math.random() - 0.5) * 60,
+        y: canvas.height / 2 + (Math.random() - 0.5) * 60,
+        angle: 0
+      };
+
+      // Set standard sizing
+      switch (type) {
+        case 'laser':
+          newObj.color = '#00ff66';
+          newObj.active = true;
+          newObj.radius = 16;
+          break;
+        case 'mirror':
+          newObj.length = 90;
+          break;
+        case 'splitter':
+          newObj.length = 90;
+          break;
+        case 'prism':
+          newObj.size = 90;
+          newObj.refractiveIndex = 1.55;
+          break;
+        case 'lens':
+          newObj.width = 80;
+          newObj.height = 45;
+          newObj.refractiveIndex = 1.55;
+          break;
+        case 'concave-lens':
+          newObj.width = 80;
+          newObj.height = 55;
+          newObj.refractiveIndex = 1.55;
+          break;
+        case 'portal':
+          // Portals spawn as paired structures
+          newObj.radius = 22;
+          newObj.color = '#ff6c00'; // Orange Portal A
+          
+          const partnerId = 'obj_' + nextObjId++;
+          let partnerObj = {
+            id: partnerId,
+            type: 'portal',
+            x: newObj.x + 80,
+            y: newObj.y + 80,
+            angle: Math.PI,
+            radius: 22,
+            partnerId: id,
+            color: '#a000ff' // Purple Portal B
+          };
+          newObj.partnerId = partnerId;
+          objects.push(newObj);
+          objects.push(partnerObj);
+          selectedObj = newObj;
+          updateInspector();
+          return;
+        case 'target':
+          newObj.radius = 22;
+          newObj.requiredColor = 'any';
+          break;
+        case 'wall':
+          newObj.width = 100;
+          newObj.height = 40;
+          break;
+      }
+
+      objects.push(newObj);
+      selectedObj = newObj;
+      updateInspector();
+    }
+
+    function deleteSelected() {
+      if (!selectedObj || selectedObj.fixed) return;
+
+      if (currentLevelIndex > 0 && inventory) {
+        // Return to inventory
+        inventory[selectedObj.type]++;
+        updateInventoryUI();
+      }
+
+      // Check portal partners
+      if (selectedObj.type === 'portal') {
+        const partner = objects.find(o => o.id === selectedObj.partnerId);
+        if (partner) {
+          objects = objects.filter(o => o !== partner);
+          if (currentLevelIndex > 0 && inventory) inventory['portal']++;
+        }
+      }
+
+      objects = objects.filter(o => o !== selectedObj);
+      selectedObj = null;
+      updateInspector();
+      resetSynth();
+    }
+
+    function cloneSelected() {
+      if (!selectedObj || selectedObj.type === 'portal') return; // Cannot clone portals directly
+
+      if (currentLevelIndex > 0) {
+        if (!inventory || inventory[selectedObj.type] <= 0) return;
+        inventory[selectedObj.type]--;
+        updateInventoryUI();
+      }
+
+      const id = 'obj_' + nextObjId++;
+      const clone = {
+        ...selectedObj,
+        id: id,
+        x: selectedObj.x + 30,
+        y: selectedObj.y + 30,
+        fixed: false // cloned are always unlocked
+      };
+
+      objects.push(clone);
+      selectedObj = clone;
+      updateInspector();
+    }
+
+    // UI Panel Builders
+    function updateInventoryUI() {
+      const items = ['laser', 'mirror', 'splitter', 'prism', 'lens', 'concave-lens', 'portal', 'target', 'wall'];
+      items.forEach(t => {
+        const btn = document.getElementById('tool-' + t);
+        const badge = document.getElementById('inv-' + t);
+        
+        if (currentLevelIndex === 0) {
+          // Sandbox: all free
+          badge.style.display = 'none';
+          btn.classList.remove('disabled');
+        } else {
+          const count = inventory[t] || 0;
+          badge.style.display = count > 0 ? 'block' : 'none';
+          badge.innerText = count;
+          
+          if (count <= 0) {
+            btn.classList.add('disabled');
+          } else {
+            btn.classList.remove('disabled');
+          }
+        }
+      });
+    }
+
+    function updateInspector() {
+      const container = document.getElementById('inspector-content');
+      if (!selectedObj) {
+        container.innerHTML = `
+          <div class="inspector-placeholder">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7Z"/></svg>
+            select an optical component on the grid to calibrate its variables.
+          </div>
+        `;
+        return;
+      }
+
+      let angleDeg = Math.round((selectedObj.angle || 0) * 180 / Math.PI);
+      if (angleDeg < 0) angleDeg += 360;
+
+      let subcontrols = '';
+
+      if (selectedObj.type === 'laser') {
+        const colors = [
+          { name: 'Red', val: '#ff0055' },
+          { name: 'Yellow', val: '#ffea00' },
+          { name: 'Green', val: '#00ff66' },
+          { name: 'Blue', val: '#00ffff' },
+          { name: 'White', val: 'white' }
+        ];
+
+        let swatchHtml = '';
+        colors.forEach(c => {
+          const activeClass = selectedObj.color === c.val ? 'active' : '';
+          swatchHtml += `<div class="color-swatch ${activeClass}" style="background-color: ${c.val === 'white' ? '#fff' : c.val}; color: ${c.val === 'white' ? '#000' : c.val}" onclick="setLaserColor('${c.val}')"></div>`;
+        });
+
+        subcontrols += `
+          <div class="control-group">
+            <div class="control-label">laser emitter color</div>
+            <div class="color-select">${swatchHtml}</div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">beam state</div>
+            <button class="btn ${selectedObj.active ? 'btn-active' : ''}" style="width:100%;" onclick="toggleLaserState()">
+              ${selectedObj.active ? 'disable output' : 'enable output'}
+            </button>
+          </div>
+        `;
+      }
+
+      if (selectedObj.type === 'mirror' || selectedObj.type === 'splitter') {
+        const len = selectedObj.length || 90;
+        subcontrols += `
+          <div class="control-group">
+            <div class="control-label">mirror length <span class="control-val">${len}px</span></div>
+            <input type="range" class="slider" min="40" max="150" step="5" value="${len}" oninput="setObjSize('length', this.value)">
+          </div>
+        `;
+      }
+
+      if (selectedObj.type === 'prism') {
+        const size = selectedObj.size || 90;
+        const index = selectedObj.refractiveIndex || 1.55;
+        subcontrols += `
+          <div class="control-group">
+            <div class="control-label">prism size <span class="control-val">${size}px</span></div>
+            <input type="range" class="slider" min="50" max="140" step="5" value="${size}" oninput="setObjSize('size', this.value)">
+          </div>
+          <div class="control-group">
+            <div class="control-label">refractive index (n) <span class="control-val">${index.toFixed(2)}</span></div>
+            <input type="range" class="slider" min="1.10" max="2.30" step="0.05" value="${index}" oninput="setObjRefraction(this.value)">
+          </div>
+        `;
+      }
+
+      if (selectedObj.type === 'lens' || selectedObj.type === 'concave-lens') {
+        const w = selectedObj.width || 80;
+        const h = selectedObj.height || 45;
+        const index = selectedObj.refractiveIndex || 1.55;
+        subcontrols += `
+          <div class="control-group">
+            <div class="control-label">lens width <span class="control-val">${w}px</span></div>
+            <input type="range" class="slider" min="50" max="150" step="5" value="${w}" oninput="setObjSize('width', this.value)">
+          </div>
+          <div class="control-group">
+            <div class="control-label">lens curvature <span class="control-val">${h}px</span></div>
+            <input type="range" class="slider" min="20" max="80" step="5" value="${h}" oninput="setObjSize('height', this.value)">
+          </div>
+          <div class="control-group">
+            <div class="control-label">refractive index (n) <span class="control-val">${index.toFixed(2)}</span></div>
+            <input type="range" class="slider" min="1.10" max="2.30" step="0.05" value="${index}" oninput="setObjRefraction(this.value)">
+          </div>
+        `;
+      }
+
+      if (selectedObj.type === 'wall') {
+        const w = selectedObj.width || 100;
+        const h = selectedObj.height || 40;
+        subcontrols += `
+          <div class="control-group">
+            <div class="control-label">wall width <span class="control-val">${w}px</span></div>
+            <input type="range" class="slider" min="20" max="200" step="10" value="${w}" oninput="setObjSize('width', this.value)">
+          </div>
+          <div class="control-group">
+            <div class="control-label">wall height <span class="control-val">${h}px</span></div>
+            <input type="range" class="slider" min="20" max="200" step="10" value="${h}" oninput="setObjSize('height', this.value)">
+          </div>
+        `;
+      }
+
+      if (selectedObj.type === 'target') {
+        const reqCol = selectedObj.requiredColor || 'any';
+        subcontrols += `
+          <div class="control-group">
+            <div class="control-label">target filter wavelength</div>
+            <select onchange="setTargetRequiredColor(this.value)">
+              <option value="any" ${reqCol === 'any' ? 'selected' : ''}>any wavelength</option>
+              <option value="red" ${reqCol === 'red' ? 'selected' : ''}>red only</option>
+              <option value="yellow" ${reqCol === 'yellow' ? 'selected' : ''}>yellow only</option>
+              <option value="green" ${reqCol === 'green' ? 'selected' : ''}>green only</option>
+              <option value="blue" ${reqCol === 'blue' ? 'selected' : ''}>blue only</option>
+            </select>
+          </div>
+        `;
+      }
+
+      let editHeader = `calibration matrix`;
+      if (selectedObj.fixed) {
+        editHeader += ` <span style="color:var(--neon-pink); font-size:0.6rem;">[locked]</span>`;
+      }
+
+      container.innerHTML = `
+        <div class="panel-title">${editHeader}</div>
+        
+        <div class="control-group">
+          <div class="control-label">component: <span style="color:#fff;">${selectedObj.type}</span></div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">orientation angle <span class="control-val">${angleDeg}°</span></div>
+          <input type="range" class="slider" min="0" max="360" step="5" value="${angleDeg}" ${selectedObj.fixed ? 'disabled' : ''} oninput="setObjAngle(this.value)">
+        </div>
+
+        ${subcontrols}
+
+        <div style="display:flex; gap:10px; margin-top:15px;">
+          <button class="btn btn-danger" style="flex:1;" ${selectedObj.fixed ? 'disabled' : ''} onclick="deleteSelected()">delete</button>
+          <button class="btn" style="flex:1;" ${selectedObj.type === 'portal' ? 'disabled' : ''} onclick="cloneSelected()">clone</button>
+        </div>
+      `;
+    }
+
+    // Property setters
+    function setLaserColor(col) {
+      if (selectedObj && selectedObj.type === 'laser') {
+        selectedObj.color = col;
+        updateInspector();
+      }
+    }
+
+    function toggleLaserState() {
+      if (selectedObj && selectedObj.type === 'laser') {
+        selectedObj.active = !selectedObj.active;
+        updateInspector();
+      }
+    }
+
+    function setObjSize(key, val) {
+      if (selectedObj) {
+        selectedObj[key] = parseInt(val);
+        updateInspector();
+      }
+    }
+
+    function setObjRefraction(val) {
+      if (selectedObj && (selectedObj.type === 'prism' || selectedObj.type === 'lens' || selectedObj.type === 'concave-lens')) {
+        selectedObj.refractiveIndex = parseFloat(val);
+        updateInspector();
+      }
+    }
+
+    function setObjAngle(val) {
+      if (selectedObj && !selectedObj.fixed) {
+        selectedObj.angle = parseInt(val) * Math.PI / 180;
+        updateInspector();
+      }
+    }
+
+    function setTargetRequiredColor(val) {
+      if (selectedObj && selectedObj.type === 'target') {
+        selectedObj.requiredColor = val;
+        updateInspector();
+      }
+    }
+
+    // System wide options
+    function toggleSnap() {
+      snapGrid = !snapGrid;
+      document.getElementById('snap-state').innerText = snapGrid ? "on" : "off";
+      document.getElementById('snap-btn').classList.toggle('btn-active', snapGrid);
+    }
+
+    function clearCanvas() {
+      if (currentLevelIndex === 0) {
+        objects = [];
+        selectedObj = null;
+        updateInspector();
+        resetSynth();
+      } else {
+        loadLevel(currentLevelIndex);
+      }
+    }
+
+    function loadLevel(index) {
+      currentLevelIndex = index;
+      particles = [];
+      selectedObj = null;
+      levelSuccess = false;
+      document.getElementById('success-overlay').classList.remove('active');
+
+      if (index === 0) {
+        // Sandbox setup
+        objects = [
+          { id: 'l1', type: 'laser', x: 120, y: 300, angle: 0, color: 'white', active: true }
+        ];
+        inventory = null;
+        document.getElementById('level-desc').innerText = "welcome to sandbox mode. place, drag, rotate, and scale any elements you want to build custom optical circuits.";
+      } else {
+        const lvl = levels[index - 1];
+        lvl.setup();
+        inventory = { ...lvl.inventory };
+        document.getElementById('level-desc').innerText = lvl.desc;
+      }
+      
+      updateInventoryUI();
+      updateInspector();
+      resetSynth();
+    }
+
+    function nextLevel() {
+      let nextIdx = currentLevelIndex + 1;
+      if (nextIdx > levels.length) nextIdx = 0; // wrap back to sandbox
+      document.getElementById('level-select').value = nextIdx;
+      loadLevel(nextIdx);
+    }
+
+    // Help Modal Control
+    function openHelp() {
+      document.getElementById('help-modal').classList.add('active');
+    }
+
+    function closeHelp() {
+      document.getElementById('help-modal').classList.remove('active');
+    }
+
+    // Run-loop
+    function animate() {
+      time++;
+      
+      // Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // Trace rays
+      const rays = traceRays();
+
+      // Render
+      drawScene(rays);
+
+      // Audio and stat feedback
+      const allTargets = objects.filter(o => o.type === 'target');
+      const litCount = allTargets.filter(t => t.lit).length;
+      
+      document.getElementById('stat-rays').innerText = rays.length;
+      document.getElementById('stat-targets').innerText = `${litCount}/${allTargets.length}`;
+      
+      const targetDot = document.getElementById('stat-targets-dot');
+      if (allTargets.length > 0) {
+        if (litCount === allTargets.length) {
+          targetDot.className = "stat-dot active";
+        } else {
+          targetDot.className = "stat-dot inactive";
+        }
+      } else {
+        targetDot.className = "stat-dot";
+      }
+
+      // Update synth
+      if (audioCtx) {
+        const litStates = [false, false, false, false];
+        allTargets.forEach((t, i) => {
+          const ch = i % 4;
+          litStates[ch] = t.lit;
+        });
+        for (let i = 0; i < 4; i++) {
+          const targetVol = litStates[i] ? 0.22 : 0.0;
+          targetSynths[i].gain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.08);
+        }
+      }
+
+      // Check level success
+      if (currentLevelIndex > 0 && allTargets.length > 0 && litCount === allTargets.length && !levelSuccess) {
+        levelSuccess = true;
+        document.getElementById('success-overlay').classList.add('active');
+        playSuccessSound();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // Init
+    loadLevel(0);
+    animate();
+  </script>
+</body>
+</html>
