@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>quantum wavebox // schrödinger equation sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #04050a;
+      --panel-bg: rgba(10, 12, 22, 0.85);
+      --border-color: rgba(0, 243, 255, 0.15);
+      --border-glow: rgba(0, 243, 255, 0.05);
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff0055;
+      --neon-orange: #ff7700;
+      --neon-purple: #9d00ff;
+      --neon-green: #39ff14;
+      --text-main: #f0f2f5;
+      --text-muted: #6b7c96;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(4, 5, 10, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-glow {
+      width: 12px;
+      height: 12px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--neon-cyan);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.6; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: lowercase;
+      background: linear-gradient(90deg, #fff, var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-info {
+      display: flex;
+      gap: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-info span strong {
+      color: var(--neon-cyan);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 20px;
+      z-index: 5;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sidebar-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: lowercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 5px;
+      letter-spacing: 1px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      text-transform: lowercase;
+      text-align: left;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn:hover {
+      background: rgba(0, 243, 255, 0.08);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.25);
+    }
+
+    .btn.active {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.35);
+      color: #fff;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .control-label span.value {
+      color: var(--neon-cyan);
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--neon-cyan);
+      transition: transform 0.1s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #020306;
+      position: relative;
+      overflow-y: auto;
+      padding: 20px;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .canvas-container {
+      position: relative;
+      background: rgba(4, 5, 10, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 0 20px var(--border-glow);
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      cursor: crosshair;
+    }
+
+    .canvas-label {
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      text-transform: lowercase;
+      color: var(--text-muted);
+      pointer-events: none;
+      letter-spacing: 1px;
+    }
+
+    .secondary-row {
+      display: flex;
+      gap: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .secondary-box {
+      flex: 1;
+      position: relative;
+      background: rgba(4, 5, 10, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 0 20px var(--border-glow);
+      overflow: hidden;
+      height: 180px;
+    }
+
+    .control-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 800px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      padding: 12px;
+      border-radius: 10px;
+      backdrop-filter: blur(16px);
+    }
+
+    .btn-main {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 600;
+      text-transform: lowercase;
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: rgba(0, 243, 255, 0.05);
+      color: var(--neon-cyan);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-main:hover {
+      background: rgba(0, 243, 255, 0.15);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+      border-color: var(--neon-cyan);
+    }
+
+    .btn-pink {
+      color: var(--neon-pink);
+      border-color: rgba(255, 0, 85, 0.3);
+      background: rgba(255, 0, 85, 0.05);
+    }
+
+    .btn-pink:hover {
+      background: rgba(255, 0, 85, 0.15);
+      box-shadow: 0 0 12px rgba(255, 0, 85, 0.3);
+      border-color: var(--neon-pink);
+    }
+
+    .btn-orange {
+      color: var(--neon-orange);
+      border-color: rgba(255, 119, 0, 0.3);
+      background: rgba(255, 119, 0, 0.05);
+    }
+
+    .btn-orange:hover {
+      background: rgba(255, 119, 0, 0.15);
+      box-shadow: 0 0 12px rgba(255, 119, 0, 0.3);
+      border-color: var(--neon-orange);
+    }
+
+    .console-box {
+      width: 100%;
+      max-width: 800px;
+      background: rgba(4, 5, 10, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--neon-cyan);
+      text-transform: lowercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .console-text {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .legend {
+      display: flex;
+      gap: 15px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .legend-rainbow {
+      background: linear-gradient(90deg, red, yellow, green, cyan, blue, magenta, red);
+      width: 24px;
+      height: 8px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <h1>quantum wavebox</h1>
+    </div>
+    <div class="header-info">
+      <span>probability: <strong id="val-prob">1.000000</strong></span>
+      <span>energy &langle;H&rangle;: <strong id="val-energy">0.0000</strong> eV</span>
+      <span>uncertainty &sigma;x&middot;&sigma;p: <strong id="val-uncertainty">0.500</strong></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">presets</div>
+        <div class="preset-grid">
+          <button class="btn active" onclick="loadPreset('tunneling')">quantum tunneling <span>⇛</span></button>
+          <button class="btn" onclick="loadPreset('double_well')">double well oscillations <span>⇄</span></button>
+          <button class="btn" onclick="loadPreset('harmonic')">quantum oscillator <span>∼</span></button>
+          <button class="btn" onclick="loadPreset('infinite_well')">infinite square well <span>⬜</span></button>
+          <button class="btn" onclick="loadPreset('lattice')">periodic crystal lattice <span>⦾</span></button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">wave packet config</div>
+        
+        <div class="control-group">
+          <div class="control-label">
+            <span>momentum (k₀)</span>
+            <span class="value" id="label-k0">1.50</span>
+          </div>
+          <input type="range" id="param-k0" min="-4" max="4" step="0.1" value="1.5">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>packet width (&sigma;)</span>
+            <span class="value" id="label-sigma">12.0</span>
+          </div>
+          <input type="range" id="param-sigma" min="5" max="30" step="0.5" value="12">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>initial position (x₀)</span>
+            <span class="value" id="label-x0">60</span>
+          </div>
+          <input type="range" id="param-x0" min="20" max="230" step="1" value="60">
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">simulation constants</div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>particle mass (m)</span>
+            <span class="value" id="label-mass">1.0</span>
+          </div>
+          <input type="range" id="param-mass" min="0.2" max="4.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>time step (dt)</span>
+            <span class="value" id="label-dt">0.35</span>
+          </div>
+          <input type="range" id="param-dt" min="0.05" max="1.0" step="0.05" value="0.35">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>barrier height (V₀)</span>
+            <span class="value" id="label-vheight">2.20</span>
+          </div>
+          <input type="range" id="param-vheight" min="0.5" max="6.0" step="0.1" value="2.2">
+        </div>
+      </div>
+      
+      <div class="sidebar-section" style="margin-top: auto;">
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--neon-cyan);"></div>
+            <span>Re(&psi;)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--neon-pink);"></div>
+            <span>Im(&psi;)</span>
+          </div>
+        </div>
+        <div class="legend" style="margin-top: 5px;">
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--neon-orange);"></div>
+            <span>Potential V(x)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-rainbow"></div>
+            <span>Phase &theta;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="canvas-container" style="width: 800px; height: 380px;">
+        <div class="canvas-label">position space visualizer: |&psi;(x)|&sup2; & phase mapping</div>
+        <canvas id="canvas-main" width="800" height="380"></canvas>
+      </div>
+
+      <div class="secondary-row">
+        <div class="secondary-box">
+          <div class="canvas-label">momentum space visualizer: |&phi;(p)|&sup2;</div>
+          <canvas id="canvas-momentum" width="390" height="180"></canvas>
+        </div>
+        <div class="secondary-box">
+          <div class="canvas-label">classical phase space trajectory: &langle;p&rangle; vs &langle;x&rangle;</div>
+          <canvas id="canvas-phase" width="390" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="control-bar">
+        <button class="btn-main" id="btn-play">pause <span>❚❚</span></button>
+        <button class="btn-main" onclick="stepSim()">step <span>▶❚</span></button>
+        <button class="btn-main btn-orange" onclick="resetWavePacket()">reset state <span>⟲</span></button>
+        <button class="btn-main btn-orange" onclick="clearPotentials()">clear barriers <span>∅</span></button>
+        <button class="btn-main btn-pink" onclick="triggerCollapse()">collapse (measure) <span>⚛</span></button>
+        <button class="btn-main" id="btn-audio" onclick="toggleAudio()" style="margin-left: auto;">audio: off <span>🔇</span></button>
+      </div>
+
+      <div class="console-box">
+        <div class="console-text" id="console-output">system initialized. left-click and drag on main visualizer to draw potentials.</div>
+        <div style="font-size: 0.65rem; color: var(--text-muted);">thomas algorithm cn solver v1.0 // hexo</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Complex number class definition
+    class Complex {
+      constructor(r, i) {
+        this.r = r;
+        this.i = i;
+      }
+      add(o) { return new Complex(this.r + o.r, this.i + o.i); }
+      sub(o) { return new Complex(this.r - o.r, this.i - o.i); }
+      mul(o) { return new Complex(this.r * o.r - this.i * o.i, this.r * o.i + this.i * o.r); }
+      mulReal(n) { return new Complex(this.r * n, this.i * n); }
+      div(o) {
+        const denom = o.r * o.r + o.i * o.i;
+        if (denom === 0) return new Complex(0, 0);
+        return new Complex(
+          (this.r * o.r + this.i * o.i) / denom,
+          (this.i * o.r - this.r * o.i) / denom
+        );
+      }
+      mag2() { return this.r * this.r + this.i * this.i; }
+      mag() { return Math.sqrt(this.r * this.r + this.i * this.i); }
+      phase() { return Math.atan2(this.i, this.r); }
+    }
+
+    // Grid size
+    const N = 256;
+    let psi = new Array(N).fill(null).map(() => new Complex(0, 0));
+    let V = new Array(N).fill(0);
+
+    // Settings
+    let mass = 1.0;
+    let dt = 0.35;
+    let k0 = 1.5;
+    let sigma = 12.0;
+    let x0 = 60;
+    let vHeightPreset = 2.2;
+    let isPlaying = true;
+    let activePreset = 'tunneling';
+
+    // Interactive Drawing state
+    let isDrawing = false;
+
+    // Measurement collapse animation state
+    let collapseFlashX = -1;
+    let collapseFlashFrames = 0;
+
+    // Phase Space History
+    const phaseSpaceHistory = [];
+
+    // UI elements
+    const canvasMain = document.getElementById('canvas-main');
+    const ctxMain = canvasMain.getContext('2d');
+    const canvasMom = document.getElementById('canvas-momentum');
+    const ctxMom = canvasMom.getContext('2d');
+    const canvasPhase = document.getElementById('canvas-phase');
+    const ctxPhase = canvasPhase.getContext('2d');
+
+    const labelK0 = document.getElementById('label-k0');
+    const labelSigma = document.getElementById('label-sigma');
+    const labelX0 = document.getElementById('label-x0');
+    const labelMass = document.getElementById('label-mass');
+    const labelDt = document.getElementById('label-dt');
+    const labelVHeight = document.getElementById('label-vheight');
+
+    const paramK0 = document.getElementById('param-k0');
+    const paramSigma = document.getElementById('param-sigma');
+    const paramX0 = document.getElementById('param-x0');
+    const paramMass = document.getElementById('param-mass');
+    const paramDt = document.getElementById('param-dt');
+    const paramVHeight = document.getElementById('param-vheight');
+
+    const btnPlay = document.getElementById('btn-play');
+    const consoleOutput = document.getElementById('console-output');
+
+    // Audio Engine
+    let audioCtx = null;
+    let carrierOsc = null;
+    let carrierGain = null;
+    let synthActive = false;
+
+    function initAudio() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        
+        carrierOsc = audioCtx.createOscillator();
+        carrierOsc.type = 'triangle';
+        
+        carrierGain = audioCtx.createGain();
+        carrierGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        
+        carrierOsc.connect(carrierGain);
+        carrierGain.connect(audioCtx.destination);
+        carrierOsc.start();
+        
+        synthActive = true;
+        document.getElementById('btn-audio').innerHTML = 'audio: on <span>🔊</span>';
+        document.getElementById('btn-audio').style.color = 'var(--neon-green)';
+        logMessage('quantum audio synthesis engine active.');
+      } catch (e) {
+        logMessage('failed to initialize web audio context.');
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        initAudio();
+      } else {
+        if (synthActive) {
+          carrierGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+          synthActive = false;
+          document.getElementById('btn-audio').innerHTML = 'audio: off <span>🔇</span>';
+          document.getElementById('btn-audio').style.color = '';
+          logMessage('audio engine deactivated.');
+        } else {
+          synthActive = true;
+          document.getElementById('btn-audio').innerHTML = 'audio: on <span>🔊</span>';
+          document.getElementById('btn-audio').style.color = 'var(--neon-green)';
+          logMessage('audio engine reactivated.');
+        }
+      }
+    }
+
+    function playCollapseSound() {
+      if (!audioCtx || !synthActive) return;
+      const now = audioCtx.currentTime;
+      
+      const sweepOsc = audioCtx.createOscillator();
+      const sweepGain = audioCtx.createGain();
+      
+      sweepOsc.type = 'sine';
+      sweepOsc.frequency.setValueAtTime(880, now);
+      sweepOsc.frequency.exponentialRampToValueAtTime(110, now + 0.4);
+      
+      sweepGain.gain.setValueAtTime(0.2, now);
+      sweepGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      
+      sweepOsc.connect(sweepGain);
+      sweepGain.connect(audioCtx.destination);
+      
+      sweepOsc.start();
+      sweepOsc.stop(now + 0.45);
+    }
+
+    // Logger helper
+    function logMessage(msg) {
+      consoleOutput.innerText = msg;
+    }
+
+    // Crank-Nicolson Solver Step using complex Thomas Algorithm
+    function stepSchrodinger() {
+      const alpha = dt / (4 * mass);
+      
+      // Calculate B * psi to form RHS vector d
+      const d = new Array(N);
+      for (let j = 1; j < N - 1; j++) {
+        const beta = (dt / 2) * V[j];
+        const psi_j = psi[j];
+        const psi_prev = psi[j - 1];
+        const psi_next = psi[j + 1];
+        
+        // term1 = (1 - i*(2*alpha + beta)) * psi_j
+        const factor = 2 * alpha + beta;
+        const term1_r = psi_j.r + factor * psi_j.i;
+        const term1_i = psi_j.i - factor * psi_j.r;
+        
+        // term2 = i * alpha * (psi_{j-1} + psi_{j+1})
+        const sum_prev_next_r = psi_prev.r + psi_next.r;
+        const sum_prev_next_i = psi_prev.i + psi_next.i;
+        const term2_r = -alpha * sum_prev_next_i;
+        const term2_i = alpha * sum_prev_next_r;
+        
+        d[j] = new Complex(term1_r + term2_r, term1_i + term2_i);
+      }
+      
+      // Setup tridiagonal system equations
+      // a_j = -i * alpha, c_j = -i * alpha
+      // b_j = 1 + i * (2*alpha + beta_j)
+      const a_j = new Complex(0, -alpha);
+      const c_j = new Complex(0, -alpha);
+      
+      const cp = new Array(N);
+      const dp = new Array(N);
+      
+      // j = 1
+      const b_1 = new Complex(1, 2 * alpha + (dt / 2) * V[1]);
+      cp[1] = c_j.div(b_1);
+      dp[1] = d[1].div(b_1);
+      
+      // forward sweep
+      for (let j = 2; j < N - 1; j++) {
+        const b_j = new Complex(1, 2 * alpha + (dt / 2) * V[j]);
+        
+        // denominator = b_j - a_j * cp_{j-1}
+        const denom = b_j.sub(a_j.mul(cp[j - 1]));
+        cp[j] = c_j.div(denom);
+        
+        // numerator = d_j - a_j * dp_{j-1}
+        const num = d[j].sub(a_j.mul(dp[j - 1]));
+        dp[j] = num.div(denom);
+      }
+      
+      // backward substitution
+      const newPsi = new Array(N).fill(null).map(() => new Complex(0, 0));
+      newPsi[0] = new Complex(0, 0);
+      newPsi[N - 1] = new Complex(0, 0);
+      
+      newPsi[N - 2] = dp[N - 2];
+      for (let j = N - 3; j >= 1; j--) {
+        newPsi[j] = dp[j].sub(cp[j].mul(newPsi[j + 1]));
+      }
+      
+      // Normalize to prevent floating point numerical leakage
+      let total_norm = 0;
+      for (let j = 0; j < N; j++) {
+        total_norm += newPsi[j].mag2();
+      }
+      total_norm = Math.sqrt(total_norm);
+      if (total_norm > 1e-9) {
+        for (let j = 0; j < N; j++) {
+          newPsi[j].r /= total_norm;
+          newPsi[j].i /= total_norm;
+        }
+      }
+      
+      psi = newPsi;
+    }
+
+    // Set Wave packet properties based on GUI Sliders
+    function resetWavePacket() {
+      phaseSpaceHistory.length = 0;
+      let total_norm = 0;
+      for (let j = 0; j < N; j++) {
+        const dx = j - x0;
+        const amp = Math.exp(-(dx * dx) / (2 * sigma * sigma));
+        const phase = k0 * j;
+        psi[j] = new Complex(amp * Math.cos(phase), amp * Math.sin(phase));
+        total_norm += psi[j].mag2();
+      }
+      total_norm = Math.sqrt(total_norm);
+      for (let j = 0; j < N; j++) {
+        psi[j].r /= total_norm;
+        psi[j].i /= total_norm;
+      }
+      logMessage(`gaussian packet reset: x₀=${x0}, k₀=${k0.toFixed(2)}, σ=${sigma.toFixed(1)}`);
+    }
+
+    function clearPotentials() {
+      V.fill(0);
+      logMessage('custom potentials cleared.');
+    }
+
+    // Presets
+    function loadPreset(name) {
+      activePreset = name;
+      document.querySelectorAll('.preset-grid .btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      
+      V.fill(0);
+      phaseSpaceHistory.length = 0;
+
+      if (name === 'tunneling') {
+        x0 = 60;
+        k0 = 1.5;
+        sigma = 12.0;
+        vHeightPreset = 2.2;
+        
+        // Rectangular barrier in middle
+        for (let j = 122; j <= 134; j++) {
+          V[j] = vHeightPreset;
+        }
+        
+        logMessage('preset loaded: tunneling barrier. watch wave packet split into reflection & transmission.');
+      } 
+      else if (name === 'double_well') {
+        x0 = 70;
+        k0 = 0.0;
+        sigma = 9.0;
+        vHeightPreset = 2.5;
+        
+        // Create double well potential: walls, middle barrier, flat wells
+        // Outer boundaries
+        for (let j = 0; j < 35; j++) V[j] = 5.0;
+        for (let j = 221; j < N; j++) V[j] = 5.0;
+        // Central barrier separating left and right wells
+        for (let j = 115; j <= 140; j++) {
+          V[j] = vHeightPreset;
+        }
+        
+        logMessage('preset loaded: double well. quantum tunneling causes oscillation between the wells.');
+      } 
+      else if (name === 'harmonic') {
+        x0 = 80;
+        k0 = 0.8;
+        sigma = 10.0;
+        
+        // Quadratic potential V(x) = c * (x - x_c)^2
+        const xc = N / 2;
+        const c = 0.00035;
+        for (let j = 0; j < N; j++) {
+          V[j] = c * (j - xc) * (j - xc);
+        }
+        
+        logMessage('preset loaded: quantum harmonic oscillator. watch the packet oscillate classical-style.');
+      } 
+      else if (name === 'infinite_well') {
+        x0 = 128;
+        k0 = 2.0;
+        sigma = 10.0;
+        
+        // Deep square walls at 30 and 226
+        for (let j = 0; j < 30; j++) V[j] = 6.0;
+        for (let j = 226; j < N; j++) V[j] = 6.0;
+        
+        logMessage('preset loaded: infinite square well. watch standard boundary bounce reflection patterns.');
+      }
+      else if (name === 'lattice') {
+        x0 = 40;
+        k0 = 1.6;
+        sigma = 12.0;
+        vHeightPreset = 2.0;
+        
+        // Thin barriers every 22 units
+        for (let barrier = 0; barrier < 6; barrier++) {
+          const start = 80 + barrier * 24;
+          for (let j = start; j < start + 4; j++) {
+            V[j] = vHeightPreset;
+          }
+        }
+        
+        logMessage('preset loaded: periodic potential. simulates particle scattering in a crystalline lattice.');
+      }
+
+      // Sync inputs
+      paramX0.value = x0;
+      paramK0.value = k0;
+      paramSigma.value = sigma;
+      paramVHeight.value = vHeightPreset;
+
+      labelX0.innerText = x0;
+      labelK0.innerText = k0.toFixed(2);
+      labelSigma.innerText = sigma.toFixed(1);
+      labelVHeight.innerText = vHeightPreset.toFixed(2);
+
+      resetWavePacket();
+    }
+
+    // Collapse (measurement) simulation
+    function triggerCollapse() {
+      // Copenhagen measurement: collapse to single spatial eigenvalue
+      // Roll random number to select a point on the grid based on magnitude distribution
+      const cumProb = new Array(N);
+      let runningSum = 0;
+      for (let j = 0; j < N; j++) {
+        runningSum += psi[j].mag2();
+        cumProb[j] = runningSum;
+      }
+      
+      const r = Math.random() * runningSum;
+      let selectedIdx = 0;
+      for (let j = 0; j < N; j++) {
+        if (cumProb[j] >= r) {
+          selectedIdx = j;
+          break;
+        }
+      }
+
+      // Replace wavefunction with narrow Gaussian spike at chosen point
+      const sigmaCollapse = 2.2;
+      let new_norm = 0;
+      for (let j = 0; j < N; j++) {
+        const dx = j - selectedIdx;
+        const amp = Math.exp(-(dx * dx) / (2 * sigmaCollapse * sigmaCollapse));
+        psi[j] = new Complex(amp, 0); // zero phase after measurement
+        new_norm += psi[j].mag2();
+      }
+      
+      new_norm = Math.sqrt(new_norm);
+      for (let j = 0; j < N; j++) {
+        psi[j].r /= new_norm;
+        psi[j].i /= new_norm;
+      }
+
+      // Trigger animation effect
+      collapseFlashX = selectedIdx;
+      collapseFlashFrames = 35;
+      
+      playCollapseSound();
+      logMessage(`measurement triggered! wave function collapsed to position x = ${selectedIdx}. momentum uncertainty exploded.`);
+    }
+
+    // Momentum calculations via DFT
+    function computeMomentumSpace() {
+      const phi = new Array(N);
+      const factor = 1.0 / Math.sqrt(N);
+      for (let k = 0; k < N; k++) {
+        const p_idx = k - N / 2;
+        let sum_r = 0;
+        let sum_i = 0;
+        for (let j = 0; j < N; j++) {
+          const angle = -2 * Math.PI * p_idx * j / N;
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          
+          sum_r += psi[j].r * cos - psi[j].i * sin;
+          sum_i += psi[j].r * sin + psi[j].i * cos;
+        }
+        phi[k] = new Complex(sum_r * factor, sum_i * factor);
+      }
+      return phi;
+    }
+
+    // Calculate expectations & uncertainty
+    function calculateDiagnostics(phi) {
+      let totalProb = 0;
+      let expX = 0;
+      let expX2 = 0;
+      for (let j = 0; j < N; j++) {
+        const p2 = psi[j].mag2();
+        totalProb += p2;
+        expX += j * p2;
+        expX2 += j * j * p2;
+      }
+
+      let expP = 0;
+      let expP2 = 0;
+      for (let k = 0; k < N; k++) {
+        const p_val = (2 * Math.PI * (k - N / 2)) / N;
+        const momProb = phi[k].mag2();
+        expP += p_val * momProb;
+        expP2 += p_val * p_val * momProb;
+      }
+
+      const dx = Math.sqrt(Math.max(0, expX2 - expX * expX));
+      const dp = Math.sqrt(Math.max(0, expP2 - expP * expP));
+      const uncertainty = dx * dp;
+
+      // Hamiltonian Energy calculation: <H> = <T> + <V>
+      let expV = 0;
+      for (let j = 0; j < N; j++) {
+        expV += V[j] * psi[j].mag2();
+      }
+
+      let expT = 0;
+      for (let k = 0; k < N; k++) {
+        const p_val = (2 * Math.PI * (k - N / 2)) / N;
+        const momProb = phi[k].mag2();
+        expT += (p_val * p_val / (2 * mass)) * momProb;
+      }
+      const expEnergy = expT + expV;
+
+      return { totalProb, expX, expP, expEnergy, uncertainty };
+    }
+
+    // Drawing loops
+    function drawMain(expX) {
+      const w = canvasMain.width;
+      const h = canvasMain.height;
+      
+      ctxMain.fillStyle = '#06070b';
+      ctxMain.fillRect(0, 0, w, h);
+
+      // Grid background
+      ctxMain.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctxMain.lineWidth = 1;
+      for (let x = 0; x < w; x += 40) {
+        ctxMain.beginPath();
+        ctxMain.moveTo(x, 0);
+        ctxMain.lineTo(x, h);
+        ctxMain.stroke();
+      }
+      for (let y = 0; y < h; y += 40) {
+        ctxMain.beginPath();
+        ctxMain.moveTo(0, y);
+        ctxMain.lineTo(w, y);
+        ctxMain.stroke();
+      }
+
+      const dx = w / N;
+      const centerLine = h * 0.7;
+
+      // Draw potential barrier V(x)
+      ctxMain.beginPath();
+      ctxMain.moveTo(0, centerLine);
+      for (let j = 0; j < N; j++) {
+        const vx = j * dx;
+        // scale V height: V=5 -> 220 pixels high
+        const vy = centerLine - (V[j] / 6.0) * (h * 0.6);
+        ctxMain.lineTo(vx, vy);
+      }
+      ctxMain.lineTo(w, centerLine);
+      ctxMain.closePath();
+      
+      const vGrad = ctxMain.createLinearGradient(0, 0, 0, h);
+      vGrad.addColorStop(0, 'rgba(255, 85, 0, 0.01)');
+      vGrad.addColorStop(1, 'rgba(255, 85, 0, 0.25)');
+      ctxMain.fillStyle = vGrad;
+      ctxMain.fill();
+      
+      ctxMain.strokeStyle = 'var(--neon-orange)';
+      ctxMain.lineWidth = 2.5;
+      ctxMain.shadowBlur = 8;
+      ctxMain.shadowColor = 'var(--neon-orange)';
+      ctxMain.beginPath();
+      for (let j = 0; j < N; j++) {
+        const vx = j * dx;
+        const vy = centerLine - (V[j] / 6.0) * (h * 0.6);
+        if (j === 0) ctxMain.moveTo(vx, vy);
+        else ctxMain.lineTo(vx, vy);
+      }
+      ctxMain.stroke();
+      ctxMain.shadowBlur = 0; // reset glow
+
+      // Draw real and imaginary parts as thin wave curves
+      ctxMain.lineWidth = 1.2;
+      
+      // Re(psi) in cyan
+      ctxMain.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+      ctxMain.beginPath();
+      for (let j = 0; j < N; j++) {
+        const vx = j * dx;
+        const vy = centerLine - psi[j].r * 110;
+        if (j === 0) ctxMain.moveTo(vx, vy);
+        else ctxMain.lineTo(vx, vy);
+      }
+      ctxMain.stroke();
+
+      // Im(psi) in pink
+      ctxMain.strokeStyle = 'rgba(255, 0, 85, 0.4)';
+      ctxMain.beginPath();
+      for (let j = 0; j < N; j++) {
+        const vx = j * dx;
+        const vy = centerLine - psi[j].i * 110;
+        if (j === 0) ctxMain.moveTo(vx, vy);
+        else ctxMain.lineTo(vx, vy);
+      }
+      ctxMain.stroke();
+
+      // Draw Wave Function Probability density filled dynamically by phase
+      for (let j = 0; j < N - 1; j++) {
+        const vx1 = j * dx;
+        const vx2 = (j + 1) * dx;
+        
+        const mag1 = psi[j].mag2();
+        const mag2 = psi[j + 1].mag2();
+        
+        // vertical scaling: max prob amplitude ~0.15 normalized, let's scale it
+        const vy1 = centerLine - mag1 * 850;
+        const vy2 = centerLine - mag2 * 850;
+        
+        const phase = psi[j].phase();
+        const hue = ((phase + Math.PI) / (2 * Math.PI)) * 360;
+
+        ctxMain.fillStyle = `hsla(${hue}, 100%, 55%, 0.45)`;
+        ctxMain.beginPath();
+        ctxMain.moveTo(vx1, centerLine);
+        ctxMain.lineTo(vx1, vy1);
+        ctxMain.lineTo(vx2, vy2);
+        ctxMain.lineTo(vx2, centerLine);
+        ctxMain.closePath();
+        ctxMain.fill();
+      }
+
+      // Draw expectation marker <x>
+      const markerX = expX * dx;
+      ctxMain.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctxMain.lineWidth = 1;
+      ctxMain.setLineDash([5, 5]);
+      ctxMain.beginPath();
+      ctxMain.moveTo(markerX, 0);
+      ctxMain.lineTo(markerX, h);
+      ctxMain.stroke();
+      ctxMain.setLineDash([]); // clear dash
+
+      // Draw collapse visual flash
+      if (collapseFlashFrames > 0) {
+        const flashX = collapseFlashX * dx;
+        const opacity = collapseFlashFrames / 35.0;
+        ctxMain.fillStyle = `rgba(255, 255, 255, ${opacity * 0.35})`;
+        ctxMain.fillRect(flashX - 25, 0, 50, h);
+        
+        ctxMain.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+        ctxMain.lineWidth = 4;
+        ctxMain.shadowBlur = 15;
+        ctxMain.shadowColor = '#fff';
+        ctxMain.beginPath();
+        ctxMain.moveTo(flashX, 0);
+        ctxMain.lineTo(flashX, h);
+        ctxMain.stroke();
+        ctxMain.shadowBlur = 0;
+
+        ctxMain.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        ctxMain.font = 'bold 0.85rem Orbitron';
+        ctxMain.fillText("collapsed!", flashX + 10, 40);
+        
+        collapseFlashFrames--;
+      }
+    }
+
+    function drawMomentum(phi, expP) {
+      const w = canvasMom.width;
+      const h = canvasMom.height;
+      
+      ctxMom.fillStyle = '#06070b';
+      ctxMom.fillRect(0, 0, w, h);
+
+      // Grid
+      ctxMom.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctxMom.lineWidth = 1;
+      for (let x = 0; x < w; x += 30) {
+        ctxMom.beginPath();
+        ctxMom.moveTo(x, 0);
+        ctxMom.lineTo(x, h);
+        ctxMom.stroke();
+      }
+
+      // Draw probability histogram
+      const dx = w / N;
+      ctxMom.fillStyle = 'rgba(0, 243, 255, 0.3)';
+      ctxMom.strokeStyle = 'var(--neon-cyan)';
+      ctxMom.lineWidth = 1.5;
+      
+      ctxMom.beginPath();
+      for (let k = 0; k < N; k++) {
+        const vx = k * dx;
+        const mag = phi[k].mag2();
+        const vy = h - 20 - mag * 400; // scaling momentum magnitude
+        if (k === 0) ctxMom.moveTo(vx, vy);
+        else ctxMom.lineTo(vx, vy);
+      }
+      ctxMom.lineTo(w, h - 20);
+      ctxMom.stroke();
+      
+      // Draw momentum center lines
+      ctxMom.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctxMom.beginPath();
+      ctxMom.moveTo(w / 2, 0);
+      ctxMom.lineTo(w / 2, h);
+      ctxMom.stroke();
+
+      // Expected momentum marker
+      // map momentum back to indices
+      // expP ranges roughly from -pi to pi. map to 0 -> N
+      const pIdx = (expP * N) / (2 * Math.PI) + N / 2;
+      const markX = pIdx * dx;
+      
+      ctxMom.strokeStyle = 'var(--neon-pink)';
+      ctxMom.lineWidth = 1.2;
+      ctxMom.setLineDash([3, 3]);
+      ctxMom.beginPath();
+      ctxMom.moveTo(markX, 0);
+      ctxMom.lineTo(markX, h);
+      ctxMom.stroke();
+      ctxMom.setLineDash([]);
+    }
+
+    function drawPhaseSpace(expX, expP) {
+      const w = canvasPhase.width;
+      const h = canvasPhase.height;
+      
+      ctxPhase.fillStyle = '#06070b';
+      ctxPhase.fillRect(0, 0, w, h);
+
+      // Draw axes
+      ctxPhase.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctxPhase.lineWidth = 1;
+      ctxPhase.beginPath();
+      ctxPhase.moveTo(0, h / 2);
+      ctxPhase.lineTo(w, h / 2);
+      ctxPhase.moveTo(w / 2, 0);
+      ctxPhase.lineTo(w / 2, h);
+      ctxPhase.stroke();
+
+      // Record trajectory in history
+      if (isPlaying) {
+        phaseSpaceHistory.push({ x: expX, p: expP });
+        if (phaseSpaceHistory.length > 200) {
+          phaseSpaceHistory.shift();
+        }
+      }
+
+      // Draw line trail
+      if (phaseSpaceHistory.length > 1) {
+        ctxPhase.beginPath();
+        for (let i = 0; i < phaseSpaceHistory.length; i++) {
+          const pt = phaseSpaceHistory[i];
+          // map x: 0 -> N to 10 -> w-10
+          // map p: -3.5 -> 3.5 to h-10 -> 10
+          const cx = 10 + (pt.x / N) * (w - 20);
+          const cy = h / 2 - (pt.p / 3.5) * (h / 2 - 10);
+          
+          if (i === 0) ctxPhase.moveTo(cx, cy);
+          else ctxPhase.lineTo(cx, cy);
+        }
+        ctxPhase.strokeStyle = 'rgba(157, 0, 255, 0.65)';
+        ctxPhase.lineWidth = 1.8;
+        ctxPhase.stroke();
+      }
+
+      // Draw current coordinate dot
+      const curX = 10 + (expX / N) * (w - 20);
+      const curY = h / 2 - (expP / 3.5) * (h / 2 - 10);
+      
+      ctxPhase.fillStyle = 'var(--neon-green)';
+      ctxPhase.shadowBlur = 6;
+      ctxPhase.shadowColor = 'var(--neon-green)';
+      ctxPhase.beginPath();
+      ctxPhase.arc(curX, curY, 4, 0, 2 * Math.PI);
+      ctxPhase.fill();
+      ctxPhase.shadowBlur = 0;
+    }
+
+    // Simulation Loop
+    function update() {
+      if (isPlaying) {
+        stepSim();
+      } else {
+        // Draw static
+        const phi = computeMomentumSpace();
+        const diags = calculateDiagnostics(phi);
+        
+        drawMain(diags.expX);
+        drawMomentum(phi, diags.expP);
+        drawPhaseSpace(diags.expX, diags.expP);
+        
+        updateGUIValues(diags);
+      }
+      requestAnimationFrame(update);
+    }
+
+    function stepSim() {
+      stepSchrodinger();
+      
+      const phi = computeMomentumSpace();
+      const diags = calculateDiagnostics(phi);
+      
+      drawMain(diags.expX);
+      drawMomentum(phi, diags.expP);
+      drawPhaseSpace(diags.expX, diags.expP);
+      
+      updateGUIValues(diags);
+      updateAudioFreq(diags.expX, diags.expP);
+    }
+
+    function updateGUIValues(diags) {
+      document.getElementById('val-prob').innerText = diags.totalProb.toFixed(6);
+      document.getElementById('val-energy').innerText = diags.expEnergy.toFixed(4);
+      document.getElementById('val-uncertainty').innerText = diags.uncertainty.toFixed(3);
+    }
+
+    function updateAudioFreq(expX, expP) {
+      if (!audioCtx || !synthActive) return;
+      
+      // Theremin effect: frequency based on position, amplitude based on momentum
+      // Map x (0 to N) to 180Hz -> 580Hz
+      const freq = 180 + (expX / N) * 400;
+      carrierOsc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
+
+      // Volume based on momentum magnitude
+      const vol = Math.min(0.08, Math.abs(expP) * 0.04);
+      carrierGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.05);
+    }
+
+    // Playback toggle
+    btnPlay.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        btnPlay.innerHTML = 'pause <span>❚❚</span>';
+        btnPlay.classList.remove('btn-orange');
+      } else {
+        btnPlay.innerHTML = 'play <span>▶</span>';
+        btnPlay.classList.add('btn-orange');
+        if (audioCtx && synthActive) {
+          carrierGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        }
+      }
+    });
+
+    // Handle parameter slider adjustments
+    paramK0.addEventListener('input', (e) => {
+      k0 = parseFloat(e.target.value);
+      labelK0.innerText = k0.toFixed(2);
+      resetWavePacket();
+    });
+
+    paramSigma.addEventListener('input', (e) => {
+      sigma = parseFloat(e.target.value);
+      labelSigma.innerText = sigma.toFixed(1);
+      resetWavePacket();
+    });
+
+    paramX0.addEventListener('input', (e) => {
+      x0 = parseInt(e.target.value);
+      labelX0.innerText = x0;
+      resetWavePacket();
+    });
+
+    paramMass.addEventListener('input', (e) => {
+      mass = parseFloat(e.target.value);
+      labelMass.innerText = mass.toFixed(1);
+    });
+
+    paramDt.addEventListener('input', (e) => {
+      dt = parseFloat(e.target.value);
+      labelDt.innerText = dt.toFixed(2);
+    });
+
+    paramVHeight.addEventListener('input', (e) => {
+      vHeightPreset = parseFloat(e.target.value);
+      labelVHeight.innerText = vHeightPreset.toFixed(2);
+      
+      // If active preset has barrier, update height live
+      if (activePreset === 'tunneling') {
+        for (let j = 122; j <= 134; j++) V[j] = vHeightPreset;
+      } else if (activePreset === 'double_well') {
+        for (let j = 115; j <= 140; j++) V[j] = vHeightPreset;
+      } else if (activePreset === 'lattice') {
+        for (let barrier = 0; barrier < 6; barrier++) {
+          const start = 80 + barrier * 24;
+          for (let j = start; j < start + 4; j++) V[j] = vHeightPreset;
+        }
+      }
+    });
+
+    // Custom potential drawing on canvas
+    function getMouseGridIndex(e) {
+      const rect = canvasMain.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      
+      const gridX = Math.floor((clickX / rect.width) * N);
+      
+      // calculate potential height relative to bottom axis
+      const centerLine = rect.height * 0.7;
+      const relativeY = centerLine - clickY;
+      const targetV = Math.max(0, (relativeY / (rect.height * 0.6)) * 6.0);
+      
+      return { idx: gridX, val: targetV };
+    }
+
+    canvasMain.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      drawPotentialBrush(e);
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDrawing = false;
+    });
+
+    canvasMain.addEventListener('mousemove', (e) => {
+      if (!isDrawing) return;
+      drawPotentialBrush(e);
+    });
+
+    function drawPotentialBrush(e) {
+      const mouse = getMouseGridIndex(e);
+      if (mouse.idx < 0 || mouse.idx >= N) return;
+      
+      // Smooth Gaussian brush application
+      const brushRadius = 5;
+      for (let d = -brushRadius; d <= brushRadius; d++) {
+        const targetIdx = mouse.idx + d;
+        if (targetIdx >= 0 && targetIdx < N) {
+          const distWeight = Math.exp(-(d * d) / 10);
+          V[targetIdx] = Math.max(V[targetIdx], mouse.val * distWeight);
+        }
+      }
+      logMessage(`modifying potential barrier around x = ${mouse.idx}`);
+    }
+
+    // Prevent default context menu on right click to clear potential easily
+    canvasMain.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const mouse = getMouseGridIndex(e);
+      if (mouse.idx < 0 || mouse.idx >= N) return;
+      
+      // Erase brush
+      const brushRadius = 8;
+      for (let d = -brushRadius; d <= brushRadius; d++) {
+        const targetIdx = mouse.idx + d;
+        if (targetIdx >= 0 && targetIdx < N) {
+          V[targetIdx] = 0;
+        }
+      }
+      logMessage(`erasing potential barrier around x = ${mouse.idx}`);
+    });
+
+    // Start
+    loadPreset('tunneling');
+    update();
+  </script>
+</body>
+</html>
