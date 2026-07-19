@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>jelly-grid // soft-body physics & pressure-mesh sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #06060c;
+      --panel-bg: rgba(12, 14, 28, 0.85);
+      --border-color: rgba(181, 0, 255, 0.2);
+      --border-glow: rgba(181, 0, 255, 0.05);
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007f;
+      --neon-purple: #b500ff;
+      --neon-green: #39ff14;
+      --neon-yellow: #ffaa00;
+      --text-main: #f0f2f5;
+      --text-muted: #72829c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(6, 6, 12, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-glow {
+      width: 12px;
+      height: 12px;
+      background: var(--neon-purple);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--neon-purple);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: lowercase;
+      background: linear-gradient(90deg, #fff, var(--neon-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-info {
+      display: flex;
+      gap: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-info span strong {
+      color: var(--neon-cyan);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Left Control Sidebar */
+    #sidebar {
+      width: 320px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      z-index: 5;
+      backdrop-filter: blur(12px);
+      box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      text-transform: lowercase;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 0.75rem;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    label span.val-label {
+      color: var(--neon-cyan);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: background 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #fff;
+    }
+
+    /* Tool Buttons Grid */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: rgba(181, 0, 255, 0.1);
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 10px rgba(181, 0, 255, 0.3);
+    }
+
+    .btn.active {
+      background: rgba(181, 0, 255, 0.25);
+      border-color: var(--neon-purple);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(181, 0, 255, 0.5);
+    }
+
+    .btn-danger {
+      background: rgba(255, 0, 127, 0.05);
+      border-color: rgba(255, 0, 127, 0.2);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 0, 127, 0.2);
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+    }
+
+    .spawn-select {
+      background: #0f101f;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .spawn-select:focus {
+      border-color: var(--neon-cyan);
+    }
+
+    /* Simulation Container */
+    #sim-container {
+      flex: 1;
+      position: relative;
+      background: #030308;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Floating Stats Overlaid on Canvas */
+    .overlay-panel {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(6, 6, 12, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 10px 14px;
+      pointer-events: none;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 2;
+    }
+
+    .overlay-panel div {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+    }
+
+    .overlay-panel div span:last-child {
+      color: var(--neon-cyan);
+    }
+
+    /* Back Button */
+    .back-home {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      transition: color 0.2s;
+    }
+
+    .back-home:hover {
+      color: var(--neon-cyan);
+    }
+
+    /* Custom Scrollbar for Sidebar */
+    #sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    #sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <h1>jelly-grid // soft-body mesh</h1>
+    </div>
+    <div class="header-info">
+      <span>fps: <strong id="fps-counter">60</strong></span>
+      <span>masses: <strong id="nodes-counter">0</strong></span>
+      <span>springs: <strong id="springs-counter">0</strong></span>
+    </div>
+    <a href="../index.html" class="back-home">&lt;&lt; index</a>
+  </header>
+
+  <main>
+    <div id="sidebar">
+      
+      <!-- Preset Select -->
+      <div class="control-group">
+        <div class="section-title">sandbox setups</div>
+        <button class="btn" onclick="loadPreset('bumper_arena')">Bumper Arena</button>
+        <button class="btn" onclick="loadPreset('jelly_plinko')">Jelly Plinko</button>
+        <button class="btn" onclick="loadPreset('cradle')">Newton's Cradle</button>
+        <button class="btn" onclick="loadPreset('squeeze')">Tight Funnel</button>
+      </div>
+
+      <!-- Interaction Tool Selection -->
+      <div class="control-group">
+        <div class="section-title">active tool</div>
+        <div class="tools-grid">
+          <button class="btn active" id="tool-grab" onclick="setTool('grab')">Grab / Pull</button>
+          <button class="btn" id="tool-slice" onclick="setTool('slice')">Slice / Tear</button>
+          <button class="btn" id="tool-spawn" onclick="setTool('spawn')">Spawn Obj</button>
+          <button class="btn" id="tool-wall" onclick="setTool('wall')">Draw Wall</button>
+        </div>
+      </div>
+
+      <!-- Spawn Configuration -->
+      <div class="control-group">
+        <div class="section-title">spawn settings</div>
+        <select class="spawn-select" id="spawn-type">
+          <option value="circle_blob_med">Medium Jelly Circle</option>
+          <option value="circle_blob_large">Huge Jelly Circle</option>
+          <option value="square_blob">Structural Jelly Square</option>
+          <option value="rope">Chain Rope (Free)</option>
+          <option value="rope_pinned">Chain Rope (Anchored)</option>
+          <option value="peg">Bumper Sound Peg</option>
+        </select>
+      </div>
+
+      <!-- Physical Properties Sliders -->
+      <div class="control-group">
+        <div class="section-title">physics controls</div>
+        
+        <div class="control-group">
+          <label>Gravity Y <span class="val-label" id="lbl-gravity">0.2</span></label>
+          <input type="range" id="param-gravity" min="-0.5" max="1.0" step="0.05" value="0.2" oninput="updateParam('gravity', this.value)">
+        </div>
+
+        <div class="control-group">
+          <label>Jelly Pressure <span class="val-label" id="lbl-pressure">0.05</span></label>
+          <input type="range" id="param-pressure" min="0.005" max="0.25" step="0.005" value="0.05" oninput="updateParam('pressure', this.value)">
+        </div>
+
+        <div class="control-group">
+          <label>Spring Stiffness <span class="val-label" id="lbl-stiffness">0.7</span></label>
+          <input type="range" id="param-stiffness" min="0.1" max="1.0" step="0.05" value="0.7" oninput="updateParam('stiffness', this.value)">
+        </div>
+
+        <div class="control-group">
+          <label>Border Bounciness <span class="val-label" id="lbl-restitution">0.6</span></label>
+          <input type="range" id="param-restitution" min="0.0" max="1.0" step="0.1" value="0.6" oninput="updateParam('restitution', this.value)">
+        </div>
+      </div>
+
+      <!-- Control buttons -->
+      <div class="control-group" style="margin-top: auto;">
+        <div class="section-title">system</div>
+        <button class="btn" id="btn-pause" onclick="togglePause()">Pause Simulation</button>
+        <button class="btn btn-danger" onclick="clearAll()">Reset Sandbox</button>
+      </div>
+
+    </div>
+
+    <!-- Simulation Viewport -->
+    <div id="sim-container">
+      <canvas id="simCanvas"></canvas>
+      
+      <div class="overlay-panel">
+        <div><span>Solver Iterations:</span> <span>8</span></div>
+        <div><span>Active Blobs:</span> <span id="active-blobs-lbl">0</span></div>
+        <div><span>Audio Engine:</span> <span id="audio-status-lbl">Ready (Click Screen)</span></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Canvas Setup
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const simContainer = document.getElementById('sim-container');
+
+    let width, height;
+    function resize() {
+      const rect = simContainer.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resize);
+
+    // Physics Engine Globals
+    let points = [];
+    let springs = [];
+    let softBodies = [];
+    let obstacles = [];
+    let pegs = [];
+    let particles = [];
+
+    // Global Physics Settings
+    let config = {
+      gravityX: 0,
+      gravityY: 0.2,
+      pressureConstant: 0.05,
+      stiffness: 0.7,
+      restitution: 0.6,
+      damping: 0.992,
+      iterations: 8,
+      tearThreshold: 3.5, // Tear springs if extended > 3.5x
+    };
+
+    // UI State
+    let isPaused = false;
+    let currentTool = 'grab'; // grab, slice, spawn, wall
+    let lastTime = 0;
+    let fps = 60;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Mouse Interaction
+    let mouse = { x: 0, y: 0, px: 0, py: 0, isDown: false, button: 0 };
+    let dragPoint = null;
+    let dragDistance = 0;
+    let isDrawingWall = false;
+    let wallStart = { x: 0, y: 0 };
+    let slicePath = [];
+
+    // Audio Context (Web Audio API)
+    let audioCtx = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      document.getElementById('audio-status-lbl').textContent = "Active";
+    }
+
+    function playBumperSound(frequency, volume) {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+      
+      gainNode.gain.setValueAtTime(volume * 0.12, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.6);
+    }
+
+    function playSliceSound() {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      const bufferSize = audioCtx.sampleRate * 0.12;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(3500, audioCtx.currentTime + 0.12);
+      filter.Q.value = 6;
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      noise.start();
+    }
+
+    function playPopSound() {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.25);
+      
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
+
+    // Classes
+    class Point {
+      constructor(x, y, mass = 1.0) {
+        this.x = x;
+        this.y = y;
+        this.px = x;
+        this.py = y;
+        this.fx = 0;
+        this.fy = 0;
+        this.mass = mass;
+        this.isPinned = false;
+        this.parentBlob = null;
+        this.radius = 8;
+      }
+    }
+
+    class Spring {
+      constructor(p1, p2, restLength, stiffness = 0.5, isBoundary = false) {
+        this.p1 = p1;
+        this.p2 = p2;
+        this.restLength = restLength;
+        this.stiffness = stiffness;
+        this.isBoundary = isBoundary;
+        this.isInternal = !isBoundary;
+        this.isBroken = false;
+        this.parentBlob = null;
+      }
+    }
+
+    class SoftBody {
+      constructor(points, pressureConstant, color) {
+        this.points = points;
+        this.pressureConstant = pressureConstant;
+        this.color = color;
+        this.isPopped = false;
+        
+        // Calculate rest area
+        let area = 0;
+        const N = points.length;
+        for (let i = 0; i < N; i++) {
+          const p1 = points[i];
+          const p2 = points[(i + 1) % N];
+          area += 0.5 * (p1.x * p2.y - p2.x * p1.y);
+        }
+        this.targetArea = Math.abs(area);
+        
+        // Build perimeter boundary springs
+        this.boundarySprings = [];
+        for (let i = 0; i < N; i++) {
+          const p1 = points[i];
+          const p2 = points[(i + 1) % N];
+          const len = Math.sqrt((p1.x-p2.x)**2 + (p1.y-p2.y)**2);
+          const s = new Spring(p1, p2, len, 0.9, true);
+          s.parentBlob = this;
+          this.boundarySprings.push(s);
+          springs.push(s);
+        }
+
+        // Add structural internal diagonal springs (cross-braces)
+        for (let i = 0; i < N; i++) {
+          for (let j = i + 2; j < N; j++) {
+            if (j === (i + 1) % N || i === (j + 1) % N) continue;
+            // Mesh lattice frequency filter
+            if (N > 8 && (j - i) % 3 !== 0) continue;
+            
+            const p1 = points[i];
+            const p2 = points[j];
+            const len = Math.sqrt((p1.x-p2.x)**2 + (p1.y-p2.y)**2);
+            const s = new Spring(p1, p2, len, 0.25, false); // internal low stiffness
+            s.parentBlob = this;
+            springs.push(s);
+          }
+        }
+      }
+
+      updatePressure() {
+        if (this.isPopped) return;
+
+        // Check if popped (if any boundary spring breaks)
+        for (let s of this.boundarySprings) {
+          if (s.isBroken) {
+            this.pop();
+            return;
+          }
+        }
+
+        // Calculate current oriented area
+        let area = 0;
+        const N = this.points.length;
+        for (let i = 0; i < N; i++) {
+          const p1 = this.points[i];
+          const p2 = this.points[(i + 1) % N];
+          area += 0.5 * (p1.x * p2.y - p2.x * p1.y);
+        }
+        const currentArea = Math.abs(area);
+        const sign = area > 0 ? 1 : -1;
+
+        // Ideal Gas law pressure multiplier: P = (TargetArea - CurrentArea) * pressureMultiplier
+        const pressureForce = (this.targetArea - currentArea) * this.pressureConstant;
+
+        // Apply forces outwards normal to perimeter segments
+        for (let i = 0; i < N; i++) {
+          const p1 = this.points[i];
+          const p2 = this.points[(i + 1) % N];
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist === 0) continue;
+
+          // Outward pointing normal
+          const nx = (-dy / dist) * sign;
+          const ny = (dx / dist) * sign;
+
+          // Distribute forces proportionally to segment length
+          const forceX = nx * pressureForce * dist * 0.5;
+          const forceY = ny * pressureForce * dist * 0.5;
+
+          p1.fx += forceX;
+          p1.fy += forceY;
+          p2.fx += forceX;
+          p2.fy += forceY;
+        }
+      }
+
+      pop() {
+        this.isPopped = true;
+        playPopSound();
+        spawnPopParticles(this);
+        document.getElementById('active-blobs-lbl').textContent = softBodies.filter(b => !b.isPopped).length;
+      }
+    }
+
+    class Peg {
+      constructor(x, y, radius = 24, frequency = 261.63, color = '#ff007f') {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.frequency = frequency;
+        this.color = color;
+        this.activePulse = 0;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        
+        let pegColor = this.color;
+        if (this.activePulse > 0) {
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = this.color;
+          ctx.fillStyle = '#ffffff';
+          this.activePulse -= 0.05;
+        } else {
+          ctx.fillStyle = pegColor;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Draw frequency index text
+        ctx.fillStyle = '#06060c';
+        ctx.font = 'bold 9px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(Math.round(this.frequency) + 'Hz', this.x, this.y);
+      }
+    }
+
+    class Obstacle {
+      constructor(x, y, w, h, color = '#ffaa00') {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+      }
+
+      draw() {
+        ctx.fillStyle = 'rgba(255, 170, 0, 0.1)';
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+      }
+
+      resolve(p) {
+        // AABB check
+        if (p.x > this.x && p.x < this.x + this.w && p.y > this.y && p.y < this.y + this.h) {
+          const dl = p.x - this.x;
+          const dr = (this.x + this.w) - p.x;
+          const dt = p.y - this.y;
+          const db = (this.y + this.h) - p.y;
+          const min = Math.min(dl, dr, dt, db);
+
+          const vx = p.x - p.px;
+          const vy = p.y - p.py;
+
+          if (min === dl) {
+            p.x = this.x;
+            if (vx > 0) p.px = p.x + vx * config.restitution;
+          } else if (min === dr) {
+            p.x = this.x + this.w;
+            if (vx < 0) p.px = p.x + vx * config.restitution;
+          } else if (min === dt) {
+            p.y = this.y;
+            if (vy > 0) p.py = p.y + vy * config.restitution;
+          } else {
+            p.y = this.y + this.h;
+            if (vy < 0) p.py = p.y + vy * config.restitution;
+          }
+        }
+      }
+    }
+
+    class Spark {
+      constructor(x, y, vx, vy, color, size = 3, life = 30) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.size = size;
+        this.life = life;
+        this.maxLife = life;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.08; // minor gravity
+        this.life--;
+      }
+
+      draw() {
+        ctx.globalAlpha = this.life / this.maxLife;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    // Particle Spawning Helpers
+    function spawnCollisionParticles(x, y, nx, ny, color) {
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.atan2(ny, nx) + (Math.random() - 0.5) * 1.5;
+        const speed = 1 + Math.random() * 4;
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        particles.push(new Spark(x, y, vx, vy, color, 2 + Math.random() * 3, 20 + Math.random() * 20));
+      }
+    }
+
+    function spawnPopParticles(blob) {
+      for (let p of blob.points) {
+        for (let i = 0; i < 3; i++) {
+          const vx = (Math.random() - 0.5) * 5;
+          const vy = (Math.random() - 0.5) * 5;
+          particles.push(new Spark(p.x, p.y, vx, vy, blob.color, 3 + Math.random()*2, 40 + Math.random()*20));
+        }
+      }
+    }
+
+    function spawnTearParticles(spring) {
+      const mx = (spring.p1.x + spring.p2.x) / 2;
+      const my = (spring.p1.y + spring.p2.y) / 2;
+      for (let i = 0; i < 8; i++) {
+        const vx = (Math.random() - 0.5) * 4;
+        const vy = (Math.random() - 0.5) * 4;
+        particles.push(new Spark(mx, my, vx, vy, '#ff0055', 2 + Math.random()*2, 15 + Math.random()*15));
+      }
+    }
+
+    // Geometry Intersection
+    function intersects(p1, p2, p3, p4) {
+      function ccw(a, b, c) {
+        return (c.y - a.y) * (b.x - a.x) > (b.y - a.y) * (c.x - a.x);
+      }
+      return (ccw(p1, p3, p4) !== ccw(p2, p3, p4)) && (ccw(p1, p2, p3) !== ccw(p1, p2, p4));
+    }
+
+    // Spawning Functions
+    function spawnCircleBlob(cx, cy, r, numPoints, color) {
+      const blobPoints = [];
+      for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * Math.PI * 2;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        const p = new Point(x, y, 1.0);
+        points.push(p);
+        blobPoints.push(p);
+      }
+      const sb = new SoftBody(blobPoints, config.pressureConstant, color);
+      softBodies.push(sb);
+      for (let p of blobPoints) p.parentBlob = sb;
+      updateStats();
+    }
+
+    function spawnSquareBlob(cx, cy, size, gridSize, color) {
+      const grid = [];
+      const step = size / (gridSize - 1);
+      const localPoints = [];
+      
+      for (let r = 0; r < gridSize; r++) {
+        grid[r] = [];
+        for (let c = 0; c < gridSize; c++) {
+          const x = cx - size/2 + c * step;
+          const y = cy - size/2 + r * step;
+          const p = new Point(x, y, 1.0);
+          points.push(p);
+          grid[r][c] = p;
+          localPoints.push(p);
+        }
+      }
+      
+      // Structural inner grids
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          const p = grid[r][c];
+          if (c < gridSize - 1) springs.push(new Spring(p, grid[r][c+1], step, config.stiffness));
+          if (r < gridSize - 1) springs.push(new Spring(p, grid[r+1][c], step, config.stiffness));
+          if (r < gridSize - 1 && c < gridSize - 1) {
+            springs.push(new Spring(p, grid[r+1][c+1], step * Math.SQRT2, config.stiffness));
+          }
+          if (r < gridSize - 1 && c > 0) {
+            springs.push(new Spring(p, grid[r+1][c-1], step * Math.SQRT2, config.stiffness));
+          }
+        }
+      }
+      
+      // Counter-clockwise boundary extraction
+      const boundary = [];
+      for (let c = 0; c < gridSize; c++) boundary.push(grid[0][c]);
+      for (let r = 1; r < gridSize; r++) boundary.push(grid[r][gridSize-1]);
+      for (let c = gridSize - 2; c >= 0; c--) boundary.push(grid[gridSize-1][c]);
+      for (let r = gridSize - 2; r >= 1; r--) boundary.push(grid[r][0]);
+      
+      const sb = new SoftBody(boundary, config.pressureConstant, color);
+      softBodies.push(sb);
+      for (let p of localPoints) p.parentBlob = sb;
+      updateStats();
+    }
+
+    function spawnRope(cx, cy, length, numSegments, isPinned) {
+      const ropePoints = [];
+      const step = length / numSegments;
+      for (let i = 0; i < numSegments; i++) {
+        const p = new Point(cx, cy + i * step, 1.0);
+        if (i === 0 && isPinned) p.isPinned = true;
+        points.push(p);
+        ropePoints.push(p);
+        if (i > 0) {
+          springs.push(new Spring(ropePoints[i-1], p, step, 0.95));
+        }
+      }
+      updateStats();
+    }
+
+    function spawnPeg(x, y) {
+      const baseFreqs = [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+      const freq = baseFreqs[Math.floor(Math.random() * baseFreqs.length)];
+      const colors = ['#ff007f', '#00f3ff', '#b500ff', '#39ff14', '#ffaa00'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      pegs.push(new Peg(x, y, 20 + Math.random()*8, freq, color));
+    }
+
+    // Engine Core Calculations
+    function updatePhysics() {
+      // 1. Accumulate external forces
+      for (let p of points) {
+        if (p.isPinned) continue;
+        p.fx += config.gravityX * p.mass;
+        p.fy += config.gravityY * p.mass;
+      }
+
+      // 2. Accumulate gas law internal pressure forces
+      for (let sb of softBodies) {
+        sb.updatePressure();
+      }
+
+      // 3. Verlet Integration
+      const dt = 1.0;
+      for (let p of points) {
+        if (p.isPinned) continue;
+        const vx = (p.x - p.px) * config.damping;
+        const vy = (p.y - p.py) * config.damping;
+
+        p.px = p.x;
+        p.py = p.y;
+
+        p.x += vx + p.fx * dt * dt;
+        p.y += vy + p.fy * dt * dt;
+
+        // Reset accumulators
+        p.fx = 0;
+        p.fy = 0;
+      }
+
+      // 4. Resolve Constraints and Collisions (Projecting positions iteratively)
+      for (let iter = 0; iter < config.iterations; iter++) {
+        // Resolve Springs
+        for (let s of springs) {
+          if (s.isBroken) continue;
+          const dx = s.p2.x - s.p1.x;
+          const dy = s.p2.y - s.p1.y;
+          const len = Math.sqrt(dx*dx + dy*dy);
+          if (len === 0) continue;
+
+          // Check for tear trigger on last iteration of frame
+          if (iter === config.iterations - 1) {
+            if (len > s.restLength * config.tearThreshold) {
+              s.isBroken = true;
+              spawnTearParticles(s);
+              continue;
+            }
+          }
+
+          const diff = s.restLength - len;
+          let factor1 = s.p1.isPinned ? 0 : 0.5;
+          let factor2 = s.p2.isPinned ? 0 : 0.5;
+          if (s.p1.isPinned) factor2 = 1.0;
+          if (s.p2.isPinned) factor1 = 1.0;
+
+          const offsetX = (dx / len) * diff * s.stiffness;
+          const offsetY = (dy / len) * diff * s.stiffness;
+
+          s.p1.x -= offsetX * factor1;
+          s.p1.y -= offsetY * factor1;
+          s.p2.x += offsetX * factor2;
+          s.p2.y += offsetY * factor2;
+        }
+
+        // Project Canvas Boundaries
+        const margin = 10;
+        for (let p of points) {
+          if (p.isPinned) continue;
+
+          // Wall collision responses (with bounce restitution)
+          const vx = p.x - p.px;
+          if (p.x < margin) {
+            p.x = margin;
+            if (vx < 0) p.px = p.x + vx * config.restitution;
+          } else if (p.x > width - margin) {
+            p.x = width - margin;
+            if (vx > 0) p.px = p.x + vx * config.restitution;
+          }
+
+          const vy = p.y - p.py;
+          if (p.y < margin) {
+            p.y = margin;
+            if (vy < 0) p.py = p.y + vy * config.restitution;
+          } else if (p.y > height - margin) {
+            p.y = height - margin;
+            if (vy > 0) p.py = p.y + vy * config.restitution;
+          }
+        }
+
+        // Resolving Static Rectangular Obstacles
+        for (let obs of obstacles) {
+          for (let p of points) {
+            if (p.isPinned) continue;
+            obs.resolve(p);
+          }
+        }
+
+        // Resolve Peg Collisions
+        for (let peg of pegs) {
+          for (let p of points) {
+            if (p.isPinned) continue;
+            const dx = p.x - peg.x;
+            const dy = p.y - peg.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < peg.radius) {
+              const nx = dx / (dist || 1);
+              const ny = dy / (dist || 1);
+
+              // Push out of obstacle circle
+              p.x = peg.x + nx * peg.radius;
+              
+              // Reflect Verlet velocity
+              const vx = p.x - p.px;
+              const vy = p.y - p.py;
+              const dot = vx * nx + vy * ny;
+              if (dot < 0) {
+                const rx = vx - (1 + config.restitution) * dot * nx;
+                const ry = vy - (1 + config.restitution) * dot * ny;
+                p.px = p.x - rx;
+                p.py = p.y - ry;
+
+                // Sound trigger with velocity reflection intensity mapping
+                const speed = Math.sqrt(vx*vx + vy*vy);
+                if (speed > 0.4) {
+                  peg.activePulse = 1.0;
+                  playBumperSound(peg.frequency, Math.min(speed * 0.4, 1.0));
+                  spawnCollisionParticles(p.x, p.y, nx, ny, peg.color);
+                }
+              }
+            }
+          }
+        }
+
+        // Node-to-Node Self Collision
+        for (let i = 0; i < points.length; i++) {
+          const p1 = points[i];
+          for (let j = i + 1; j < points.length; j++) {
+            const p2 = points[j];
+            
+            // Skip immediate adjacent neighbors in the same soft body loop
+            if (p1.parentBlob && p1.parentBlob === p2.parentBlob) {
+              const idx1 = p1.parentBlob.points.indexOf(p1);
+              const idx2 = p2.parentBlob.points.indexOf(p2);
+              const diff = Math.abs(idx1 - idx2);
+              if (diff <= 2 || diff >= p1.parentBlob.points.length - 2) continue;
+            }
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const minDist = 18; // soft padding radius combined
+            if (dist < minDist) {
+              const overlap = minDist - dist;
+              const nx = dx / (dist || 1);
+              const ny = dy / (dist || 1);
+
+              let factor1 = p1.isPinned ? 0 : (p2.isPinned ? 1 : 0.5);
+              let factor2 = p2.isPinned ? 0 : (p1.isPinned ? 1 : 0.5);
+
+              p1.x -= nx * overlap * factor1;
+              p1.y -= ny * overlap * factor1;
+              p2.x += nx * overlap * factor2;
+              p2.y += ny * overlap * factor2;
+            }
+          }
+        }
+
+        // Mouse Grab constraint
+        if (currentTool === 'grab' && mouse.isDown && dragPoint) {
+          const dx = mouse.x - dragPoint.x;
+          const dy = mouse.y - dragPoint.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist > 1) {
+            const pullForce = 0.6; // mouse spring stiffness
+            dragPoint.x += dx * pullForce;
+            dragPoint.y += dy * pullForce;
+          }
+        }
+
+      }
+    }
+
+    // Render Canvas Loop
+    function render() {
+      ctx.fillStyle = '#06060c';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw grid pattern (subtle cyber aesthetics)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }
+
+      // Draw obstacles
+      for (let obs of obstacles) {
+        obs.draw();
+      }
+
+      // Draw pegs
+      for (let peg of pegs) {
+        peg.draw();
+      }
+
+      // Draw Soft Body Mesh Fills
+      for (let sb of softBodies) {
+        if (sb.points.length < 3) continue;
+        ctx.beginPath();
+        ctx.moveTo(sb.points[0].x, sb.points[0].y);
+        for (let i = 1; i < sb.points.length; i++) {
+          ctx.lineTo(sb.points[i].x, sb.points[i].y);
+        }
+        ctx.closePath();
+        
+        ctx.fillStyle = sb.isPopped ? 'rgba(255, 255, 255, 0.02)' : sb.color + '15';
+        ctx.fill();
+
+        ctx.strokeStyle = sb.isPopped ? 'rgba(255, 255, 255, 0.1)' : sb.color + '40';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Draw Springs
+      for (let s of springs) {
+        if (s.isBroken) continue;
+        
+        if (s.isBoundary) {
+          ctx.strokeStyle = s.parentBlob.isPopped ? 'rgba(255,255,255,0.1)' : s.parentBlob.color;
+          ctx.lineWidth = 3;
+        } else {
+          ctx.strokeStyle = s.parentBlob.isPopped ? 'rgba(255,255,255,0.05)' : s.parentBlob.color + '22';
+          ctx.lineWidth = 1.2;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(s.p1.x, s.p1.y);
+        ctx.lineTo(s.p2.x, s.p2.y);
+        ctx.stroke();
+      }
+
+      // Draw Nodes (Points)
+      for (let p of points) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.isPinned ? 5 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = p.isPinned ? varColor('neon-yellow') : (p.parentBlob ? p.parentBlob.color : '#ffffff');
+        ctx.fill();
+      }
+
+      // Draw Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update();
+        p.draw();
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // Draw Active Mouse Grabbing Segment
+      if (currentTool === 'grab' && mouse.isDown && dragPoint) {
+        ctx.strokeStyle = varColor('neon-cyan');
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(dragPoint.x, dragPoint.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Draw Active Slicing Trailed Line
+      if (currentTool === 'slice' && mouse.isDown && slicePath.length > 1) {
+        ctx.strokeStyle = varColor('neon-pink');
+        ctx.lineWidth = 3.5;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = varColor('neon-pink');
+        ctx.beginPath();
+        ctx.moveTo(slicePath[0].x, slicePath[0].y);
+        for (let i = 1; i < slicePath.length; i++) {
+          ctx.lineTo(slicePath[i].x, slicePath[i].y);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw Custom Wall Creation Preview
+      if (currentTool === 'wall' && isDrawingWall) {
+        ctx.fillStyle = 'rgba(255, 170, 0, 0.2)';
+        ctx.fillRect(wallStart.x, wallStart.y, mouse.x - wallStart.x, mouse.y - wallStart.y);
+        ctx.strokeStyle = varColor('neon-yellow');
+        ctx.lineWidth = 1;
+        ctx.strokeRect(wallStart.x, wallStart.y, mouse.x - wallStart.x, mouse.y - wallStart.y);
+      }
+    }
+
+    function varColor(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+    }
+
+    // Main Engine Tick Loop
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const elapsed = timestamp - lastTime;
+      lastTime = timestamp;
+
+      // Update FPS counter periodically
+      frameCount++;
+      if (timestamp - lastFpsUpdate > 1000) {
+        fps = Math.round((frameCount * 1000) / (timestamp - lastFpsUpdate));
+        document.getElementById('fps-counter').textContent = fps;
+        frameCount = 0;
+        lastFpsUpdate = timestamp;
+      }
+
+      if (!isPaused) {
+        // Step physics updates
+        updatePhysics();
+      }
+
+      // Render graphics
+      render();
+
+      requestAnimationFrame(loop);
+    }
+
+    // Helper functions
+    function updateStats() {
+      document.getElementById('nodes-counter').textContent = points.length;
+      document.getElementById('springs-counter').textContent = springs.filter(s => !s.isBroken).length;
+      document.getElementById('active-blobs-lbl').textContent = softBodies.filter(b => !b.isPopped).length;
+    }
+
+    // Input handlers
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+
+    // Interaction Listeners
+    canvas.addEventListener('mousedown', (e) => {
+      initAudio();
+      mouse.isDown = true;
+      mouse.button = e.button;
+      const pos = getMousePos(e);
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+      mouse.px = pos.x;
+      mouse.py = pos.y;
+
+      if (currentTool === 'grab') {
+        // Find closest point to drag
+        let closest = null;
+        let minDist = 40; // max select radius
+        for (let p of points) {
+          const dx = p.x - mouse.x;
+          const dy = p.y - mouse.y;
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d < minDist) {
+            minDist = d;
+            closest = p;
+          }
+        }
+        dragPoint = closest;
+      } else if (currentTool === 'slice') {
+        slicePath = [{ x: mouse.x, y: mouse.y }];
+      } else if (currentTool === 'wall') {
+        isDrawingWall = true;
+        wallStart = { x: mouse.x, y: mouse.y };
+      } else if (currentTool === 'spawn') {
+        const type = document.getElementById('spawn-type').value;
+        const color = ['#ff007f', '#00f3ff', '#b500ff', '#39ff14', '#ffaa00'][Math.floor(Math.random() * 5)];
+        if (type === 'circle_blob_med') {
+          spawnCircleBlob(mouse.x, mouse.y, 45, 16, color);
+        } else if (type === 'circle_blob_large') {
+          spawnCircleBlob(mouse.x, mouse.y, 75, 24, color);
+        } else if (type === 'square_blob') {
+          spawnSquareBlob(mouse.x, mouse.y, 90, 4, color);
+        } else if (type === 'rope') {
+          spawnRope(mouse.x, mouse.y, 150, 10, false);
+        } else if (type === 'rope_pinned') {
+          spawnRope(mouse.x, mouse.y, 150, 10, true);
+        } else if (type === 'peg') {
+          spawnPeg(mouse.x, mouse.y);
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const pos = getMousePos(e);
+      mouse.px = mouse.x;
+      mouse.py = mouse.y;
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+
+      if (mouse.isDown && currentTool === 'slice') {
+        slicePath.push({ x: mouse.x, y: mouse.y });
+        playSliceSound();
+
+        // Check if slice intersects any spring and tear it
+        const sliceStart = slicePath[slicePath.length - 2];
+        const sliceEnd = slicePath[slicePath.length - 1];
+
+        for (let s of springs) {
+          if (s.isBroken) continue;
+          if (intersects(s.p1, s.p2, sliceStart, sliceEnd)) {
+            s.isBroken = true;
+            spawnTearParticles(s);
+          }
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (mouse.isDown && currentTool === 'wall' && isDrawingWall) {
+        const x = Math.min(wallStart.x, mouse.x);
+        const y = Math.min(wallStart.y, mouse.y);
+        const w = Math.abs(mouse.x - wallStart.x);
+        const h = Math.abs(mouse.y - wallStart.y);
+        if (w > 12 && h > 12) {
+          obstacles.push(new Obstacle(x, y, w, h));
+        }
+        isDrawingWall = false;
+      }
+      mouse.isDown = false;
+      dragPoint = null;
+      slicePath = [];
+      updateStats();
+    });
+
+    // Control callbacks
+    function setTool(toolName) {
+      currentTool = toolName;
+      document.querySelectorAll('.tools-grid button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('tool-' + toolName).classList.add('active');
+    }
+
+    // Parameter sliders update
+    function updateParam(name, value) {
+      const numericVal = parseFloat(value);
+      if (name === 'gravity') {
+        config.gravityY = numericVal;
+        document.getElementById('lbl-gravity').textContent = numericVal.toFixed(2);
+      } else if (name === 'pressure') {
+        config.pressureConstant = numericVal;
+        document.getElementById('lbl-pressure').textContent = numericVal.toFixed(3);
+        // Live update active softbodies pressure configs
+        for (let sb of softBodies) {
+          if (!sb.isPopped) sb.pressureConstant = numericVal;
+        }
+      } else if (name === 'stiffness') {
+        config.stiffness = numericVal;
+        document.getElementById('lbl-stiffness').textContent = numericVal.toFixed(2);
+        // Live update all springs
+        for (let s of springs) {
+          s.stiffness = numericVal;
+        }
+      } else if (name === 'restitution') {
+        config.restitution = numericVal;
+        document.getElementById('lbl-restitution').textContent = numericVal.toFixed(1);
+      }
+    }
+
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById('btn-pause').textContent = isPaused ? "Resume Simulation" : "Pause Simulation";
+    }
+
+    function clearAll() {
+      points = [];
+      springs = [];
+      softBodies = [];
+      obstacles = [];
+      pegs = [];
+      particles = [];
+      updateStats();
+    }
+
+    // Preconfigured setups (Presets)
+    function loadPreset(name) {
+      clearAll();
+      resize();
+
+      if (name === 'bumper_arena') {
+        // Place circle bumper pegs in center
+        pegs.push(new Peg(width * 0.35, height * 0.45, 24, 261.63, '#ff007f'));
+        pegs.push(new Peg(width * 0.65, height * 0.45, 24, 329.63, '#00f3ff'));
+        pegs.push(new Peg(width * 0.50, height * 0.70, 30, 196.00, '#b500ff'));
+        
+        // Spawn softbodies on top
+        spawnCircleBlob(width * 0.35, 120, 48, 16, '#39ff14');
+        spawnCircleBlob(width * 0.65, 120, 48, 16, '#ffaa00');
+        spawnSquareBlob(width * 0.50, 80, 80, 4, '#ff007f');
+
+      } else if (name === 'jelly_plinko') {
+        // Spawn Plinko-style triangle lattice pegs
+        const rows = 4;
+        const spacingX = 90;
+        const spacingY = 80;
+        const startY = height * 0.35;
+        const freqs = [196, 220, 261.63, 293.66, 329.63, 392, 440];
+
+        for (let r = 0; r < rows; r++) {
+          const count = r + 3;
+          const startX = (width / 2) - ((count - 1) * spacingX) / 2;
+          for (let c = 0; c < count; c++) {
+            const freq = freqs[(r + c) % freqs.length];
+            const colors = ['#00f3ff', '#ff007f', '#b500ff', '#39ff14'];
+            const color = colors[(r + c) % colors.length];
+            pegs.push(new Peg(startX + c * spacingX, startY + r * spacingY, 18, freq, color));
+          }
+        }
+
+        // Spawn a bunch of small round blobs at top
+        spawnCircleBlob(width * 0.38, 70, 32, 10, '#00f3ff');
+        spawnCircleBlob(width * 0.50, 60, 36, 12, '#ffaa00');
+        spawnCircleBlob(width * 0.62, 70, 32, 10, '#39ff14');
+
+      } else if (name === 'cradle') {
+        // Hanging Newton's cradle setup
+        const startX = width * 0.35;
+        const gap = 60;
+        for (let i = 0; i < 4; i++) {
+          const cx = startX + i * gap;
+          // Spawn rope pinned at top
+          spawnRope(cx, 40, 150, 8, true);
+          // Attach a circle blob at the end of the rope
+          const ropeEnd = points[points.length - 1];
+          const numBlobPoints = 12;
+          const r = 24;
+          const blobPoints = [];
+          for (let b = 0; b < numBlobPoints; b++) {
+            const angle = (b / numBlobPoints) * Math.PI * 2;
+            const px = cx + Math.cos(angle) * r;
+            const py = 190 + Math.sin(angle) * r;
+            const p = new Point(px, py, 1.0);
+            points.push(p);
+            blobPoints.push(p);
+          }
+          const sb = new SoftBody(blobPoints, config.pressureConstant, '#b500ff');
+          softBodies.push(sb);
+          for (let p of blobPoints) p.parentBlob = sb;
+          
+          // Connect rope end to softbody
+          springs.push(new Spring(ropeEnd, blobPoints[0], 10, 0.9));
+        }
+
+      } else if (name === 'squeeze') {
+        // Funnel walls
+        obstacles.push(new Obstacle(0, height * 0.35, width * 0.35, 30));
+        obstacles.push(new Obstacle(width * 0.65, height * 0.35, width * 0.35, 30));
+
+        // Plinko trigger bumper
+        pegs.push(new Peg(width * 0.5, height * 0.70, 25, 220.00, '#39ff14'));
+
+        // Spawn a very huge blob above funnel squeeze
+        spawnCircleBlob(width * 0.5, 90, 80, 24, '#ff007f');
+      }
+
+      updateStats();
+    }
+
+    // Init Engine
+    resize();
+    loadPreset('bumper_arena');
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
