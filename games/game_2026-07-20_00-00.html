@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>turing morphogenesis // organic reaction-diffusion sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #040408;
+      --panel-bg: rgba(8, 9, 20, 0.85);
+      --border-color: rgba(181, 0, 255, 0.15);
+      --border-glow: rgba(181, 0, 255, 0.05);
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007f;
+      --neon-purple: #b500ff;
+      --neon-green: #39ff14;
+      --neon-yellow: #ffaa00;
+      --text-main: #f0f2f5;
+      --text-muted: #72829c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(4, 4, 8, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-glow {
+      width: 12px;
+      height: 12px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--neon-cyan);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.4; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: lowercase;
+      background: linear-gradient(90deg, #fff, var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-info {
+      display: flex;
+      gap: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-info span strong {
+      color: var(--neon-pink);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Left Control Sidebar */
+    #sidebar {
+      width: 320px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      z-index: 5;
+      backdrop-filter: blur(12px);
+      box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Scrollbar Styling for Sidebar */
+    #sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    #sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #sidebar::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      text-transform: lowercase;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.72rem;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    label span.val-label {
+      color: var(--neon-cyan);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.68rem;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--neon-cyan);
+      transition: background 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #fff;
+    }
+
+    select {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px;
+      border-radius: 4px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.78rem;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    select:focus {
+      border-color: var(--neon-cyan);
+    }
+
+    .preset-desc {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 8px;
+      border-radius: 4px;
+      border-left: 2px solid var(--neon-purple);
+      margin-top: 4px;
+    }
+
+    /* Buttons Group */
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      padding: 8px 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: rgba(181, 0, 255, 0.08);
+      border-color: var(--neon-purple);
+      box-shadow: 0 0 8px rgba(181, 0, 255, 0.25);
+    }
+
+    .btn.active {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--neon-cyan);
+      color: #fff;
+      text-shadow: 0 0 4px var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    .btn-primary {
+      grid-column: span 2;
+      background: rgba(0, 243, 255, 0.05);
+      border-color: rgba(0, 243, 255, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+    }
+
+    /* Brush mode toggle styles */
+    .brush-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .brush-grid .btn {
+      padding: 6px 2px;
+      font-size: 0.68rem;
+    }
+
+    /* Sound Panel overlay button */
+    .audio-banner {
+      background: rgba(255, 0, 127, 0.08);
+      border: 1px dashed var(--neon-pink);
+      padding: 10px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .audio-banner span {
+      font-size: 0.72rem;
+      color: var(--neon-pink);
+      font-weight: 600;
+    }
+
+    /* Canvas Area */
+    #viewport-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #020204;
+      padding: 20px;
+    }
+
+    #canvas-wrapper {
+      position: relative;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 2px var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      aspect-ratio: 1 / 1;
+      max-height: 90%;
+      max-width: 90%;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    /* HUD overlay */
+    #hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(4, 4, 8, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px 14px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      z-index: 4;
+      backdrop-filter: blur(8px);
+    }
+
+    #hud span strong {
+      color: var(--neon-cyan);
+    }
+
+    /* Keyboard Shortcuts Overlay */
+    #shortcuts {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      background: rgba(4, 4, 8, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+      pointer-events: none;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      z-index: 4;
+      backdrop-filter: blur(8px);
+    }
+
+    #shortcuts div {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    #shortcuts kbd {
+      color: var(--neon-pink);
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 600;
+    }
+
+    /* Custom Switch Container */
+    .switch-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 32px;
+      height: 16px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 10px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 2px;
+      bottom: 2px;
+      background-color: var(--text-muted);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: rgba(0, 243, 255, 0.2);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(16px);
+      background-color: var(--neon-cyan);
+      box-shadow: 0 0 6px var(--neon-cyan);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <h1>turing morphogenesis</h1>
+    </div>
+    <div class="header-info">
+      <span>grid: <strong>512x512 float</strong></span>
+      <span>solver: <strong>webgl2 gpu</strong></span>
+    </div>
+  </header>
+
+  <main>
+    <div id="sidebar">
+      
+      <!-- Simulation Controls -->
+      <div class="control-group">
+        <div class="section-title">simulation state</div>
+        <button id="btn-play" class="btn btn-primary active">pause simulation</button>
+        <div class="btn-group">
+          <button id="btn-step" class="btn">step single</button>
+          <button id="btn-reset" class="btn">re-seed</button>
+          <button id="btn-clear" class="btn" style="grid-column: span 2;">clear canvas</button>
+        </div>
+      </div>
+
+      <!-- Presets -->
+      <div class="control-group">
+        <div class="section-title">morphology presets</div>
+        <select id="select-preset">
+          <!-- Populated by JS -->
+        </select>
+        <div id="preset-description" class="preset-desc">
+          loading preset description...
+        </div>
+      </div>
+
+      <!-- Gray Scott Parameters -->
+      <div class="control-group">
+        <div class="section-title">equation tuning</div>
+        
+        <div class="control-group">
+          <label for="slide-feed">feed rate (f) <span id="label-feed" class="val-label">0.0367</span></label>
+          <input type="range" id="slide-feed" min="0.0050" max="0.0900" step="0.0001" value="0.0367">
+        </div>
+
+        <div class="control-group">
+          <label for="slide-kill">kill rate (k) <span id="label-kill" class="val-label">0.0649</span></label>
+          <input type="range" id="slide-kill" min="0.0300" max="0.0700" step="0.0001" value="0.0649">
+        </div>
+
+        <div class="control-group">
+          <label for="slide-da">diffusion a (da) <span id="label-da" class="val-label">1.0</span></label>
+          <input type="range" id="slide-da" min="0.1" max="1.0" step="0.05" value="1.0">
+        </div>
+
+        <div class="control-group">
+          <label for="slide-db">diffusion b (db) <span id="label-db" class="val-label">0.5</span></label>
+          <input type="range" id="slide-db" min="0.1" max="0.5" step="0.02" value="0.5">
+        </div>
+      </div>
+
+      <!-- Interactive Painting -->
+      <div class="control-group">
+        <div class="section-title">interactive brush</div>
+        
+        <div class="brush-grid">
+          <button id="brush-draw" class="btn active">draw b</button>
+          <button id="brush-erase" class="btn">erase</button>
+          <button id="brush-noise" class="btn">noise</button>
+        </div>
+
+        <div class="control-group" style="margin-top: 6px;">
+          <label for="slide-brush-radius">brush radius <span id="label-brush-radius" class="val-label">16 px</span></label>
+          <input type="range" id="slide-brush-radius" min="4" max="80" step="1" value="16">
+        </div>
+      </div>
+
+      <!-- Render options -->
+      <div class="control-group">
+        <div class="section-title">visualization</div>
+
+        <div class="control-group">
+          <label for="select-palette">color palette</label>
+          <select id="select-palette">
+            <option value="0">cyberpunk neon</option>
+            <option value="1">toxic sludge</option>
+            <option value="2">volcanic fire</option>
+            <option value="3">electric ocean</option>
+            <option value="4">monochrome ink</option>
+            <option value="5">psychedelic orange</option>
+          </select>
+        </div>
+
+        <div class="switch-container" style="margin-top: 4px;">
+          <span>enable 3d liquid shading</span>
+          <label class="switch">
+            <input type="checkbox" id="check-shading" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="control-group" style="margin-top: 6px;">
+          <label for="slide-speed">solver speed (steps/frame) <span id="label-speed" class="val-label">10x</span></label>
+          <input type="range" id="slide-speed" min="1" max="25" step="1" value="10">
+        </div>
+      </div>
+
+      <!-- Synthesizer -->
+      <div class="control-group">
+        <div class="section-title">organic synthesizer</div>
+        <div id="audio-panel">
+          <div class="audio-banner">
+            <span>synthesizer inactive</span>
+            <button id="btn-audio" class="btn btn-primary" style="margin-top: 4px; padding: 6px 10px;">enable ambient sound</button>
+          </div>
+        </div>
+        <div class="control-group" id="vol-control" style="display: none; margin-top: 4px;">
+          <label for="slide-volume">synth volume <span id="label-volume" class="val-label">30%</span></label>
+          <input type="range" id="slide-volume" min="0" max="100" value="30">
+        </div>
+      </div>
+
+    </div>
+
+    <div id="viewport-container">
+      
+      <!-- Floating HUD -->
+      <div id="hud">
+        <span>fps: <strong id="hud-fps">0</strong></span>
+        <span>generations: <strong id="hud-gen">0</strong></span>
+        <span>mass density: <strong id="hud-mass">0.0%</strong></span>
+      </div>
+
+      <!-- Canvas Wrapper -->
+      <div id="canvas-wrapper">
+        <canvas id="gl-canvas" width="512" height="512"></canvas>
+      </div>
+
+      <!-- Shortcuts Overlay -->
+      <div id="shortcuts">
+        <div><span>play/pause</span><kbd>space</kbd></div>
+        <div><span>step solver</span><kbd>S</kbd></div>
+        <div><span>re-seed grid</span><kbd>R</kbd></div>
+        <div><span>clear grid</span><kbd>C</kbd></div>
+        <div><span>toggle 3d</span><kbd>U</kbd></div>
+        <div><span>toggle erase</span><kbd>E</kbd></div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // --- PRESETS CONFIG ---
+    const PRESETS = {
+      mitosis: {
+        name: "cell division (mitosis)",
+        feed: 0.0367,
+        kill: 0.0649,
+        da: 1.0,
+        db: 0.5,
+        desc: "isolated chemical blobs expand, stretch, and undergo binary division. models cellular mitosis."
+      },
+      coral: {
+        name: "coral branching",
+        feed: 0.0545,
+        kill: 0.0620,
+        da: 1.0,
+        db: 0.5,
+        desc: "stable labyrinth lines grow outward, generating highly dense fractal structures resembling brain coral."
+      },
+      fingerprints: {
+        name: "fingerprints & maze",
+        feed: 0.0600,
+        kill: 0.0620,
+        da: 1.0,
+        db: 0.5,
+        desc: "self-correcting parallel stripes wind and curve. models fingerprint ridges and turing maze networks."
+      },
+      chaos: {
+        name: "unstable chaos ripples",
+        feed: 0.0250,
+        kill: 0.0500,
+        da: 1.0,
+        db: 0.5,
+        desc: "waves collapse, warp, and trigger chaotic turbulent cascades that flow indefinitely across the plane."
+      },
+      solitons: {
+        name: "soliton particles",
+        feed: 0.0180,
+        kill: 0.0470,
+        da: 1.0,
+        db: 0.5,
+        desc: "self-propelled circular particle-like blobs that drift, bounce off borders, and replicate on collision."
+      },
+      uskate: {
+        name: "oscillating u-skate",
+        feed: 0.0620,
+        kill: 0.0610,
+        da: 1.0,
+        db: 0.5,
+        desc: "intricate, snake-like helical trails oscillate in size and slide around on the chemical gradient."
+      },
+      spots: {
+        name: "replicating colonies",
+        feed: 0.0360,
+        kill: 0.0600,
+        da: 1.0,
+        db: 0.5,
+        desc: "a grid of isolated spot colonies that divide and form complex packed structures."
+      }
+    };
+
+    // --- STATE INITIALIZATION ---
+    let feed = PRESETS.mitosis.feed;
+    let kill = PRESETS.mitosis.kill;
+    let da = PRESETS.mitosis.da;
+    let db = PRESETS.mitosis.db;
+    let dt = 1.0;
+
+    let stepsPerFrame = 10;
+    let paused = false;
+    let enableShading = true;
+    let selectedPalette = 0;
+    
+    let brushMode = 'draw'; // 'draw', 'erase', 'noise'
+    let brushRadius = 16.0;
+    let brushValue = 0.5;
+
+    let simulationSteps = 0;
+
+    // --- WEBGL SIMULATION VARIABLES ---
+    const SIM_WIDTH = 512;
+    const SIM_HEIGHT = 512;
+
+    const canvas = document.getElementById('gl-canvas');
+    const gl = canvas.getContext('webgl2');
+
+    if (!gl) {
+      alert("WebGL2 is required for this application.");
+    }
+
+    // Attempt to load float texture extension
+    const extColorBufferFloat = gl.getExtension('EXT_color_buffer_float');
+    let internalFormat = gl.RGBA32F;
+    let format = gl.RGBA;
+    let type = gl.FLOAT;
+
+    if (!extColorBufferFloat) {
+      console.warn("EXT_color_buffer_float not supported. Trying half-float fallback.");
+      // WebGL2 supports RGBA16F and HALF_FLOAT
+      internalFormat = gl.RGBA16F;
+      type = gl.HALF_FLOAT;
+    }
+
+    // Fullscreen quad buffer
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      -1.0, -1.0,
+       1.0, -1.0,
+      -1.0,  1.0,
+      -1.0,  1.0,
+       1.0, -1.0,
+       1.0,  1.0
+    ]), gl.STATIC_DRAW);
+
+    // --- SHADER SOURCE CODE ---
+    const vsSource = `#version 300 es
+      in vec2 position;
+      out vec2 v_texCoord;
+      void main() {
+        v_texCoord = position * 0.5 + 0.5;
+        gl_Position = vec4(position, 0.0, 1.0);
+      }
+    `;
+
+    const simFsSource = `#version 300 es
+      precision highp float;
+      in vec2 v_texCoord;
+      out vec4 fragColor;
+
+      uniform sampler2D u_texture;
+      uniform vec2 u_texelSize;
+      uniform float u_feed;
+      uniform float u_kill;
+      uniform float u_da;
+      uniform float u_db;
+      uniform float u_dt;
+
+      uniform vec2 u_mouse;
+      uniform vec2 u_prevMouse;
+      uniform float u_brushRadius;
+      uniform float u_brushValue;
+      uniform int u_brushMode; // 0=draw B, 1=erase, 2=noise
+      uniform bool u_isPainting;
+
+      float distToSegment(vec2 p, vec2 a, vec2 b) {
+        vec2 pa = p - a;
+        vec2 ba = b - a;
+        float lenSq = dot(ba, ba);
+        if (lenSq < 0.00001) return length(pa);
+        float h = clamp(dot(pa, ba) / lenSq, 0.0, 1.0);
+        return length(pa - ba * h);
+      }
+
+      // Pseudo-random noise function
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+      }
+
+      void main() {
+        vec2 tc = v_texCoord;
+        vec2 dx = vec2(u_texelSize.x, 0.0);
+        vec2 dy = vec2(0.0, u_texelSize.y);
+
+        // 9-point Laplacian stencil
+        vec4 center = texture(u_texture, tc);
+        vec4 n  = texture(u_texture, tc + dy);
+        vec4 s  = texture(u_texture, tc - dy);
+        vec4 e  = texture(u_texture, tc + dx);
+        vec4 w  = texture(u_texture, tc - dx);
+        vec4 nw = texture(u_texture, tc - dx + dy);
+        vec4 ne = texture(u_texture, tc + dx + dy);
+        vec4 sw = texture(u_texture, tc - dx - dy);
+        vec4 se = texture(u_texture, tc + dx - dy);
+
+        vec2 lap = center.xy * -1.0;
+        lap += (n.xy + s.xy + e.xy + w.xy) * 0.2;
+        lap += (nw.xy + ne.xy + sw.xy + se.xy) * 0.05;
+
+        float a = center.r;
+        float b = center.g;
+
+        float abb = a * b * b;
+        float nextA = a + (u_da * lap.r - abb + u_feed * (1.0 - a)) * u_dt;
+        float nextB = b + (u_db * lap.g + abb - (u_kill + u_feed) * b) * u_dt;
+
+        nextA = clamp(nextA, 0.0, 1.0);
+        nextB = clamp(nextB, 0.0, 1.0);
+
+        // Dynamic mouse drawing
+        if (u_isPainting) {
+          float dist = distToSegment(tc, u_prevMouse, u_mouse);
+          if (dist < u_brushRadius) {
+            float influence = smoothstep(u_brushRadius, u_brushRadius * 0.25, dist);
+            
+            if (u_brushMode == 0) { // Draw B
+              nextB += influence * u_brushValue;
+              nextA = mix(nextA, 0.2, influence * 0.8);
+            } else if (u_brushMode == 1) { // Erase B
+              nextB = mix(nextB, 0.0, influence);
+              nextA = mix(nextA, 1.0, influence);
+            } else if (u_brushMode == 2) { // Seed noise
+              float randVal = hash(tc + vec2(u_feed, u_kill));
+              if (randVal < 0.3) {
+                nextB = mix(nextB, 0.3 + randVal * 0.2, influence);
+                nextA = mix(nextA, 0.4, influence);
+              }
+            }
+          }
+        }
+
+        nextA = clamp(nextA, 0.0, 1.0);
+        nextB = clamp(nextB, 0.0, 1.0);
+
+        fragColor = vec4(nextA, nextB, 0.0, 1.0);
+      }
+    `;
+
+    const displayFsSource = `#version 300 es
+      precision highp float;
+      in vec2 v_texCoord;
+      out vec4 fragColor;
+
+      uniform sampler2D u_texture;
+      uniform vec2 u_texelSize;
+      uniform int u_palette;
+      uniform bool u_enableShading;
+
+      vec3 getPaletteColor(float val) {
+        if (u_palette == 0) { // Cyberpunk Neon (Pink/Cyan)
+          vec3 col0 = vec3(0.01, 0.01, 0.03); // Deep violet background
+          vec3 col1 = vec3(0.0, 0.95, 1.0);   // Electric cyan
+          vec3 col2 = vec3(1.0, 0.0, 0.5);   // Hot neon pink
+          vec3 col3 = vec3(1.0, 0.9, 1.0);   // Glowing white
+          if (val < 0.15) return mix(col0, col1, val / 0.15);
+          if (val < 0.45) return mix(col1, col2, (val - 0.15) / 0.30);
+          return mix(col2, col3, (val - 0.45) / 0.55);
+        } else if (u_palette == 1) { // Toxic Sludge
+          vec3 col0 = vec3(0.01, 0.02, 0.02);
+          vec3 col1 = vec3(0.1, 0.85, 0.15);
+          vec3 col2 = vec3(0.9, 1.0, 0.0);
+          vec3 col3 = vec3(1.0, 1.0, 1.0);
+          if (val < 0.25) return mix(col0, col1, val / 0.25);
+          if (val < 0.65) return mix(col1, col2, (val - 0.25) / 0.40);
+          return mix(col2, col3, (val - 0.65) / 0.35);
+        } else if (u_palette == 2) { // Volcanic Fire
+          vec3 col0 = vec3(0.02, 0.0, 0.01);
+          vec3 col1 = vec3(0.9, 0.15, 0.0);
+          vec3 col2 = vec3(1.0, 0.65, 0.0);
+          vec3 col3 = vec3(1.0, 1.0, 0.85);
+          if (val < 0.20) return mix(col0, col1, val / 0.20);
+          if (val < 0.55) return mix(col1, col2, (val - 0.20) / 0.35);
+          return mix(col2, col3, (val - 0.55) / 0.45);
+        } else if (u_palette == 3) { // Electric Ocean
+          vec3 col0 = vec3(0.0, 0.01, 0.04);
+          vec3 col1 = vec3(0.0, 0.25, 0.65);
+          vec3 col2 = vec3(0.0, 0.80, 0.95);
+          vec3 col3 = vec3(0.85, 1.0, 1.0);
+          if (val < 0.18) return mix(col0, col1, val / 0.18);
+          if (val < 0.50) return mix(col1, col2, (val - 0.18) / 0.32);
+          return mix(col2, col3, (val - 0.50) / 0.50);
+        } else if (u_palette == 4) { // Monochrome Ink
+          return vec3(1.0 - val);
+        } else if (u_palette == 5) { // Psychedelic Purple Orange
+          vec3 col0 = vec3(0.08, 0.0, 0.15);
+          vec3 col1 = vec3(0.55, 0.0, 0.85);
+          vec3 col2 = vec3(1.0, 0.35, 0.0);
+          vec3 col3 = vec3(1.0, 0.9, 0.4);
+          if (val < 0.18) return mix(col0, col1, val / 0.18);
+          if (val < 0.55) return mix(col1, col2, (val - 0.18) / 0.37);
+          return mix(col2, col3, (val - 0.55) / 0.45);
+        }
+        return vec3(val);
+      }
+
+      void main() {
+        float val = texture(u_texture, v_texCoord).g;
+        vec3 baseColor = getPaletteColor(val);
+
+        if (u_enableShading) {
+          // Calculate slope using central difference of B concentration
+          float l = texture(u_texture, v_texCoord - vec2(u_texelSize.x, 0.0)).g;
+          float r = texture(u_texture, v_texCoord + vec2(u_texelSize.x, 0.0)).g;
+          float d = texture(u_texture, v_texCoord - vec2(0.0, u_texelSize.y)).g;
+          float u = texture(u_texture, v_texCoord + vec2(0.0, u_texelSize.y)).g;
+
+          // Embossing heights
+          float heightFactor = 16.0;
+          vec3 normal = normalize(vec3((l - r) * heightFactor, (d - u) * heightFactor, 1.0));
+
+          // Soft diagonal top-left light source
+          vec3 lightDir = normalize(vec3(-1.0, 1.0, 0.7));
+          
+          float ambient = 0.35;
+          float diffuse = max(dot(normal, lightDir), 0.0) * 0.65;
+          
+          // Specular highlights
+          vec3 viewDir = vec3(0.0, 0.0, 1.0);
+          vec3 halfDir = normalize(lightDir + viewDir);
+          float specular = pow(max(dot(normal, halfDir), 0.0), 24.0) * 0.4;
+
+          fragColor = vec4(baseColor * (ambient + diffuse) + vec3(specular), 1.0);
+        } else {
+          fragColor = vec4(baseColor, 1.0);
+        }
+      }
+    `;
+
+    // --- COMPILE SHADERS ---
+    function compileShader(gl, source, type) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("Shader compiling error: ", gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    function createProgram(gl, vsSource, fsSource) {
+      const vs = compileShader(gl, vsSource, gl.VERTEX_SHADER);
+      const fs = compileShader(gl, fsSource, gl.FRAGMENT_SHADER);
+      const prog = gl.createProgram();
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        console.error("Program linking error: ", gl.getProgramInfoLog(prog));
+        return null;
+      }
+      return prog;
+    }
+
+    const simProgram = createProgram(gl, vsSource, simFsSource);
+    const displayProgram = createProgram(gl, vsSource, displayFsSource);
+
+    // Get attribute/uniform locations for Simulation
+    const positionAttributeLocation = gl.getAttribLocation(simProgram, "position");
+    const simUniforms = {
+      u_texture: gl.getUniformLocation(simProgram, "u_texture"),
+      u_texelSize: gl.getUniformLocation(simProgram, "u_texelSize"),
+      u_feed: gl.getUniformLocation(simProgram, "u_feed"),
+      u_kill: gl.getUniformLocation(simProgram, "u_kill"),
+      u_da: gl.getUniformLocation(simProgram, "u_da"),
+      u_db: gl.getUniformLocation(simProgram, "u_db"),
+      u_dt: gl.getUniformLocation(simProgram, "u_dt"),
+      u_mouse: gl.getUniformLocation(simProgram, "u_mouse"),
+      u_prevMouse: gl.getUniformLocation(simProgram, "u_prevMouse"),
+      u_brushRadius: gl.getUniformLocation(simProgram, "u_brushRadius"),
+      u_brushValue: gl.getUniformLocation(simProgram, "u_brushValue"),
+      u_brushMode: gl.getUniformLocation(simProgram, "u_brushMode"),
+      u_isPainting: gl.getUniformLocation(simProgram, "u_isPainting")
+    };
+
+    // Get attribute/uniform locations for Display
+    const displayPositionLocation = gl.getAttribLocation(displayProgram, "position");
+    const displayUniforms = {
+      u_texture: gl.getUniformLocation(displayProgram, "u_texture"),
+      u_texelSize: gl.getUniformLocation(displayProgram, "u_texelSize"),
+      u_palette: gl.getUniformLocation(displayProgram, "u_palette"),
+      u_enableShading: gl.getUniformLocation(displayProgram, "u_enableShading")
+    };
+
+    // --- SETUP DATA & TEXTURES ---
+    function generateInitialState(type) {
+      const data = new Float32Array(SIM_WIDTH * SIM_HEIGHT * 4);
+      
+      // Default state: A=1.0, B=0.0 everywhere
+      for (let i = 0; i < SIM_WIDTH * SIM_HEIGHT; i++) {
+        const idx = i * 4;
+        data[idx] = 1.0;
+        data[idx + 1] = 0.0;
+        data[idx + 2] = 0.0;
+        data[idx + 3] = 1.0;
+      }
+
+      if (type === 'center-square') {
+        const border = 15;
+        const cx = SIM_WIDTH / 2;
+        const cy = SIM_HEIGHT / 2;
+        for (let y = cy - border; y <= cy + border; y++) {
+          for (let x = cx - border; x <= cx + border; x++) {
+            const idx = (y * SIM_WIDTH + x) * 4;
+            const n = Math.random() * 0.08;
+            data[idx] = 0.5;
+            data[idx + 1] = 0.25 + n;
+          }
+        }
+      } else if (type === 'blobs') {
+        const count = 12;
+        for (let b = 0; b < count; b++) {
+          const bx = Math.floor(50 + Math.random() * (SIM_WIDTH - 100));
+          const by = Math.floor(50 + Math.random() * (SIM_HEIGHT - 100));
+          const r = 10 + Math.floor(Math.random() * 15);
+          
+          for (let y = by - r; y <= by + r; y++) {
+            for (let x = bx - r; x <= bx + r; x++) {
+              if (x >= 0 && x < SIM_WIDTH && y >= 0 && y < SIM_HEIGHT) {
+                const distSq = (x - bx) * (x - bx) + (y - by) * (y - by);
+                if (distSq < r * r) {
+                  const idx = (y * SIM_WIDTH + x) * 4;
+                  data[idx] = 0.5;
+                  data[idx + 1] = 0.25 + Math.random() * 0.06;
+                }
+              }
+            }
+          }
+        }
+      } else if (type === 'noise') {
+        for (let i = 0; i < SIM_WIDTH * SIM_HEIGHT; i++) {
+          const idx = i * 4;
+          if (Math.random() < 0.02) {
+            data[idx] = 0.5;
+            data[idx + 1] = 0.25 + Math.random() * 0.1;
+          }
+        }
+      }
+
+      return data;
+    }
+
+    function createTexture(gl, width, height, data) {
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, data);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return tex;
+    }
+
+    function createFramebuffer(gl, texture) {
+      const fb = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+      
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (status !== gl.FRAMEBUFFER_COMPLETE) {
+        console.error("Framebuffer compile status incomplete: " + status);
+      }
+      return fb;
+    }
+
+    // Create dual ping-pong buffers
+    let currentTex, nextTex, fbA, fbB, nextFb;
+
+    function resetSimulation(seedType = 'center-square') {
+      if (fbA) gl.deleteFramebuffer(fbA);
+      if (fbB) gl.deleteFramebuffer(fbB);
+      if (currentTex) gl.deleteTexture(currentTex);
+      if (nextTex) gl.deleteTexture(nextTex);
+
+      const initState = generateInitialState(seedType);
+      const emptyState = new Float32Array(SIM_WIDTH * SIM_HEIGHT * 4);
+
+      currentTex = createTexture(gl, SIM_WIDTH, SIM_HEIGHT, initState);
+      nextTex = createTexture(gl, SIM_WIDTH, SIM_HEIGHT, emptyState);
+
+      fbA = createFramebuffer(gl, currentTex);
+      fbB = createFramebuffer(gl, nextTex);
+
+      nextFb = fbB;
+      simulationSteps = 0;
+    }
+
+    resetSimulation('center-square');
+
+    // --- INTERACTIVE MOUSE PAINTING EVENTS ---
+    let isPainting = false;
+    let mouseX = 0, mouseY = 0;
+    let prevMouseX = 0, prevMouseY = 0;
+    let brushStrokeSpeed = 0.0;
+    let lastPaintTime = performance.now();
+
+    function getMouseCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+      
+      return {
+        x: (clientX - rect.left) / rect.width,
+        y: 1.0 - (clientY - rect.top) / rect.height // Flip WebGL coordinates
+      };
+    }
+
+    function startPaint(e) {
+      e.preventDefault();
+      isPainting = true;
+      const coords = getMouseCoords(e);
+      mouseX = coords.x;
+      mouseY = coords.y;
+      prevMouseX = coords.x;
+      prevMouseY = coords.y;
+      brushStrokeSpeed = 0.0;
+      lastPaintTime = performance.now();
+
+      // Trigger Web Audio resume on user interaction
+      resumeAudio();
+      updateAudioBrush(true, mouseX, mouseY, 0.2);
+    }
+
+    function handlePaint(e) {
+      if (!isPainting) return;
+      
+      const coords = getMouseCoords(e);
+      prevMouseX = mouseX;
+      prevMouseY = mouseY;
+      mouseX = coords.x;
+      mouseY = coords.y;
+
+      const now = performance.now();
+      const dtMs = now - lastPaintTime;
+      if (dtMs > 0) {
+        const dx = mouseX - prevMouseX;
+        const dy = mouseY - prevMouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        brushStrokeSpeed = dist / (dtMs / 1000.0); // units/sec
+        
+        // Feed synthesis updates
+        updateAudioBrush(true, mouseX, mouseY, brushStrokeSpeed);
+      }
+      lastPaintTime = now;
+
+      // If solver is paused, run drawing passes inline
+      if (paused) {
+        runSimulationStep(0.0); // 0 dt stops Gray-Scott evolution, drawing runs
+      }
+    }
+
+    function endPaint() {
+      if (!isPainting) return;
+      isPainting = false;
+      updateAudioBrush(false, mouseX, mouseY, 0.0);
+    }
+
+    canvas.addEventListener('mousedown', startPaint);
+    canvas.addEventListener('mousemove', handlePaint);
+    window.addEventListener('mouseup', endPaint);
+
+    canvas.addEventListener('touchstart', startPaint, {passive: false});
+    canvas.addEventListener('touchmove', handlePaint, {passive: false});
+    window.addEventListener('touchend', endPaint);
+
+    // --- MAIN SOLVER PASS STEP ---
+    function runSimulationStep(timeStep = 1.0) {
+      gl.useProgram(simProgram);
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(positionAttributeLocation);
+
+      gl.uniform2f(simUniforms.u_texelSize, 1.0 / SIM_WIDTH, 1.0 / SIM_HEIGHT);
+      gl.uniform1f(simUniforms.u_feed, feed);
+      gl.uniform1f(simUniforms.u_kill, kill);
+      gl.uniform1f(simUniforms.u_da, da);
+      gl.uniform1f(simUniforms.u_db, db);
+      gl.uniform1f(simUniforms.u_dt, timeStep);
+
+      // Painting uniforms
+      gl.uniform1i(simUniforms.u_isPainting, isPainting ? 1 : 0);
+      gl.uniform2f(simUniforms.u_mouse, mouseX, mouseY);
+      gl.uniform2f(simUniforms.u_prevMouse, prevMouseX, prevMouseY);
+      gl.uniform1f(simUniforms.u_brushRadius, brushRadius / SIM_WIDTH);
+      gl.uniform1f(simUniforms.u_brushValue, brushValue);
+      gl.uniform1i(simUniforms.u_brushMode, brushMode === 'draw' ? 0 : (brushMode === 'erase' ? 1 : 2));
+
+      // Source texture unit 0
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, currentTex);
+      gl.uniform1i(simUniforms.u_texture, 0);
+
+      // Target framebuffer
+      gl.bindFramebuffer(gl.FRAMEBUFFER, nextFb);
+      gl.viewport(0, 0, SIM_WIDTH, SIM_HEIGHT);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      // Swap ping-pong pointers
+      const tempTex = currentTex;
+      currentTex = nextTex;
+      nextTex = tempTex;
+      nextFb = (nextFb === fbB) ? fbA : fbB;
+
+      if (timeStep > 0.0) {
+        simulationSteps++;
+      }
+    }
+
+    // --- SCREEN RENDER PASS ---
+    function renderDisplay() {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); // Render directly to window canvas
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+      gl.useProgram(displayProgram);
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.vertexAttribPointer(displayPositionLocation, 2, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(displayPositionLocation);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, currentTex);
+      gl.uniform1i(displayUniforms.u_texture, 0);
+      gl.uniform2f(displayUniforms.u_texelSize, 1.0 / SIM_WIDTH, 1.0 / SIM_HEIGHT);
+      gl.uniform1i(displayUniforms.u_palette, selectedPalette);
+      gl.uniform1i(displayUniforms.u_enableShading, enableShading ? 1 : 0);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+
+    // --- MAIN TICK / ANIMATION LOOP ---
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let fps = 0;
+
+    function tick() {
+      // Loop simulation iterations per frame
+      if (!paused) {
+        for (let i = 0; i < stepsPerFrame; i++) {
+          runSimulationStep(dt);
+        }
+      }
+
+      renderDisplay();
+
+      // Track statistics
+      frameCount++;
+      const now = performance.now();
+      const elapsed = now - lastFrameTime;
+      if (elapsed >= 1000) {
+        fps = Math.round((frameCount * 1000) / elapsed);
+        frameCount = 0;
+        lastFrameTime = now;
+        
+        calculateMassDensity();
+      }
+
+      // Update HUD stats
+      document.getElementById('hud-fps').textContent = fps;
+      document.getElementById('hud-gen').textContent = simulationSteps;
+
+      requestAnimationFrame(tick);
+    }
+
+    // Async estimation of mass density to keep CPU performance at 100%
+    function calculateMassDensity() {
+      const pixels = new Float32Array(32 * 32 * 4); // Small readback sample for performance
+      gl.bindFramebuffer(gl.FRAMEBUFFER, nextFb);
+      gl.readPixels(128, 128, 32, 32, gl.RGBA, gl.FLOAT, pixels);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+      let bSum = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        bSum += pixels[i + 1]; // Green channel holds chemical B
+      }
+      const density = (bSum / (32 * 32)) * 100.0;
+      document.getElementById('hud-mass').textContent = density.toFixed(1) + "%";
+
+      modulatePadSynth(density);
+    }
+
+    // Start execution
+    requestAnimationFrame(tick);
+
+    // --- DYNAMIC AUDIO SYNTHESIZER ---
+    let audioCtx = null;
+    let masterGain = null;
+    let delayNode = null;
+    let delayGain = null;
+    let padOscs = [];
+    let padGain = null;
+    let padFilter = null;
+    let padLfo = null;
+    let brushOsc = null;
+    let brushGain = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+      masterGain.connect(audioCtx.destination);
+
+      // Smooth master gain raise
+      const volumeLevel = parseInt(document.getElementById('slide-volume').value) / 100;
+      masterGain.gain.linearRampToValueAtTime(volumeLevel * 0.4, audioCtx.currentTime + 1.0);
+
+      // Stereo echo delay
+      delayNode = audioCtx.createDelay(1.0);
+      delayNode.delayTime.setValueAtTime(0.35, audioCtx.currentTime);
+      delayGain = audioCtx.createGain();
+      delayGain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+
+      delayNode.connect(delayGain);
+      delayGain.connect(delayNode);
+      delayGain.connect(masterGain);
+
+      // Lowpass resonant synth filter
+      padFilter = audioCtx.createBiquadFilter();
+      padFilter.type = 'lowpass';
+      padFilter.Q.setValueAtTime(4.0, audioCtx.currentTime);
+      padFilter.frequency.setValueAtTime(450, audioCtx.currentTime);
+      padFilter.connect(masterGain);
+      padFilter.connect(delayNode);
+
+      padGain = audioCtx.createGain();
+      padGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      padGain.connect(padFilter);
+
+      // Synthesize an ambient organic minor 7th chord (A minor)
+      const pitches = [110.00, 130.81, 165.00, 196.00]; // A2, C3, E3, G3
+      pitches.forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.detune.setValueAtTime((Math.random() - 0.5) * 16, audioCtx.currentTime);
+        osc.connect(padGain);
+        osc.start();
+        padOscs.push(osc);
+      });
+
+      // LFO to slowly sweep filter cutoff
+      padLfo = audioCtx.createOscillator();
+      padLfo.frequency.setValueAtTime(0.06, audioCtx.currentTime);
+
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.setValueAtTime(280, audioCtx.currentTime);
+
+      padLfo.connect(lfoGain);
+      lfoGain.connect(padFilter.frequency);
+      padLfo.start();
+
+      // Brush synthesizer
+      brushOsc = audioCtx.createOscillator();
+      brushOsc.type = 'sine';
+      brushOsc.frequency.setValueAtTime(440, audioCtx.currentTime);
+
+      brushGain = audioCtx.createGain();
+      brushGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      const brushFilter = audioCtx.createBiquadFilter();
+      brushFilter.type = 'bandpass';
+      brushFilter.Q.setValueAtTime(8.0, audioCtx.currentTime);
+      brushFilter.frequency.setValueAtTime(440, audioCtx.currentTime);
+
+      brushOsc.connect(brushFilter);
+      brushFilter.connect(brushGain);
+      brushGain.connect(masterGain);
+      brushGain.connect(delayNode);
+      brushOsc.start();
+    }
+
+    function updateAudioBrush(active, x, y, speed) {
+      if (!audioCtx || audioCtx.state === 'suspended') return;
+
+      const targetFreq = 180 + y * 650;
+      const targetVol = active ? Math.min(speed * 0.04, 0.14) : 0.0;
+
+      brushOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.06);
+      brushGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.06);
+    }
+
+    function modulatePadSynth(density) {
+      if (!audioCtx || !padLfo) return;
+      const targetLfoSpeed = 0.05 + (density / 100.0) * 0.25;
+      padLfo.frequency.setTargetAtTime(targetLfoSpeed, audioCtx.currentTime, 0.8);
+    }
+
+    function resumeAudio() {
+      if (!audioCtx) {
+        initAudio();
+        document.getElementById('audio-panel').innerHTML = `
+          <div class="switch-container">
+            <span>synthesizer enabled</span>
+            <button id="btn-audio-toggle" class="btn active">mute</button>
+          </div>
+        `;
+        document.getElementById('vol-control').style.display = 'flex';
+        
+        document.getElementById('btn-audio-toggle').addEventListener('click', () => {
+          if (audioCtx.state === 'running') {
+            audioCtx.suspend();
+            document.getElementById('btn-audio-toggle').classList.remove('active');
+            document.getElementById('btn-audio-toggle').textContent = 'unmute';
+          } else {
+            audioCtx.resume();
+            document.getElementById('btn-audio-toggle').classList.add('active');
+            document.getElementById('btn-audio-toggle').textContent = 'mute';
+          }
+        });
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // --- BIND HTML INTERFACE CONTROLS ---
+
+    // Play / Pause
+    const playBtn = document.getElementById('btn-play');
+    function togglePause() {
+      paused = !paused;
+      if (paused) {
+        playBtn.textContent = 'resume simulation';
+        playBtn.classList.remove('active');
+      } else {
+        playBtn.textContent = 'pause simulation';
+        playBtn.classList.add('active');
+      }
+    }
+    playBtn.addEventListener('click', togglePause);
+
+    // Steps
+    document.getElementById('btn-step').addEventListener('click', () => {
+      runSimulationStep(dt);
+      renderDisplay();
+    });
+
+    // Reset / Seed
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      resetSimulation(Math.random() < 0.5 ? 'center-square' : 'blobs');
+      if (paused) renderDisplay();
+    });
+
+    // Clear
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      resetSimulation('none');
+      if (paused) renderDisplay();
+    });
+
+    // Populating presets select dropdown
+    const presetSelect = document.getElementById('select-preset');
+    const presetDesc = document.getElementById('preset-description');
+
+    for (let key in PRESETS) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = PRESETS[key].name;
+      presetSelect.appendChild(opt);
+    }
+
+    function applyPreset(key) {
+      const p = PRESETS[key];
+      feed = p.feed;
+      kill = p.kill;
+      da = p.da;
+      db = p.db;
+
+      document.getElementById('slide-feed').value = feed;
+      document.getElementById('slide-kill').value = kill;
+      document.getElementById('slide-da').value = da;
+      document.getElementById('slide-db').value = db;
+
+      document.getElementById('label-feed').textContent = feed.toFixed(4);
+      document.getElementById('label-kill').textContent = kill.toFixed(4);
+      document.getElementById('label-da').textContent = da.toFixed(2);
+      document.getElementById('label-db').textContent = db.toFixed(2);
+
+      presetDesc.textContent = p.desc;
+      resetSimulation('center-square');
+    }
+
+    presetSelect.addEventListener('change', (e) => {
+      applyPreset(e.target.value);
+    });
+
+    // Initial preset setup
+    applyPreset('mitosis');
+
+    // Formula tune updates
+    document.getElementById('slide-feed').addEventListener('input', (e) => {
+      feed = parseFloat(e.target.value);
+      document.getElementById('label-feed').textContent = feed.toFixed(4);
+    });
+    document.getElementById('slide-kill').addEventListener('input', (e) => {
+      kill = parseFloat(e.target.value);
+      document.getElementById('label-kill').textContent = kill.toFixed(4);
+    });
+    document.getElementById('slide-da').addEventListener('input', (e) => {
+      da = parseFloat(e.target.value);
+      document.getElementById('label-da').textContent = da.toFixed(2);
+    });
+    document.getElementById('slide-db').addEventListener('input', (e) => {
+      db = parseFloat(e.target.value);
+      document.getElementById('label-db').textContent = db.toFixed(2);
+    });
+
+    // Interactive brushes
+    const bDraw = document.getElementById('brush-draw');
+    const bErase = document.getElementById('brush-erase');
+    const bNoise = document.getElementById('brush-noise');
+
+    function setBrushMode(mode) {
+      brushMode = mode;
+      bDraw.classList.remove('active');
+      bErase.classList.remove('active');
+      bNoise.classList.remove('active');
+
+      if (mode === 'draw') bDraw.classList.add('active');
+      if (mode === 'erase') bErase.classList.add('active');
+      if (mode === 'noise') bNoise.classList.add('active');
+    }
+
+    bDraw.addEventListener('click', () => setBrushMode('draw'));
+    bErase.addEventListener('click', () => setBrushMode('erase'));
+    bNoise.addEventListener('click', () => setBrushMode('noise'));
+
+    document.getElementById('slide-brush-radius').addEventListener('input', (e) => {
+      brushRadius = parseFloat(e.target.value);
+      document.getElementById('label-brush-radius').textContent = brushRadius + " px";
+    });
+
+    // Visual options
+    document.getElementById('select-palette').addEventListener('change', (e) => {
+      selectedPalette = parseInt(e.target.value);
+      if (paused) renderDisplay();
+    });
+
+    document.getElementById('check-shading').addEventListener('change', (e) => {
+      enableShading = e.target.checked;
+      if (paused) renderDisplay();
+    });
+
+    document.getElementById('slide-speed').addEventListener('input', (e) => {
+      stepsPerFrame = parseInt(e.target.value);
+      document.getElementById('label-speed').textContent = stepsPerFrame + "x";
+    });
+
+    // Audio setup
+    document.getElementById('btn-audio').addEventListener('click', () => {
+      resumeAudio();
+    });
+
+    document.getElementById('slide-volume').addEventListener('input', (e) => {
+      const vol = parseInt(e.target.value) / 100;
+      document.getElementById('label-volume').textContent = e.target.value + "%";
+      if (masterGain && audioCtx) {
+        masterGain.gain.setValueAtTime(vol * 0.4, audioCtx.currentTime);
+      }
+    });
+
+    // --- KEYBOARD SHORTCUTS CONTROLLER ---
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      }
+      if (e.code === 'KeyS') {
+        runSimulationStep(dt);
+        renderDisplay();
+      }
+      if (e.code === 'KeyR') {
+        resetSimulation('blobs');
+        if (paused) renderDisplay();
+      }
+      if (e.code === 'KeyC') {
+        resetSimulation('none');
+        if (paused) renderDisplay();
+      }
+      if (e.code === 'KeyU') {
+        const check = document.getElementById('check-shading');
+        check.checked = !check.checked;
+        enableShading = check.checked;
+        if (paused) renderDisplay();
+      }
+      if (e.code === 'KeyE') {
+        if (brushMode === 'draw') {
+          setBrushMode('erase');
+        } else {
+          setBrushMode('draw');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
