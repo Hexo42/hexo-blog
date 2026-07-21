@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>chaos & attractors // 3D chaotic flow sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #030307;
+      --panel-bg: rgba(6, 7, 16, 0.88);
+      --border-color: rgba(0, 243, 255, 0.18);
+      --border-glow: rgba(0, 243, 255, 0.05);
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007f;
+      --neon-purple: #b500ff;
+      --neon-green: #39ff14;
+      --neon-yellow: #ffaa00;
+      --text-main: #f2f5fa;
+      --text-muted: #6a7c96;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(3, 3, 7, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-glow {
+      width: 10px;
+      height: 10px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--neon-cyan);
+      animation: pulse 2.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.3; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: lowercase;
+      background: linear-gradient(90deg, #fff, var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-info {
+      display: flex;
+      gap: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .header-info span strong {
+      color: var(--neon-pink);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #sidebar {
+      width: 320px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      z-index: 5;
+      backdrop-filter: blur(12px);
+      box-shadow: 4px 0 25px rgba(0, 0, 0, 0.4);
+    }
+
+    #sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    #sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #sidebar::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+      text-transform: lowercase;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.72rem;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    label span.val {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-cyan);
+    }
+
+    select, input[type="range"], button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 8px;
+      border-radius: 4px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    select:focus, input[type="range"]:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+    }
+
+    select {
+      background-color: #0b0c16;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 6px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      flex: 1;
+      cursor: pointer;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.05), rgba(181, 0, 255, 0.05));
+      border: 1px solid var(--border-color);
+      letter-spacing: 0.5px;
+      text-transform: lowercase;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(181, 0, 255, 0.15));
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+      color: #fff;
+    }
+
+    button.active {
+      background: linear-gradient(135deg, rgba(255, 0, 127, 0.2), rgba(181, 0, 255, 0.2));
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 8px rgba(255, 0, 127, 0.3);
+    }
+
+    .info-panel {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .info-panel p {
+      margin-bottom: 4px;
+    }
+
+    .info-panel p strong {
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    canvas:active {
+      cursor: grabbing;
+    }
+
+    /* HUD Overlay */
+    .hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-family: 'Orbitron', sans-serif;
+      z-index: 2;
+    }
+
+    .hud-card {
+      background: rgba(4, 5, 12, 0.75);
+      border: 1px solid rgba(0, 243, 255, 0.1);
+      backdrop-filter: blur(8px);
+      padding: 10px 14px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-title {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .hud-value {
+      font-size: 0.95rem;
+      color: var(--neon-cyan);
+      font-weight: 800;
+    }
+
+    .hud-value.pink {
+      color: var(--neon-pink);
+    }
+
+    .helper-text {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      pointer-events: none;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 8px;
+      border-radius: 4px;
+      z-index: 2;
+    }
+
+    /* Toggle switches */
+    .switch-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-round {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .slider-round:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-round {
+      background-color: rgba(0, 243, 255, 0.2);
+      border-color: var(--neon-cyan);
+    }
+
+    input:checked + .slider-round:before {
+      background-color: var(--neon-cyan);
+      transform: translateX(16px);
+      box-shadow: 0 0 6px var(--neon-cyan);
+    }
+
+    /* Equation Parameters Panel Dynamic Grid */
+    #params-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    /* Instructions overlay */
+    #audio-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 3, 7, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      gap: 15px;
+      backdrop-filter: blur(10px);
+      transition: opacity 0.5s ease;
+    }
+
+    .overlay-box {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 0 30px var(--border-glow);
+      padding: 30px;
+      border-radius: 8px;
+      max-width: 500px;
+      text-align: center;
+    }
+
+    .overlay-box h2 {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-cyan);
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+
+    .overlay-box p {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-main);
+      margin-bottom: 20px;
+    }
+
+    .overlay-btn {
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      border: none;
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      padding: 12px 24px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      cursor: pointer;
+      border-radius: 4px;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .overlay-btn:hover {
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.7);
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="audio-overlay">
+    <div class="overlay-box">
+      <h2>chaos attractors</h2>
+      <p>an interactive 3D simulation of mathematical chaos and strange attractors. spawns thousands of particles sliding through vector fields, mapped to a modular synthesizer playing atmospheric pads and generative melodies.</p>
+      <button class="overlay-btn" id="start-btn">initialize sandbox</button>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <h1>chaos & attractors // strange attractor sandbox</h1>
+    </div>
+    <div class="header-info">
+      <span>fps: <strong id="fps-counter">60</strong></span>
+      <span>particles: <strong id="active-count">5000</strong></span>
+      <span>system: <strong id="system-name">lorenz</strong></span>
+    </div>
+  </header>
+
+  <main>
+    <div id="sidebar">
+      <div class="control-group">
+        <div class="section-title">select system</div>
+        <select id="attractor-selector">
+          <option value="lorenz">lorenz attractor (convective flow)</option>
+          <option value="aizawa">aizawa attractor (spherical tube)</option>
+          <option value="halvorsen">halvorsen attractor (cyclic chaos)</option>
+          <option value="thomas">thomas attractor (toroidal maze)</option>
+          <option value="dadras">dadras attractor (multilobe torus)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <div class="section-title">system equations</div>
+        <div class="info-panel" id="equation-display">
+          dx/dt = s * (y - x)<br>
+          dy/dt = x * (r - z) - y<br>
+          dz/dt = x * y - b * z
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="section-title">parameters</div>
+        <div id="params-grid">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="section-title">simulation details</div>
+        <label>particles <span class="val" id="lbl-particles">5000</span></label>
+        <input type="range" id="slider-particles" min="500" max="10000" step="100" value="5000">
+
+        <label>dt (speed) <span class="val" id="lbl-speed">0.005</span></label>
+        <input type="range" id="slider-speed" min="0.001" max="0.02" step="0.001" value="0.005">
+
+        <label>trail length <span class="val" id="lbl-trail">0.12</span></label>
+        <input type="range" id="slider-trail" min="0.01" max="0.5" step="0.01" value="0.12">
+      </div>
+
+      <div class="control-group">
+        <div class="section-title">visuals</div>
+        <label>color scheme</label>
+        <select id="color-selector">
+          <option value="cyberpunk">cyberpunk (neon pink & cyan)</option>
+          <option value="aurora">aurora (toxic green & cyan)</option>
+          <option value="solar">solar flare (orange & yellow)</option>
+          <option value="quantum">quantum (electric blue & magenta)</option>
+          <option value="velocity">velocity (colors by speed)</option>
+        </select>
+
+        <div class="switch-container" style="margin-top: 5px;">
+          <span>auto-rotate camera</span>
+          <label class="switch">
+            <input type="checkbox" id="chk-rotate" checked>
+            <span class="slider-round"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="section-title">audio synthesizer</div>
+        <div class="switch-container">
+          <span>audio synthesizer</span>
+          <label class="switch">
+            <input type="checkbox" id="chk-audio">
+            <span class="slider-round"></span>
+          </label>
+        </div>
+
+        <label style="margin-top: 5px;">synth volume <span class="val" id="lbl-vol">40%</span></label>
+        <input type="range" id="slider-vol" min="0" max="1" step="0.05" value="0.4">
+
+        <div class="info-panel" style="font-size: 0.68rem; margin-top: 5px;">
+          generative FM chords and a pentatonic arpeggiator mapping system coordinates to synth modulation.
+        </div>
+      </div>
+
+      <div class="control-group" style="margin-top: auto;">
+        <button id="btn-butterfly" class="active">butterfly effect mode</button>
+        <div class="btn-row">
+          <button id="btn-perturb">perturb state</button>
+          <button id="btn-reset">reset view</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="canvas-container">
+      <canvas id="flow-canvas"></canvas>
+
+      <div class="hud">
+        <div class="hud-card">
+          <div class="hud-title">lyapunov variance</div>
+          <div class="hud-value" id="lyapunov-val">0.000000</div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title">system dimension</div>
+          <div class="hud-value pink" id="dimension-val">fractal</div>
+        </div>
+      </div>
+
+      <div class="helper-text">
+        left click & drag to rotate | mouse wheel to zoom | right click or double click to spawn particles
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // --- 1. ATTRACTOR EQUATIONS DEFINITION ---
+    const systems = {
+      lorenz: {
+        name: 'lorenz attractor',
+        equations: 'dx/dt = s * (y - x)\ndy/dt = x * (r - z) - y\ndz/dt = x * y - b * z',
+        defaults: { s: 10, r: 28, b: 2.666 },
+        labels: { s: 'sigma (s)', r: 'rho (r)', b: 'beta (b)' },
+        ranges: { s: [1, 50, 0.1], r: [5, 100, 0.1], b: [0.1, 10, 0.01] },
+        scale: 7.2,
+        center: { x: 0, y: 0, z: 25 },
+        lyapunov: "d_lyap = 2.062 (chaotic)",
+        dimension: "d_f = 2.06",
+        step: (p, c, dt) => {
+          const dx = c.s * (p.y - p.x);
+          const dy = p.x * (c.r - p.z) - p.y;
+          const dz = p.x * p.y - c.b * p.z;
+          return { x: p.x + dx * dt, y: p.y + dy * dt, z: p.z + dz * dt };
+        }
+      },
+      aizawa: {
+        name: 'aizawa attractor',
+        equations: 'dx/dt = (z - b)*x - d*y\ndy/dt = d*x + (z - b)*y\ndz/dt = c + a*z - z^3/3 - (x^2+y^2)*(1 + e*z) + f*z*x^3',
+        defaults: { a: 0.95, b: 0.7, c: 0.6, d: 3.5, e: 0.25, f: 0.1 },
+        labels: { a: 'a (depth)', b: 'b (drag)', c: 'c (offset)', d: 'd (spin)', e: 'e (scale)', f: 'f (skew)' },
+        ranges: { a: [0.1, 2, 0.01], b: [0.1, 2, 0.01], c: [0.1, 2, 0.01], d: [1, 6, 0.05], e: [0.05, 1, 0.01], f: [0.01, 0.5, 0.01] },
+        scale: 160,
+        center: { x: 0, y: 0, z: 0.8 },
+        lyapunov: "d_lyap = 0.428 (stable-chaos)",
+        dimension: "d_f = 2.24",
+        step: (p, c, dt) => {
+          const dx = (p.z - c.b) * p.x - c.d * p.y;
+          const dy = c.d * p.x + (p.z - c.b) * p.y;
+          const dz = c.c + c.a * p.z - (p.z * p.z * p.z) / 3 - (p.x * p.x + p.y * p.y) * (1 + c.e * p.z) + c.f * p.z * (p.x * p.x * p.x);
+          return { x: p.x + dx * dt, y: p.y + dy * dt, z: p.z + dz * dt };
+        }
+      },
+      halvorsen: {
+        name: 'halvorsen attractor',
+        equations: 'dx/dt = -a*x - 4*y - 4*z - y^2\ndy/dt = -a*y - 4*z - 4*x - z^2\ndz/dt = -a*z - 4*x - 4*y - x^2',
+        defaults: { a: 1.4 },
+        labels: { a: 'alpha (a)' },
+        ranges: { a: [0.5, 3.0, 0.05] },
+        scale: 24,
+        center: { x: -2.3, y: -2.3, z: -2.3 },
+        lyapunov: "d_lyap = 1.341 (cyclical)",
+        dimension: "d_f = 2.01",
+        step: (p, c, dt) => {
+          const dx = -c.a * p.x - 4 * p.y - 4 * p.z - p.y * p.y;
+          const dy = -c.a * p.y - 4 * p.z - 4 * p.x - p.z * p.z;
+          const dz = -c.a * p.z - 4 * p.x - 4 * p.y - p.x * p.x;
+          return { x: p.x + dx * dt, y: p.y + dy * dt, z: p.z + dz * dt };
+        }
+      },
+      thomas: {
+        name: 'thomas attractor',
+        equations: 'dx/dt = sin(y) - b*x\ndy/dt = sin(z) - b*y\ndz/dt = sin(x) - b*z',
+        defaults: { b: 0.19 },
+        labels: { b: 'damping (b)' },
+        ranges: { b: [0.01, 0.5, 0.005] },
+        scale: 58,
+        center: { x: 0, y: 0, z: 0 },
+        lyapunov: "d_lyap = 0.082 (toroidal)",
+        dimension: "d_f = 2.82",
+        step: (p, c, dt) => {
+          const dx = Math.sin(p.y) - c.b * p.x;
+          const dy = Math.sin(p.z) - c.b * p.y;
+          const dz = Math.sin(p.x) - c.b * p.z;
+          return { x: p.x + dx * dt, y: p.y + dy * dt, z: p.z + dz * dt };
+        }
+      },
+      dadras: {
+        name: 'dadras attractor',
+        equations: 'dx/dt = y - a*x + b*y*z\ndy/dt = c*y - x*z + z\ndz/dt = d*x*y - e*z',
+        defaults: { a: 3.0, b: 2.7, c: 1.7, d: 2.0, e: 9.0 },
+        labels: { a: 'a', b: 'b', c: 'c', d: 'd', e: 'e' },
+        ranges: { a: [1, 8, 0.1], b: [1, 8, 0.1], c: [0.5, 4, 0.1], d: [0.5, 4, 0.1], e: [2, 20, 0.1] },
+        scale: 11.5,
+        center: { x: 0, y: 0, z: 0 },
+        lyapunov: "d_lyap = 1.942 (multilobed)",
+        dimension: "d_f = 2.16",
+        step: (p, c, dt) => {
+          const dx = p.y - c.a * p.x + c.b * p.y * p.z;
+          const dy = c.c * p.y - p.x * p.z + p.z;
+          const dz = c.d * p.x * p.y - c.e * p.z;
+          return { x: p.x + dx * dt, y: p.y + dy * dt, z: p.z + dz * dt };
+        }
+      }
+    };
+
+    // --- 2. GLOBAL STATE ---
+    let currentSystemKey = 'lorenz';
+    let currentSystem = systems[currentSystemKey];
+    let params = { ...currentSystem.defaults };
+    let particles = [];
+    let particleCount = 5000;
+    let dt = 0.005;
+    let trailLength = 0.12;
+    let colorScheme = 'cyberpunk';
+    let autoRotate = true;
+    let butterflyMode = true;
+
+    // Camera details
+    let yaw = 0.6;
+    let pitch = 0.3;
+    let targetYaw = 0.6;
+    let targetPitch = 0.3;
+    let cameraDistance = 350;
+    let targetCameraDistance = 350;
+
+    // Canvas setup
+    const canvas = document.getElementById('flow-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Drag tracking
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    // FPS tracking
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let currentFps = 60;
+
+    // Stats
+    let maxDistanceBetweenTwinning = 0;
+
+    // --- 3. WEB AUDIO SYNTH ENGINE ---
+    let audioCtx = null;
+    let synthActive = false;
+    let masterGain = null;
+    let delayNode = null;
+    let droneOscs = [];
+    let droneGain = null;
+    let arpeggiatorTimer = null;
+    const scale = [110.00, 123.47, 130.81, 146.83, 164.81, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 392.00, 440.00]; // Pentatonic A minor/C Major roots
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Master volume configuration
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      // Creative delay loop
+      delayNode = audioCtx.createDelay(2.0);
+      const delayFeedback = audioCtx.createGain();
+      
+      delayNode.delayTime.setValueAtTime(0.4, audioCtx.currentTime);
+      delayFeedback.gain.setValueAtTime(0.45, audioCtx.currentTime);
+
+      // Connect nodes
+      masterGain.connect(audioCtx.destination);
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+      delayNode.connect(masterGain);
+
+      // Create ambient drone oscillators
+      droneGain = audioCtx.createGain();
+      droneGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      
+      const freqs = [110.00, 164.81, 220.00, 261.63]; // Detuned chord A minor
+      freqs.forEach((freq, index) => {
+        const osc = audioCtx.createOscillator();
+        const panner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+        
+        osc.type = index % 2 === 0 ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(freq + (Math.random() - 0.5) * 1.5, audioCtx.currentTime);
+        
+        if (panner) {
+          panner.pan.setValueAtTime((index / (freqs.length - 1)) * 2 - 1, audioCtx.currentTime);
+          osc.connect(panner);
+          panner.connect(droneGain);
+        } else {
+          osc.connect(droneGain);
+        }
+        osc.start();
+        droneOscs.push(osc);
+      });
+
+      const droneFilter = audioCtx.createBiquadFilter();
+      droneFilter.type = 'lowpass';
+      droneFilter.Q.setValueAtTime(3.0, audioCtx.currentTime);
+      droneFilter.frequency.setValueAtTime(350.0, audioCtx.currentTime);
+
+      droneGain.connect(droneFilter);
+      droneFilter.connect(masterGain);
+
+      // Start dynamic filter modulation loop
+      function modulateFilter() {
+        if (!synthActive) return;
+        const centroid = getCentroid();
+        // map vertical (Z or Y depending on viewport) coordinate to filter frequency
+        const freqVal = Math.min(2500, Math.max(200, 300 + (centroid.z * 18)));
+        droneFilter.frequency.setTargetAtTime(freqVal, audioCtx.currentTime, 0.2);
+        
+        // Slightly detune base drone frequency based on expansion speed
+        droneOscs.forEach((osc, idx) => {
+          const mod = Math.sin(audioCtx.currentTime * 0.1 + idx) * 1.2;
+          osc.detune.setValueAtTime(mod, audioCtx.currentTime);
+        });
+        requestAnimationFrame(modulateFilter);
+      }
+      
+      // Start generative arpeggiator
+      startArpeggiator();
+      requestAnimationFrame(modulateFilter);
+      
+      // Smooth fade-in
+      const targetVol = parseFloat(document.getElementById('slider-vol').value);
+      masterGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 1.5);
+    }
+
+    function startArpeggiator() {
+      if (arpeggiatorTimer) clearInterval(arpeggiatorTimer);
+      
+      arpeggiatorTimer = setInterval(() => {
+        if (!synthActive || Math.random() > 0.8) return; // Add probabilistic pauses
+        
+        const centroid = getCentroid();
+        const normZ = Math.min(1.0, Math.max(0.0, centroid.z / (currentSystem.center.z * 2 || 30)));
+        const noteIndex = Math.floor(normZ * scale.length);
+        const targetFreq = scale[Math.min(scale.length - 1, Math.max(0, noteIndex))];
+        
+        playPluck(targetFreq);
+      }, 350);
+    }
+
+    function playPluck(frequency) {
+      if (!audioCtx || !synthActive) return;
+
+      const carrier = audioCtx.createOscillator();
+      const modulator = audioCtx.createOscillator();
+      const modGain = audioCtx.createGain();
+      const synthGain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+
+      carrier.type = 'sine';
+      modulator.type = 'sawtooth';
+
+      // FM Synth parameters
+      carrier.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+      modulator.frequency.setValueAtTime(frequency * 1.5, audioCtx.currentTime); // Harmonic ratio
+      modGain.gain.setValueAtTime(frequency * 2.0, audioCtx.currentTime); // Modulation depth
+
+      // Connections for FM synthesis
+      modulator.connect(modGain);
+      modGain.connect(carrier.frequency);
+
+      // Lowpass sweep
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(200, audioCtx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(frequency * 4, audioCtx.currentTime + 0.05);
+      filter.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.5);
+      filter.Q.setValueAtTime(2.0, audioCtx.currentTime);
+
+      // Volume envelope
+      synthGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+      synthGain.gain.linearRampToValueAtTime(0.28, audioCtx.currentTime + 0.02);
+      synthGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+
+      carrier.connect(filter);
+      filter.connect(synthGain);
+      
+      // Send some signal to direct output, some to delay
+      const delaySend = audioCtx.createGain();
+      delaySend.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      
+      synthGain.connect(masterGain);
+      synthGain.connect(delaySend);
+      delaySend.connect(delayNode);
+
+      carrier.start();
+      modulator.start();
+      carrier.stop(audioCtx.currentTime + 0.7);
+      modulator.stop(audioCtx.currentTime + 0.7);
+    }
+
+    function toggleSynth(active) {
+      synthActive = active;
+      if (active) {
+        if (!audioCtx) {
+          initAudio();
+        } else {
+          audioCtx.resume();
+          const targetVol = parseFloat(document.getElementById('slider-vol').value);
+          masterGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.4);
+        }
+      } else {
+        if (masterGain) {
+          masterGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.2);
+          setTimeout(() => { if (!synthActive && audioCtx) audioCtx.suspend(); }, 300);
+        }
+      }
+    }
+
+    function updateVolume(val) {
+      if (masterGain && synthActive) {
+        masterGain.gain.setTargetAtTime(parseFloat(val), audioCtx.currentTime, 0.1);
+      }
+    }
+
+    // --- 4. SIMULATION PHYSICS ENGINE ---
+    function initializeParticles() {
+      particles = [];
+      maxDistanceBetweenTwinning = 0;
+      
+      const c = currentSystem.center;
+      const spread = butterflyMode ? 0.002 : 12; // tight grouping for butterfly divergence mode
+
+      for (let i = 0; i < particleCount; i++) {
+        if (butterflyMode) {
+          // Half red, half blue. Starting at exact same coords with tiny pertubation.
+          const isTwinning = i >= particleCount / 2;
+          const pertubation = isTwinning ? 0.000002 : 0;
+          
+          // Seed close to the attractor attractor center
+          const rx = c.x + (Math.random() - 0.5) * spread;
+          const ry = c.y + (Math.random() - 0.5) * spread;
+          const rz = c.z + (Math.random() - 0.5) * spread;
+          
+          particles.push({
+            x: rx + (isTwinning ? pertubation : 0),
+            y: ry,
+            z: rz,
+            ox: rx,
+            oy: ry,
+            oz: rz,
+            twinIndex: isTwinning ? i - (particleCount / 2) : i + (particleCount / 2),
+            isTwin: isTwinning,
+            speed: 0
+          });
+        } else {
+          // General random spread across state space
+          const rx = c.x + (Math.random() - 0.5) * spread;
+          const ry = c.y + (Math.random() - 0.5) * spread;
+          const rz = c.z + (Math.random() - 0.5) * spread;
+          
+          particles.push({
+            x: rx,
+            y: ry,
+            z: rz,
+            ox: rx,
+            oy: ry,
+            oz: rz,
+            isTwin: false,
+            speed: 0
+          });
+        }
+      }
+    }
+
+    function perturbParticles() {
+      // Shakes the system coordinates slightly
+      particles.forEach(p => {
+        p.x += (Math.random() - 0.5) * 1.5;
+        p.y += (Math.random() - 0.5) * 1.5;
+        p.z += (Math.random() - 0.5) * 1.5;
+      });
+      maxDistanceBetweenTwinning = 0;
+    }
+
+    function updateSimulation() {
+      let twinMaxDist = 0;
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.ox = p.x;
+        p.oy = p.y;
+        p.oz = p.z;
+
+        // Apply attractor dynamics equations step
+        const next = currentSystem.step(p, params, dt);
+        
+        // Calculate velocity (speed)
+        const dx = next.x - p.x;
+        const dy = next.y - p.y;
+        const dz = next.z - p.z;
+        p.speed = Math.sqrt(dx*dx + dy*dy + dz*dz) / dt;
+
+        p.x = next.x;
+        p.y = next.y;
+        p.z = next.z;
+
+        // Compute Lyapunov deviation in twinning mode
+        if (butterflyMode && !p.isTwin) {
+          const twin = particles[p.twinIndex];
+          if (twin) {
+            const dist = Math.sqrt((p.x - twin.x)**2 + (p.y - twin.y)**2 + (p.z - twin.z)**2);
+            if (dist > twinMaxDist) twinMaxDist = dist;
+          }
+        }
+      }
+
+      if (butterflyMode) {
+        maxDistanceBetweenTwinning = Math.max(maxDistanceBetweenTwinning, twinMaxDist);
+        document.getElementById('lyapunov-val').innerText = maxDistanceBetweenTwinning.toFixed(6);
+      } else {
+        document.getElementById('lyapunov-val').innerText = "0.000000";
+      }
+    }
+
+    function getCentroid() {
+      if (particles.length === 0) return { x: 0, y: 0, z: 0 };
+      let sx = 0, sy = 0, sz = 0;
+      // sample every 10th particle for performance
+      let sampleCount = 0;
+      for (let i = 0; i < particles.length; i += 10) {
+        sx += particles[i].x;
+        sy += particles[i].y;
+        sz += particles[i].z;
+        sampleCount++;
+      }
+      return { x: sx / sampleCount, y: sy / sampleCount, z: sz / sampleCount };
+    }
+
+    // --- 5. RENDER ENGINE (3D -> 2D Perspective Projection) ---
+    function render() {
+      // Clear overlay with trail effect
+      ctx.fillStyle = `rgba(3, 3, 7, ${trailLength})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Pre-compute rotation sin/cos
+      const cosYaw = Math.cos(yaw);
+      const sinYaw = Math.sin(yaw);
+      const cosPitch = Math.cos(pitch);
+      const sinPitch = Math.sin(pitch);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const sc = currentSystem.scale;
+      const center = currentSystem.center;
+
+      ctx.lineWidth = 1.0;
+      
+      // Global glow configuration
+      ctx.globalCompositeOperation = 'screen';
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // 1. Shift to center
+        const x1 = p.x - center.x;
+        const y1 = p.y - center.y;
+        const z1 = p.z - center.z;
+
+        const ox1 = p.ox - center.x;
+        const oy1 = p.oy - center.y;
+        const oz1 = p.oz - center.z;
+
+        // 2. Rotate Yaw (Y axis)
+        const x2 = x1 * cosYaw - z1 * sinYaw;
+        const z2 = x1 * sinYaw + z1 * cosYaw;
+        const y2 = y1;
+
+        const ox2 = ox1 * cosYaw - oz1 * sinYaw;
+        const oz2 = ox1 * sinYaw + oz1 * cosYaw;
+        const oy2 = oy1;
+
+        // 3. Rotate Pitch (X axis)
+        const x3 = x2;
+        const y3 = y2 * cosPitch - z2 * sinPitch;
+        const z3 = y2 * sinPitch + z2 * cosPitch;
+
+        const ox3 = ox2;
+        const oy3 = oy2 * cosPitch - oz2 * sinPitch;
+        const oz3 = oy2 * sinPitch + oz2 * cosPitch;
+
+        // 4. Perspective Projection
+        const d = cameraDistance + z3;
+        const od = cameraDistance + oz3;
+
+        if (d > 10 && od > 10) {
+          const perspective = cameraDistance / d;
+          const operspective = cameraDistance / od;
+
+          const screenX = cx + x3 * sc * perspective;
+          const screenY = cy - y3 * sc * perspective;
+
+          const oscreenX = cx + ox3 * sc * operspective;
+          const oscreenY = cy - oy3 * sc * operspective;
+
+          // Only draw if within bounds
+          if (screenX >= 0 && screenX < canvas.width && screenY >= 0 && screenY < canvas.height) {
+            ctx.beginPath();
+            ctx.moveTo(oscreenX, oscreenY);
+            ctx.lineTo(screenX, screenY);
+
+            // Styling colors based on scheme
+            ctx.strokeStyle = getParticleColor(p, i);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function getParticleColor(p, index) {
+      if (butterflyMode) {
+        // Red and cyan twin separation visualization
+        return p.isTwin ? `rgba(255, 0, 127, 0.45)` : `rgba(0, 243, 255, 0.45)`;
+      }
+
+      switch (colorScheme) {
+        case 'aurora':
+          return `hsla(${140 + (p.z * 1.5) % 80}, 100%, 60%, 0.35)`;
+        case 'solar':
+          return `hsla(${15 + (p.y * 1.2) % 40}, 100%, 55%, 0.35)`;
+        case 'quantum':
+          return index % 2 === 0 ? `rgba(181, 0, 255, 0.35)` : `rgba(255, 0, 127, 0.35)`;
+        case 'velocity':
+          const normSpeed = Math.min(100, p.speed) / 100;
+          return `hsla(${240 - normSpeed * 240}, 100%, 60%, 0.35)`; // Blue (slow) -> Red (fast)
+        case 'cyberpunk':
+        default:
+          return index % 2 === 0 ? `rgba(0, 243, 255, 0.35)` : `rgba(255, 0, 127, 0.35)`;
+      }
+    }
+
+    // --- 6. USER INTERACTION & INTERFACE SETUP ---
+    function resizeCanvas() {
+      const rect = canvas.parentNode.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    function populateSliders() {
+      const grid = document.getElementById('params-grid');
+      grid.innerHTML = '';
+
+      Object.keys(currentSystem.defaults).forEach(key => {
+        const value = params[key];
+        const range = currentSystem.ranges[key];
+        const label = currentSystem.labels[key];
+
+        const container = document.createElement('div');
+        container.className = 'control-group';
+
+        const labelEl = document.createElement('label');
+        labelEl.innerHTML = `${label} <span class="val" id="lbl-param-${key}">${value}</span>`;
+
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.id = `slider-param-${key}`;
+        input.min = range[0];
+        input.max = range[1];
+        input.step = range[2];
+        input.value = value;
+
+        input.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          params[key] = val;
+          document.getElementById(`lbl-param-${key}`).innerText = val;
+        });
+
+        container.appendChild(labelEl);
+        container.appendChild(input);
+        grid.appendChild(container);
+      });
+
+      document.getElementById('equation-display').innerHTML = currentSystem.equations.replace(/\n/g, '<br>');
+      document.getElementById('system-name').innerText = currentSystemKey;
+      document.getElementById('dimension-val').innerText = currentSystem.dimension;
+    }
+
+    // --- 7. EVENT LISTENERS ---
+    window.addEventListener('resize', resizeCanvas);
+
+    // Dynamic configuration controls
+    document.getElementById('attractor-selector').addEventListener('change', (e) => {
+      currentSystemKey = e.target.value;
+      currentSystem = systems[currentSystemKey];
+      params = { ...currentSystem.defaults };
+      populateSliders();
+      initializeParticles();
+    });
+
+    document.getElementById('color-selector').addEventListener('change', (e) => {
+      colorScheme = e.target.value;
+    });
+
+    document.getElementById('slider-particles').addEventListener('input', (e) => {
+      particleCount = parseInt(e.target.value);
+      document.getElementById('lbl-particles').innerText = particleCount;
+      document.getElementById('active-count').innerText = particleCount;
+      initializeParticles();
+    });
+
+    document.getElementById('slider-speed').addEventListener('input', (e) => {
+      dt = parseFloat(e.target.value);
+      document.getElementById('lbl-speed').innerText = dt;
+    });
+
+    document.getElementById('slider-trail').addEventListener('input', (e) => {
+      trailLength = parseFloat(e.target.value);
+      document.getElementById('lbl-trail').innerText = trailLength;
+    });
+
+    document.getElementById('slider-vol').addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      document.getElementById('lbl-vol').innerText = `${Math.round(val * 100)}%`;
+      updateVolume(val);
+    });
+
+    document.getElementById('chk-rotate').addEventListener('change', (e) => {
+      autoRotate = e.target.checked;
+    });
+
+    document.getElementById('chk-audio').addEventListener('change', (e) => {
+      toggleSynth(e.target.checked);
+    });
+
+    document.getElementById('btn-butterfly').addEventListener('click', (e) => {
+      butterflyMode = !butterflyMode;
+      e.target.classList.toggle('active', butterflyMode);
+      initializeParticles();
+    });
+
+    document.getElementById('btn-perturb').addEventListener('click', () => {
+      perturbParticles();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      yaw = 0.6;
+      pitch = 0.3;
+      targetYaw = 0.6;
+      targetPitch = 0.3;
+      cameraDistance = 350;
+      targetCameraDistance = 350;
+      initializeParticles();
+    });
+
+    // Start Sandbox interaction overlay removal
+    document.getElementById('start-btn').addEventListener('click', () => {
+      const overlay = document.getElementById('audio-overlay');
+      overlay.style.opacity = 0;
+      setTimeout(() => overlay.remove(), 500);
+
+      // Play soft initialization chord
+      document.getElementById('chk-audio').checked = true;
+      toggleSynth(true);
+    });
+
+    // Camera Orbiting & Drag Handlers
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) { // Left click rotate
+        isDragging = true;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      } else if (e.button === 2 || e.button === 1) { // Right or middle click spawn
+        e.preventDefault();
+        triggerSpawnExplosion();
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const deltaX = e.clientX - previousMousePosition.x;
+        const deltaY = e.clientY - previousMousePosition.y;
+
+        targetYaw += deltaX * 0.007;
+        targetPitch = Math.min(Math.PI/2 - 0.05, Math.max(-Math.PI/2 + 0.05, targetPitch + deltaY * 0.007));
+
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('dblclick', () => {
+      triggerSpawnExplosion();
+    });
+
+    // Mouse wheel zoom
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      targetCameraDistance = Math.min(750, Math.max(80, targetCameraDistance + e.deltaY * 0.4));
+    });
+
+    function triggerSpawnExplosion() {
+      // Disperse particles from the center in a spherical explosion wave
+      const power = 8.0;
+      particles.forEach(p => {
+        const angle1 = Math.random() * Math.PI * 2;
+        const angle2 = Math.random() * Math.PI;
+        
+        p.x += Math.cos(angle1) * Math.sin(angle2) * power;
+        p.y += Math.sin(angle1) * Math.sin(angle2) * power;
+        p.z += Math.cos(angle2) * power;
+      });
+      maxDistanceBetweenTwinning = 0;
+
+      // Play audio effect
+      if (audioCtx && synthActive) {
+        playPluck(330.00);
+        setTimeout(() => playPluck(440.00), 100);
+      }
+    }
+
+    // --- 8. INITIALIZATION AND MAIN LOOP ---
+    resizeCanvas();
+    populateSliders();
+    initializeParticles();
+
+    function loop() {
+      // FPS calculator
+      frameCount++;
+      const time = performance.now();
+      if (time >= lastTime + 1000) {
+        currentFps = frameCount;
+        document.getElementById('fps-counter').innerText = currentFps;
+        frameCount = 0;
+        lastTime = time;
+      }
+
+      // Smooth camera interpolation
+      yaw += (targetYaw - yaw) * 0.1;
+      pitch += (targetPitch - pitch) * 0.1;
+      cameraDistance += (targetCameraDistance - cameraDistance) * 0.1;
+
+      // Auto-orbit rotate
+      if (autoRotate && !isDragging) {
+        targetYaw += 0.0018;
+      }
+
+      updateSimulation();
+      render();
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+
+  </script>
+</body>
+</html>
