@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bioswarm // self-organizing particle life sandbox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #040409;
+      --panel-bg: rgba(7, 8, 20, 0.88);
+      --border-color: rgba(0, 243, 255, 0.15);
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007f;
+      --neon-purple: #b500ff;
+      --neon-green: #39ff14;
+      --neon-yellow: #ffe600;
+      --text-main: #f2f5fa;
+      --text-muted: #6e7f98;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(4, 4, 9, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.7);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-glow {
+      width: 10px;
+      height: 10px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--neon-cyan);
+      animation: pulse 2.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.3; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: lowercase;
+      background: linear-gradient(90deg, #fff, var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-info {
+      display: flex;
+      gap: 20px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .header-info span strong {
+      color: var(--neon-pink);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #sidebar {
+      width: 340px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      z-index: 5;
+      backdrop-filter: blur(15px);
+      box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    #sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    #sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #sidebar::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+      text-transform: lowercase;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.75rem;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    label span.val {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-cyan);
+    }
+
+    select, input[type="range"], button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      padding: 8px;
+      border-radius: 4px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    select:focus, input[type="range"]:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+    }
+
+    select {
+      background-color: #080914;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 6px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      flex: 1;
+      cursor: pointer;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.03), rgba(181, 0, 255, 0.03));
+      border: 1px solid var(--border-color);
+      letter-spacing: 0.5px;
+      text-transform: lowercase;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.12), rgba(181, 0, 255, 0.12));
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.25);
+      color: #fff;
+    }
+
+    button.active {
+      background: linear-gradient(135deg, rgba(255, 0, 127, 0.15), rgba(181, 0, 255, 0.15));
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 8px rgba(255, 0, 127, 0.25);
+    }
+
+    .switch-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider-round {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .slider-round:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-round {
+      background-color: rgba(0, 243, 255, 0.2);
+      border-color: var(--neon-cyan);
+    }
+
+    input:checked + .slider-round:before {
+      background-color: var(--neon-cyan);
+      transform: translateX(16px);
+      box-shadow: 0 0 6px var(--neon-cyan);
+    }
+
+    /* Interactive Matrix Editor CSS */
+    .matrix-editor {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: 24px repeat(5, 1fr);
+      gap: 4px;
+      background: rgba(0,0,0,0.2);
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .matrix-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .matrix-cell {
+      aspect-ratio: 1;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.05);
+      cursor: ns-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      position: relative;
+      transition: border-color 0.1s;
+    }
+
+    .matrix-cell:hover {
+      border-color: var(--neon-cyan);
+      z-index: 2;
+    }
+
+    .matrix-header-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      box-shadow: 0 0 4px currentColor;
+    }
+
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      background: #020205;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    /* HUD Overlay */
+    .hud {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-family: 'Orbitron', sans-serif;
+      z-index: 2;
+    }
+
+    .hud-card {
+      background: rgba(4, 5, 12, 0.75);
+      border: 1px solid rgba(0, 243, 255, 0.1);
+      backdrop-filter: blur(8px);
+      padding: 10px 14px;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-title {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .hud-value {
+      font-size: 0.95rem;
+      color: var(--neon-cyan);
+      font-weight: 800;
+    }
+
+    .hud-value.pink {
+      color: var(--neon-pink);
+    }
+
+    .helper-text {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      pointer-events: none;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 8px;
+      border-radius: 4px;
+      z-index: 2;
+    }
+
+    /* Welcome Audio Overlay */
+    #audio-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(4, 4, 9, 0.92);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      transition: opacity 0.5s ease;
+    }
+
+    .overlay-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 450px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .overlay-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.4rem;
+      color: var(--neon-cyan);
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+    }
+
+    .overlay-desc {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-main);
+    }
+
+    .overlay-button {
+      padding: 12px 24px;
+      font-size: 0.9rem;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+    }
+
+    .overlay-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <!-- Welcome Audio overlay -->
+  <div id="audio-overlay">
+    <div class="overlay-card">
+      <div class="overlay-title">bioswarm interactive</div>
+      <p class="overlay-desc">explore emergent complexity in a self-organizing particle soup simulator. click below to initialize the simulation and activate the generative fm synthesizer engine.</p>
+      <button class="overlay-button" id="start-btn">initialize sandbox</button>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <h1>bioswarm // emergent swarm chemistry</h1>
+    </div>
+    <div class="header-info">
+      <span>fps: <strong id="fps-counter">00</strong></span>
+      <span>particles: <strong id="part-counter">0000</strong></span>
+    </div>
+  </header>
+
+  <main>
+    <div id="sidebar">
+      <div class="section-title">sim presets</div>
+      <div class="control-group">
+        <select id="preset-select">
+          <option value="membranes">cellular membranes</option>
+          <option value="spinners">rotating pinwheels</option>
+          <option value="amoebas">organic amoebas</option>
+          <option value="predators">predator-prey orbits</option>
+          <option value="crystals">ordered lattices</option>
+          <option value="chaos">primordial chaos</option>
+        </select>
+      </div>
+
+      <div class="section-title">attraction matrix</div>
+      <div class="matrix-editor">
+        <div class="matrix-grid" id="matrix-grid">
+          <!-- Col headers row -->
+          <div></div>
+          <div class="matrix-label"><div class="matrix-header-dot" style="color: #ff2a6d; background: #ff2a6d;"></div></div>
+          <div class="matrix-label"><div class="matrix-header-dot" style="color: #05d9e8; background: #05d9e8;"></div></div>
+          <div class="matrix-label"><div class="matrix-header-dot" style="color: #39ff14; background: #39ff14;"></div></div>
+          <div class="matrix-label"><div class="matrix-header-dot" style="color: #ffe600; background: #ffe600;"></div></div>
+          <div class="matrix-label"><div class="matrix-header-dot" style="color: #b500ff; background: #b500ff;"></div></div>
+          <!-- Cells filled by JS -->
+        </div>
+        <div style="font-size: 0.65rem; color: var(--text-muted); text-align: center; margin-top: 2px;">
+          drag vertical on matrix cells to adjust attraction/repulsion
+        </div>
+      </div>
+
+      <div class="section-title">engine controls</div>
+      <div class="control-group">
+        <label>particle count <span class="val" id="count-val">1000</span></label>
+        <input type="range" id="particle-count" min="200" max="2500" step="50" value="1000">
+      </div>
+
+      <div class="control-group">
+        <label>interaction range <span class="val" id="range-val">80px</span></label>
+        <input type="range" id="attract-range" min="30" max="180" value="80">
+      </div>
+
+      <div class="control-group">
+        <label>friction / damping <span class="val" id="friction-val">0.15</span></label>
+        <input type="range" id="friction-damping" min="0.05" max="0.5" step="0.01" value="0.15">
+      </div>
+
+      <div class="control-group">
+        <label>global force scale <span class="val" id="force-val">1.0</span></label>
+        <input type="range" id="force-scale" min="0.2" max="3.0" step="0.1" value="1.0">
+      </div>
+
+      <div class="control-group">
+        <label>thermal noise <span class="val" id="noise-val">0.05</span></label>
+        <input type="range" id="thermal-noise" min="0.0" max="0.3" step="0.01" value="0.05">
+      </div>
+
+      <div class="section-title">brush settings</div>
+      <div class="control-group">
+        <select id="brush-mode">
+          <option value="gravity">mouse force: pull</option>
+          <option value="push">mouse force: push</option>
+          <option value="paint-0">spawn red particles</option>
+          <option value="paint-1">spawn cyan particles</option>
+          <option value="paint-2">spawn green particles</option>
+          <option value="paint-3">spawn yellow particles</option>
+          <option value="paint-4">spawn magenta particles</option>
+        </select>
+      </div>
+
+      <div class="section-title">audio & visuals</div>
+      <div class="switch-container">
+        <span>ambient soundscape synthesizer</span>
+        <label class="switch">
+          <input type="checkbox" id="audio-toggle" checked>
+          <span class="slider-round"></span>
+        </label>
+      </div>
+
+      <div class="btn-row">
+        <button id="reset-btn">respawn swarm</button>
+        <button id="clear-btn">clear all</button>
+      </div>
+    </div>
+
+    <div id="canvas-container">
+      <div class="hud">
+        <div class="hud-card">
+          <div class="hud-title">active species</div>
+          <div class="hud-value" id="hud-active-species">5/5</div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title">swarm entropy</div>
+          <div class="hud-value pink" id="hud-entropy">low order</div>
+        </div>
+      </div>
+      <canvas id="simulation-canvas"></canvas>
+      <div class="helper-text">click + drag in canvas to apply force / draw particles</div>
+    </div>
+  </main>
+
+  <script>
+    // Particle Swarm Chemistry Engine Setup
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const countVal = document.getElementById('count-val');
+    const rangeVal = document.getElementById('range-val');
+    const frictionVal = document.getElementById('friction-val');
+    const forceVal = document.getElementById('force-val');
+    const noiseVal = document.getElementById('noise-val');
+    const fpsCounter = document.getElementById('fps-counter');
+    const partCounter = document.getElementById('part-counter');
+    const presetSelect = document.getElementById('preset-select');
+    const matrixGrid = document.getElementById('matrix-grid');
+    const hudActiveSpecies = document.getElementById('hud-active-species');
+    const hudEntropy = document.getElementById('hud-entropy');
+
+    // Species Configuration
+    const NUM_SPECIES = 5;
+    const colors = [
+      '#ff2a6d', // Neon Pink / Red
+      '#05d9e8', // Neon Cyan
+      '#39ff14', // Neon Green
+      '#ffe600', // Neon Yellow
+      '#b500ff'  // Neon Purple
+    ];
+
+    // Physics parameters
+    let maxParticles = 1000;
+    let rMax = 80;        // Max interaction distance
+    let rMin = 15;        // Hard repulsion distance
+    let damping = 0.15;   // Friction
+    let forceScale = 1.0; // Global multiplier
+    let noise = 0.05;     // Thermal randomness
+    let particles = [];
+    let attractionMatrix = [];
+
+    // Presets definitions
+    const presets = {
+      membranes: [
+        [0.3, -0.4, -0.2, 0.0, 0.0],
+        [0.4, 0.2, -0.3, 0.0, 0.0],
+        [-0.4, 0.5, 0.1, -0.2, 0.0],
+        [0.0, -0.3, 0.4, 0.3, -0.1],
+        [0.1, 0.0, 0.0, 0.2, 0.4]
+      ],
+      spinners: [
+        [0.1, 0.6, -0.3, 0.0, 0.0],
+        [-0.2, 0.1, 0.5, 0.0, 0.0],
+        [0.0, -0.3, 0.1, 0.4, 0.0],
+        [0.0, 0.0, -0.4, 0.1, 0.6],
+        [0.5, 0.0, 0.0, -0.3, 0.1]
+      ],
+      amoebas: [
+        [0.5, 0.2, -0.1, -0.1, 0.0],
+        [0.2, 0.5, 0.2, -0.1, 0.0],
+        [-0.1, 0.2, 0.5, 0.2, -0.1],
+        [-0.1, -0.1, 0.2, 0.5, 0.2],
+        [0.0, 0.0, -0.1, 0.2, 0.5]
+      ],
+      predators: [
+        [0.25, -0.5, 0.0, 0.0, 0.4],
+        [0.4, 0.1, -0.6, 0.0, 0.0],
+        [0.0, 0.3, 0.2, -0.5, 0.0],
+        [0.0, 0.0, 0.5, 0.15, -0.4],
+        [-0.3, 0.0, 0.0, 0.4, 0.2]
+      ],
+      crystals: [
+        [0.8, -0.2, 0.0, 0.0, 0.0],
+        [-0.2, 0.8, -0.2, 0.0, 0.0],
+        [0.0, -0.2, 0.8, -0.2, 0.0],
+        [0.0, 0.0, -0.2, 0.8, -0.2],
+        [-0.2, 0.0, 0.0, -0.2, 0.8]
+      ],
+      chaos: [
+        [0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0]
+      ]
+    };
+
+    // Load presets helper
+    function loadPreset(name) {
+      if (name === 'chaos') {
+        // Generate randomized matrix values
+        attractionMatrix = [];
+        for (let i = 0; i < NUM_SPECIES; i++) {
+          let row = [];
+          for (let j = 0; j < NUM_SPECIES; j++) {
+            row.push(Number((Math.random() * 1.6 - 0.8).toFixed(2)));
+          }
+          attractionMatrix.push(row);
+        }
+      } else {
+        attractionMatrix = JSON.parse(JSON.stringify(presets[name]));
+      }
+      buildMatrixUI();
+    }
+
+    // Grid Spatial Hashing to keep CPU operations O(N) instead of O(N^2)
+    class SpatialGrid {
+      constructor(width, height, cellSize) {
+        this.width = width;
+        this.height = height;
+        this.cellSize = cellSize;
+        this.cols = Math.ceil(width / cellSize);
+        this.rows = Math.ceil(height / cellSize);
+        this.grid = new Array(this.cols * this.rows);
+        for (let i = 0; i < this.grid.length; i++) {
+          this.grid[i] = [];
+        }
+      }
+
+      clear() {
+        for (let i = 0; i < this.grid.length; i++) {
+          this.grid[i].length = 0;
+        }
+      }
+
+      insert(p) {
+        let cx = Math.floor(p.x / this.cellSize);
+        let cy = Math.floor(p.y / this.cellSize);
+        if (cx < 0) cx = 0;
+        if (cx >= this.cols) cx = this.cols - 1;
+        if (cy < 0) cy = 0;
+        if (cy >= this.rows) cy = this.rows - 1;
+        this.grid[cx + cy * this.cols].push(p);
+      }
+
+      getNeighbors(p) {
+        let cx = Math.floor(p.x / this.cellSize);
+        let cy = Math.floor(p.y / this.cellSize);
+        let neighbors = [];
+
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            let nx = cx + dx;
+            let ny = cy + dy;
+
+            // Toroidal border wrap-around neighbors lookup
+            if (nx < 0) nx += this.cols;
+            if (nx >= this.cols) nx -= this.cols;
+            if (ny < 0) ny += this.rows;
+            if (ny >= this.rows) ny -= this.rows;
+
+            let idx = nx + ny * this.cols;
+            let cellList = this.grid[idx];
+            if (cellList) {
+              for (let i = 0; i < cellList.length; i++) {
+                neighbors.push(cellList[i]);
+              }
+            }
+          }
+        }
+        return neighbors;
+      }
+    }
+
+    let grid = new SpatialGrid(window.innerWidth, window.innerHeight, rMax);
+
+    // Dynamic resize handler
+    function resize() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+      grid = new SpatialGrid(canvas.width, canvas.height, rMax);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Particle Object
+    class Particle {
+      constructor(x, y, species) {
+        this.x = x || Math.random() * canvas.width;
+        this.y = y || Math.random() * canvas.height;
+        this.vx = 0;
+        this.vy = 0;
+        this.species = species !== undefined ? species : Math.floor(Math.random() * NUM_SPECIES);
+      }
+
+      update(neighbors) {
+        let fx = 0;
+        let fy = 0;
+
+        for (let i = 0; i < neighbors.length; i++) {
+          let other = neighbors[i];
+          if (other === this) continue;
+
+          let dx = other.x - this.x;
+          let dy = other.y - this.y;
+
+          // Toroidal shortest-distance calculations
+          if (dx > canvas.width / 2) dx -= canvas.width;
+          else if (dx < -canvas.width / 2) dx += canvas.width;
+
+          if (dy > canvas.height / 2) dy -= canvas.height;
+          else if (dy < -canvas.height / 2) dy += canvas.height;
+
+          let d = Math.sqrt(dx*dx + dy*dy);
+
+          if (d > 0 && d < rMax) {
+            let f = 0;
+            // Force dynamic curve
+            if (d < rMin) {
+              // Standard hard repulsion to prevent particle overlapping
+              f = (d / rMin - 1.0) * 1.5;
+            } else {
+              let attract = attractionMatrix[this.species][other.species];
+              let mid = (rMin + rMax) / 2;
+              if (d < mid) {
+                f = attract * (d - rMin) / (mid - rMin);
+              } else {
+                f = attract * (rMax - d) / (rMax - mid);
+              }
+            }
+
+            fx += (dx / d) * f;
+            fy += (dy / d) * f;
+          }
+        }
+
+        // Apply forces to velocity
+        this.vx += fx * forceScale;
+        this.vy += fy * forceScale;
+
+        // Friction / damping
+        this.vx *= (1 - damping);
+        this.vy *= (1 - damping);
+
+        // Thermal noise / Brownian motion fluctuation
+        if (noise > 0) {
+          this.vx += (Math.random() - 0.5) * noise;
+          this.vy += (Math.random() - 0.5) * noise;
+        }
+
+        // Move particle
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Toroidal canvas wrap
+        if (this.x < 0) this.x += canvas.width;
+        if (this.x >= canvas.width) this.x -= canvas.width;
+        if (this.y < 0) this.y += canvas.height;
+        if (this.y >= canvas.height) this.y -= canvas.height;
+      }
+    }
+
+    // Build the particle arrays
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < maxParticles; i++) {
+        particles.push(new Particle());
+      }
+      partCounter.textContent = particles.length;
+    }
+
+    // Interactive Attraction Matrix Grid UI builder
+    function buildMatrixUI() {
+      // Clear old rows/cells (keeping layout dot indicators)
+      const oldCells = matrixGrid.querySelectorAll('.matrix-cell, .matrix-row-label');
+      oldCells.forEach(el => el.remove());
+
+      for (let i = 0; i < NUM_SPECIES; i++) {
+        // Append row color header dot
+        const rowLabel = document.createElement('div');
+        rowLabel.className = 'matrix-row-label matrix-label';
+        rowLabel.innerHTML = `<div class="matrix-header-dot" style="color: ${colors[i]}; background: ${colors[i]};"></div>`;
+        matrixGrid.appendChild(rowLabel);
+
+        for (let j = 0; j < NUM_SPECIES; j++) {
+          const val = attractionMatrix[i][j];
+          const cell = document.createElement('div');
+          cell.className = 'matrix-cell';
+          cell.dataset.row = i;
+          cell.dataset.col = j;
+          updateCellDisplay(cell, val);
+
+          // Interaction handling: Drag up/down to edit forces
+          let startY = 0;
+          let startVal = 0;
+
+          function onPointerDown(e) {
+            startY = e.clientY;
+            startVal = attractionMatrix[i][j];
+            document.addEventListener('pointermove', onPointerMove);
+            document.addEventListener('pointerup', onPointerUp);
+            e.preventDefault();
+          }
+
+          function onPointerMove(e) {
+            let dy = startY - e.clientY; // drag up increases
+            let newVal = startVal + (dy * 0.015);
+            newVal = Math.max(-1.0, Math.min(1.0, newVal));
+            attractionMatrix[i][j] = Number(newVal.toFixed(2));
+            updateCellDisplay(cell, attractionMatrix[i][j]);
+            triggerSynthTuning();
+          }
+
+          function onPointerUp() {
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+          }
+
+          cell.addEventListener('pointerdown', onPointerDown);
+          matrixGrid.appendChild(cell);
+        }
+      }
+    }
+
+    function updateCellDisplay(cell, val) {
+      cell.textContent = (val >= 0 ? '+' : '') + val.toFixed(1);
+      // Map color gradient: Pink for repulsion, Cyan for attraction
+      let alpha = Math.abs(val);
+      if (val >= 0) {
+        cell.style.background = `rgba(0, 243, 255, ${alpha * 0.55})`;
+        cell.style.boxShadow = `inset 0 0 10px rgba(0, 243, 255, ${alpha * 0.25})`;
+      } else {
+        cell.style.background = `rgba(255, 0, 127, ${alpha * 0.55})`;
+        cell.style.boxShadow = `inset 0 0 10px rgba(255, 0, 127, ${alpha * 0.25})`;
+      }
+    }
+
+    // Web Audio Synthesizer implementation
+    let audioCtx = null;
+    let mainGain = null;
+    let ambientDrone = null;
+    let lfoFilter = null;
+    let synthNotes = [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00]; // Pentatonic scale
+    let noteTimer = null;
+    let activeSynthTones = [];
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      mainGain = audioCtx.createGain();
+      mainGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+
+      // Lowpass main filter
+      let mainFilter = audioCtx.createBiquadFilter();
+      mainFilter.type = 'lowpass';
+      mainFilter.frequency.setValueAtTime(800, audioCtx.currentTime);
+      mainFilter.Q.setValueAtTime(2.0, audioCtx.currentTime);
+
+      mainGain.connect(mainFilter);
+      mainFilter.connect(audioCtx.destination);
+
+      // Create ambient drone oscillators
+      ambientDrone = audioCtx.createOscillator();
+      ambientDrone.type = 'sawtooth';
+      ambientDrone.frequency.setValueAtTime(65.41, audioCtx.currentTime); // Low C
+
+      let droneGain = audioCtx.createGain();
+      droneGain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+
+      ambientDrone.connect(droneGain);
+      droneGain.connect(mainFilter);
+      ambientDrone.start();
+
+      // Trigger arpeggiator
+      scheduleArp();
+    }
+
+    function scheduleArp() {
+      if (!audioCtx) return;
+      let delay = 250 + Math.random() * 450;
+      noteTimer = setTimeout(() => {
+        playGenerativeTone();
+        scheduleArp();
+      }, delay);
+    }
+
+    function playGenerativeTone() {
+      if (!audioCtx || !document.getElementById('audio-toggle').checked) return;
+
+      // Select frequency based on clustering entropy index
+      let entropyIdx = Math.floor(Math.min(9, Math.max(0, currentEntropy * 10)));
+      let freq = synthNotes[entropyIdx];
+
+      let osc = audioCtx.createOscillator();
+      let oscGain = audioCtx.createGain();
+      
+      osc.type = Math.random() > 0.4 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      // FM Modulation to give metallic/organic timbre
+      let modulator = audioCtx.createOscillator();
+      let modGain = audioCtx.createGain();
+      modulator.frequency.value = freq * 1.5;
+      modGain.gain.value = 80;
+      
+      modulator.connect(modGain);
+      modGain.connect(osc.frequency);
+
+      osc.connect(oscGain);
+      oscGain.connect(mainGain);
+
+      let now = audioCtx.currentTime;
+      oscGain.gain.setValueAtTime(0, now);
+      oscGain.gain.linearRampToValueAtTime(0.15, now + 0.05);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+      modulator.start();
+      osc.start();
+
+      modulator.stop(now + 1.3);
+      osc.stop(now + 1.3);
+    }
+
+    function triggerSynthTuning() {
+      if (!audioCtx) return;
+      // Adjust drone properties based on attraction density
+      let sumAttract = 0;
+      for (let i = 0; i < NUM_SPECIES; i++) {
+        for (let j = 0; j < NUM_SPECIES; j++) {
+          sumAttract += Math.abs(attractionMatrix[i][j]);
+        }
+      }
+      let norm = sumAttract / 25;
+      if (ambientDrone) {
+        ambientDrone.frequency.linearRampToValueAtTime(55 + norm * 35, audioCtx.currentTime + 0.5);
+      }
+    }
+
+    // Interactivity Brush
+    let isDrawing = false;
+    let mouseX = 0;
+    let mouseY = 0;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      isDrawing = true;
+      mouseX = e.offsetX;
+      mouseY = e.offsetY;
+      initAudio(); // Resume or init audio context safely
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      mouseX = e.offsetX;
+      mouseY = e.offsetY;
+    });
+
+    window.addEventListener('pointerup', () => {
+      isDrawing = false;
+    });
+
+    function applyBrushForce() {
+      if (!isDrawing) return;
+
+      const brush = document.getElementById('brush-mode').value;
+      
+      if (brush === 'gravity' || brush === 'push') {
+        let power = brush === 'gravity' ? 1.5 : -2.5;
+        particles.forEach(p => {
+          let dx = mouseX - p.x;
+          let dy = mouseY - p.y;
+          let d = Math.sqrt(dx*dx + dy*dy);
+          if (d > 0 && d < 150) {
+            let f = (1 - d / 150) * power;
+            p.vx += (dx / d) * f;
+            p.vy += (dy / d) * f;
+          }
+        });
+      } else if (brush.startsWith('paint-')) {
+        let targetSpecies = parseInt(brush.split('-')[1]);
+        // Spawn cluster
+        for (let k = 0; k < 4; k++) {
+          let rx = mouseX + (Math.random() - 0.5) * 30;
+          let ry = mouseY + (Math.random() - 0.5) * 30;
+          let p = new Particle(rx, ry, targetSpecies);
+          // Give it dynamic tangent velocity
+          p.vx = (Math.random() - 0.5) * 2;
+          p.vy = (Math.random() - 0.5) * 2;
+          particles.push(p);
+        }
+        if (particles.length > 2500) {
+          particles.splice(0, particles.length - 2500); // cap count
+        }
+        partCounter.textContent = particles.length;
+      }
+    }
+
+    // Swarm entropy order calculation
+    let currentEntropy = 0;
+    function calculateSwarmStats() {
+      let speedSum = 0;
+      let speciesCounts = new Array(NUM_SPECIES).fill(0);
+      
+      particles.forEach(p => {
+        speedSum += Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+        speciesCounts[p.species]++;
+      });
+
+      let activeCount = speciesCounts.filter(c => c > 0).length;
+      hudActiveSpecies.textContent = `${activeCount}/${NUM_SPECIES}`;
+
+      // Measure velocity standard deviation as proxy metric for order/chaos
+      let avgSpeed = speedSum / particles.length;
+      currentEntropy = Math.min(1.0, avgSpeed / 5.0);
+
+      if (currentEntropy < 0.15) {
+        hudEntropy.textContent = 'crystalline order';
+        hudEntropy.style.color = 'var(--neon-green)';
+      } else if (currentEntropy < 0.35) {
+        hudEntropy.textContent = 'stable cell colonies';
+        hudEntropy.style.color = 'var(--neon-cyan)';
+      } else if (currentEntropy < 0.65) {
+        hudEntropy.textContent = 'dynamic orbit loops';
+        hudEntropy.style.color = 'var(--neon-purple)';
+      } else {
+        hudEntropy.textContent = 'thermal gas chaos';
+        hudEntropy.style.color = 'var(--neon-pink)';
+      }
+    }
+
+    // Engine loop variables
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fps = 0;
+
+    // Simulation Engine Loop
+    function loop() {
+      // Calculate FPS
+      let now = performance.now();
+      frameCount++;
+      if (now - lastTime >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        lastTime = now;
+        fpsCounter.textContent = fps.toString().padStart(2, '0');
+        calculateSwarmStats();
+      }
+
+      // Update spatial grid
+      grid.clear();
+      particles.forEach(p => grid.insert(p));
+
+      // Draw background with slight trail blend
+      ctx.fillStyle = 'rgba(4, 4, 9, 0.28)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Perform physics update
+      particles.forEach(p => {
+        let neighbors = grid.getNeighbors(p);
+        p.update(neighbors);
+      });
+
+      // Apply brush modifications
+      applyBrushForce();
+
+      // Render particles
+      particles.forEach(p => {
+        ctx.fillStyle = colors[p.species];
+        // Draw glow effect for particles
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(loop);
+    }
+
+    // UI Wire-up & event listeners
+    document.getElementById('particle-count').addEventListener('input', (e) => {
+      maxParticles = parseInt(e.target.value);
+      countVal.textContent = maxParticles;
+      initParticles();
+    });
+
+    document.getElementById('attract-range').addEventListener('input', (e) => {
+      rMax = parseInt(e.target.value);
+      rangeVal.textContent = rMax + 'px';
+      // rebuild grid to match new cell boundaries
+      grid = new SpatialGrid(canvas.width, canvas.height, rMax);
+    });
+
+    document.getElementById('friction-damping').addEventListener('input', (e) => {
+      damping = parseFloat(e.target.value);
+      frictionVal.textContent = damping.toFixed(2);
+    });
+
+    document.getElementById('force-scale').addEventListener('input', (e) => {
+      forceScale = parseFloat(e.target.value);
+      forceVal.textContent = forceScale.toFixed(1);
+    });
+
+    document.getElementById('thermal-noise').addEventListener('input', (e) => {
+      noise = parseFloat(e.target.value);
+      noiseVal.textContent = noise.toFixed(2);
+    });
+
+    presetSelect.addEventListener('change', (e) => {
+      loadPreset(e.target.value);
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      initParticles();
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      particles = [];
+      partCounter.textContent = '0';
+    });
+
+    // Start screen handler
+    const overlay = document.getElementById('audio-overlay');
+    document.getElementById('start-btn').addEventListener('click', () => {
+      overlay.style.opacity = 0;
+      setTimeout(() => overlay.remove(), 500);
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    });
+
+    // Audio switch toggling
+    document.getElementById('audio-toggle').addEventListener('change', (e) => {
+      if (mainGain) {
+        mainGain.gain.linearRampToValueAtTime(e.target.checked ? 0.08 : 0.0, audioCtx.currentTime + 0.3);
+      }
+    });
+
+    // Run Engine initialization
+    loadPreset('membranes');
+    initParticles();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
