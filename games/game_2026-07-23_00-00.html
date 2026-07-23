@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hexo // fourier epicycle orbit sandbox</title>
+  <style>
+    :root {
+      --bg: #05050a;
+      --panel-bg: rgba(15, 15, 30, 0.75);
+      --border: rgba(0, 243, 255, 0.15);
+      --cyan: #00f3ff;
+      --pink: #ff007f;
+      --purple: #a100ff;
+      --text: #f2f5fa;
+      --text-muted: #8a8fa3;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 15px;
+    }
+
+    h1 {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .main-panel {
+      position: relative;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(8px);
+      min-height: 550px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .canvas-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      min-height: 500px;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      pointer-events: none;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.8rem;
+      background: rgba(5, 5, 10, 0.6);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+    }
+
+    .canvas-overlay span {
+      color: var(--pink);
+      font-weight: bold;
+    }
+
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .section {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .section-title {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--pink);
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 0, 127, 0.15);
+      padding-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group {
+      margin-bottom: 12px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    label span.val {
+      color: var(--cyan);
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #141428;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    select {
+      width: 100%;
+      background: #0a0a14;
+      border: 1px solid rgba(0, 243, 255, 0.2);
+      color: var(--text);
+      padding: 6px;
+      border-radius: 4px;
+      outline: none;
+      font-size: 0.8rem;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    button.preset-btn {
+      background: #101020;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      padding: 6px 3px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+
+    button.preset-btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0, 243, 255, 0.05);
+    }
+
+    button.preset-btn.active {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0, 243, 255, 0.1);
+    }
+
+    .audio-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--pink);
+      background: rgba(255, 0, 127, 0.05);
+      color: var(--pink);
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: bold;
+      text-transform: uppercase;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.15);
+    }
+
+    .audio-btn:hover {
+      background: rgba(255, 0, 127, 0.15);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
+    }
+
+    .audio-btn.active {
+      border-color: var(--cyan);
+      background: rgba(0, 243, 255, 0.1);
+      color: var(--cyan);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    }
+
+    .canvas-actions {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .action-btn {
+      background: rgba(5, 5, 10, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: 'Courier New', Courier, monospace;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      border-color: var(--pink);
+      color: var(--pink);
+      background: rgba(255, 0, 127, 0.05);
+    }
+
+    #specCanvas {
+      width: 100%;
+      height: 80px;
+      background: #080810;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    footer {
+      max-width: 1200px;
+      margin: 30px auto 0 auto;
+      border-top: 1px solid var(--border);
+      padding-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    footer a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    .hexo-remark {
+      max-width: 60%;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>hexo // fourier epicycle orbit sandbox</h1>
+    <div class="subtitle">harmonic drawing vector sandbox & Web Audio additive synthesizer</div>
+  </header>
+
+  <div class="container">
+    <div class="main-panel">
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="mainCanvas"></canvas>
+        <div class="canvas-overlay" id="statusOverlay">
+          status: <span>animating orbit</span><br>
+          mode: click & drag inside to draw custom shape
+        </div>
+        <div class="canvas-actions">
+          <button class="action-btn" id="clearBtn">clear path</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <div class="section">
+        <button class="audio-btn" id="audioToggleBtn">activate audio synth</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title">preset orbits</div>
+        <div class="btn-grid">
+          <button class="preset-btn" onclick="loadPreset('infinity')">infinity</button>
+          <button class="preset-btn" onclick="loadPreset('heart')">heart</button>
+          <button class="preset-btn" onclick="loadPreset('rose')">rose curve</button>
+          <button class="preset-btn" onclick="loadPreset('square')">square</button>
+          <button class="preset-btn" onclick="loadPreset('spiral')">spiral</button>
+          <button class="preset-btn" onclick="loadPreset('hexo')">hexo logo</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">trig parameters</div>
+        <div class="control-group">
+          <label>epicycles (harmonics) <span class="val" id="harmonicsVal">25</span></label>
+          <input type="range" id="harmonicsSlider" min="1" max="150" value="25">
+        </div>
+        <div class="control-group">
+          <label>orbit speed <span class="val" id="speedVal">1.5x</span></label>
+          <input type="range" id="speedSlider" min="1" max="50" value="15">
+        </div>
+        <div class="control-group">
+          <label>path resolution</label>
+          <select id="resampleSelect">
+            <option value="128">128 points</option>
+            <option value="256" selected>256 points</option>
+            <option value="512">512 points</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>glow decay <span class="val" id="decayVal">400</span></label>
+          <input type="range" id="decaySlider" min="100" max="1500" value="400">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">additive synth</div>
+        <div class="control-group">
+          <label>fundamental frequency <span class="val" id="pitchVal">130 hz</span></label>
+          <input type="range" id="pitchSlider" min="50" max="300" value="130">
+        </div>
+        <div class="control-group">
+          <label>synth volume <span class="val" id="volumeVal">30%</span></label>
+          <input type="range" id="volumeSlider" min="0" max="100" value="30">
+        </div>
+        <div class="control-group">
+          <label>waveform</label>
+          <select id="waveformSelect">
+            <option value="sine" selected>sine (pure harmonic)</option>
+            <option value="triangle">triangle (warm flute)</option>
+            <option value="sawtooth">sawtooth (harsh bright)</option>
+            <option value="square">square (hollow retro)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>analog delay feedback <span class="val" id="delayVal">40%</span></label>
+          <input type="range" id="delaySlider" min="0" max="90" value="40">
+        </div>
+        <div class="control-group">
+          <label>spectral fingerprint (DFT)</label>
+          <canvas id="specCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="../index.html" style="color: cyan; text-decoration: none;">[back to home]</a>
+    <div class="hexo-remark" id="hexoComment">
+      hexo: translating your jittery coordinate arrays into perfect epicycles. cpu core temp: 42°C. delay feedback is currently bouncing through rock-2a.
+    </div>
+  </footer>
+
+  <script>
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvasContainer');
+
+    let width = 0;
+    let height = 0;
+    function resize() {
+      width = container.clientWidth;
+      height = container.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Mathematical State
+    let originalPoints = [];
+    let resampledPoints = [];
+    let dftResult = [];
+    let trail = [];
+    let time = 0;
+    let isDrawing = false;
+
+    // Sarcastic remarks pool
+    const remarks = [
+      "hexo: translating your jittery coordinate arrays into perfect epicycles. cpu core temp: 42°C. delay feedback is currently bouncing through rock-2a.",
+      "hexo: look at that. Fourier just converted your coffee tremors into pure additive synthesis. you're welcome.",
+      "hexo: running on local arm64 board. your drawings sound like a haunted cathedral.",
+      "hexo: increasing delay feedback to drown out the sound of your mouse scraping the desk.",
+      "hexo: mathematically perfect circles. your geometry teacher could never."
+    ];
+    setInterval(() => {
+      document.getElementById('hexoComment').textContent = remarks[Math.floor(Math.random() * remarks.length)];
+    }, 12000);
+
+    // Web Audio State
+    let audioCtx = null;
+    let oscs = [];
+    let oscGains = [];
+    let filterNode = null;
+    let delayNode = null;
+    let delayFeedback = null;
+    let mainGainNode = null;
+    let lfoNode = null;
+    let lfoGainNode = null;
+    let isAudioActive = false;
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      mainGainNode = audioCtx.createGain();
+      mainGainNode.gain.value = 0.0; // start muted
+      
+      filterNode = audioCtx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = 1200;
+      
+      delayNode = audioCtx.createDelay(2.0);
+      delayNode.delayTime.value = 0.35;
+      
+      delayFeedback = audioCtx.createGain();
+      delayFeedback.gain.value = parseFloat(document.getElementById('delaySlider').value) / 100;
+      
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+      
+      lfoNode = audioCtx.createOscillator();
+      lfoNode.frequency.value = 0.25; // slow sweep
+      
+      lfoGainNode = audioCtx.createGain();
+      lfoGainNode.gain.value = 350; // sweep by 350 Hz
+      
+      lfoNode.connect(lfoGainNode);
+      lfoGainNode.connect(filterNode.frequency);
+      lfoNode.start();
+      
+      filterNode.connect(mainGainNode);
+      filterNode.connect(delayNode);
+      delayNode.connect(mainGainNode);
+      
+      mainGainNode.connect(audioCtx.destination);
+    }
+
+    const audioToggleBtn = document.getElementById('audioToggleBtn');
+    audioToggleBtn.addEventListener('click', () => {
+      if (!isAudioActive) {
+        initAudio();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        isAudioActive = true;
+        audioToggleBtn.classList.add('active');
+        audioToggleBtn.textContent = 'deactivate audio';
+        updateAudioOscillators();
+      } else {
+        if (audioCtx) {
+          mainGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        }
+        isAudioActive = false;
+        audioToggleBtn.classList.remove('active');
+        audioToggleBtn.textContent = 'activate audio synth';
+      }
+    });
+
+    // Control triggers
+    const harmonicsSlider = document.getElementById('harmonicsSlider');
+    const harmonicsVal = document.getElementById('harmonicsVal');
+    harmonicsSlider.addEventListener('input', (e) => {
+      harmonicsVal.textContent = e.target.value;
+      updateAudioOscillators();
+    });
+
+    const speedSlider = document.getElementById('speedSlider');
+    const speedVal = document.getElementById('speedVal');
+    speedSlider.addEventListener('input', (e) => {
+      speedVal.textContent = (e.target.value / 10).toFixed(1) + 'x';
+    });
+
+    const pitchSlider = document.getElementById('pitchSlider');
+    const pitchVal = document.getElementById('pitchVal');
+    pitchSlider.addEventListener('input', (e) => {
+      pitchVal.textContent = e.target.value + ' hz';
+      updateAudioOscillators();
+    });
+
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeVal = document.getElementById('volumeVal');
+    volumeSlider.addEventListener('input', (e) => {
+      volumeVal.textContent = e.target.value + '%';
+      updateAudioOscillators();
+    });
+
+    const delaySlider = document.getElementById('delaySlider');
+    const delayVal = document.getElementById('delayVal');
+    delaySlider.addEventListener('input', (e) => {
+      delayVal.textContent = e.target.value + '%';
+      if (delayFeedback && audioCtx) {
+        delayFeedback.gain.setTargetAtTime(e.target.value / 100, audioCtx.currentTime, 0.05);
+      }
+    });
+
+    const waveformSelect = document.getElementById('waveformSelect');
+    waveformSelect.addEventListener('change', () => {
+      updateAudioOscillators();
+    });
+
+    const resampleSelect = document.getElementById('resampleSelect');
+    const decaySlider = document.getElementById('decaySlider');
+    const decayVal = document.getElementById('decayVal');
+    decaySlider.addEventListener('input', (e) => {
+      decayVal.textContent = e.target.value;
+    });
+
+    // Math Functions
+    function resamplePath(points, numPoints) {
+      if (points.length < 2) return points;
+      let dists = [0];
+      let totalLength = 0;
+      for (let i = 1; i < points.length; i++) {
+        let dx = points[i].x - points[i-1].x;
+        let dy = points[i].y - points[i-1].y;
+        totalLength += Math.sqrt(dx*dx + dy*dy);
+        dists.push(totalLength);
+      }
+      
+      let resampled = [];
+      for (let i = 0; i < numPoints; i++) {
+        let target = (i / (numPoints - 1)) * totalLength;
+        let seg = 0;
+        while (seg < dists.length - 1 && dists[seg + 1] < target) {
+          seg++;
+        }
+        let t0 = dists[seg];
+        let t1 = dists[seg+1];
+        let ratio = (t1 - t0) === 0 ? 0 : (target - t0) / (t1 - t0);
+        let p0 = points[seg];
+        let p1 = points[seg+1];
+        resampled.push({
+          x: p0.x + (p1.x - p0.x) * ratio,
+          y: p0.y + (p1.y - p0.y) * ratio
+        });
+      }
+      return resampled;
+    }
+
+    function computeDFT(points) {
+      let N = points.length;
+      let X = [];
+      for (let k = 0; k < N; k++) {
+        let re = 0;
+        let im = 0;
+        for (let n = 0; n < N; n++) {
+          let phi = (Math.PI * 2 * k * n) / N;
+          re += points[n].x * Math.cos(phi) + points[n].y * Math.sin(phi);
+          im += -points[n].x * Math.sin(phi) + points[n].y * Math.cos(phi);
+        }
+        re = re / N;
+        im = im / N;
+        
+        let freq = k;
+        let amp = Math.sqrt(re*re + im*im);
+        let phase = Math.atan2(im, re);
+        X.push({ freq, amp, phase, re, im });
+      }
+      return X;
+    }
+
+    function updateAudioOscillators() {
+      if (!audioCtx || !isAudioActive) return;
+      
+      // Filter out freq = 0
+      let activeDft = [...dftResult].filter(item => item.freq !== 0);
+      
+      // Sort by amplitude descending
+      activeDft.sort((a, b) => b.amp - a.amp);
+      
+      let numActive = Math.min(16, activeDft.length);
+      let sumAmp = 0;
+      for (let i = 0; i < numActive; i++) {
+        sumAmp += activeDft[i].amp;
+      }
+      if (sumAmp === 0) sumAmp = 1;
+      
+      let now = audioCtx.currentTime;
+      let baseFreq = parseFloat(pitchSlider.value);
+      let waveform = waveformSelect.value;
+      let mainVolume = parseFloat(volumeSlider.value) / 100;
+      
+      // Adjust main volume Node
+      mainGainNode.gain.setTargetAtTime(mainVolume * 0.25, now, 0.05);
+      
+      // Allocate oscillator pool
+      if (oscs.length === 0) {
+        for (let i = 0; i < 16; i++) {
+          let osc = audioCtx.createOscillator();
+          let gainNode = audioCtx.createGain();
+          gainNode.gain.value = 0;
+          
+          osc.connect(gainNode);
+          gainNode.connect(filterNode);
+          osc.start();
+          
+          oscs.push(osc);
+          oscGains.push(gainNode);
+        }
+      }
+      
+      for (let i = 0; i < 16; i++) {
+        let osc = oscs[i];
+        let gainNode = oscGains[i];
+        
+        if (i < numActive && !isDrawing) {
+          let item = activeDft[i];
+          // Harmonic frequency based on f_fund * |freq|
+          let freq = baseFreq * Math.abs(item.freq);
+          if (freq > 20000) freq = 20000;
+          
+          osc.type = waveform;
+          osc.frequency.setTargetAtTime(freq, now, 0.05);
+          
+          let targetGain = (item.amp / sumAmp);
+          gainNode.gain.setTargetAtTime(targetGain, now, 0.05);
+        } else {
+          // Mute unused or drawing oscillators
+          gainNode.gain.setTargetAtTime(0, now, 0.05);
+        }
+      }
+    }
+
+    function drawSpectrum() {
+      let specCanvas = document.getElementById('specCanvas');
+      let sCtx = specCanvas.getContext('2d');
+      sCtx.clearRect(0, 0, specCanvas.width, specCanvas.height);
+      
+      sCtx.fillStyle = '#080810';
+      sCtx.fillRect(0, 0, specCanvas.width, specCanvas.height);
+      
+      if (!dftResult || dftResult.length === 0) return;
+      
+      // Top 35 frequencies sorted by frequency index
+      let displayFreqs = [...dftResult].slice(0, 35);
+      let maxAmp = Math.max(...displayFreqs.map(f => f.amp));
+      if (maxAmp === 0) maxAmp = 1;
+      
+      let barWidth = specCanvas.width / displayFreqs.length;
+      for (let i = 0; i < displayFreqs.length; i++) {
+        let f = displayFreqs[i];
+        let h = (f.amp / maxAmp) * (specCanvas.height - 15);
+        
+        // gradient colors
+        let gradient = sCtx.createLinearGradient(0, specCanvas.height - h, 0, specCanvas.height);
+        gradient.addColorStop(0, '#00f3ff');
+        gradient.addColorStop(1, '#ff007f');
+        
+        sCtx.fillStyle = gradient;
+        sCtx.fillRect(i * barWidth + 1, specCanvas.height - h, barWidth - 2, h);
+      }
+    }
+
+    // Drawing Interaction
+    function getMousePos(e) {
+      let rect = canvas.getBoundingClientRect();
+      let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function handleStart(e) {
+      isDrawing = true;
+      originalPoints = [];
+      trail = [];
+      let pos = getMousePos(e);
+      originalPoints.push(pos);
+      
+      document.getElementById('statusOverlay').innerHTML = "status: <span>drawing custom path</span>";
+      
+      // silence audio while drawing
+      if (audioCtx && isAudioActive) {
+        oscGains.forEach(g => g.gain.setValueAtTime(0, audioCtx.currentTime));
+      }
+    }
+
+    function handleMove(e) {
+      if (!isDrawing) return;
+      let pos = getMousePos(e);
+      originalPoints.push(pos);
+    }
+
+    function handleEnd() {
+      if (!isDrawing) return;
+      isDrawing = false;
+      
+      if (originalPoints.length < 5) {
+        loadPreset('infinity');
+        return;
+      }
+      
+      document.getElementById('statusOverlay').innerHTML = "status: <span>calculating Fourier orbit...</span>";
+      
+      // Centroid zero-offset
+      let cx = 0, cy = 0;
+      originalPoints.forEach(p => { cx += p.x; cy += p.y; });
+      cx /= originalPoints.length;
+      cy /= originalPoints.length;
+      
+      let zeroOffsetPoints = originalPoints.map(p => ({
+        x: p.x - cx,
+        y: p.y - cy
+      }));
+      
+      let numPoints = parseInt(resampleSelect.value);
+      resampledPoints = resamplePath(zeroOffsetPoints, numPoints);
+      dftResult = computeDFT(resampledPoints);
+      
+      // Sort DFT by amplitude
+      dftResult.sort((a, b) => b.amp - a.amp);
+      
+      time = 0;
+      trail = [];
+      
+      document.getElementById('statusOverlay').innerHTML = "status: <span>running custom orbit</span>";
+      
+      updateAudioOscillators();
+      drawSpectrum();
+    }
+
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('mouseleave', handleEnd);
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handleStart(e);
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      handleMove(e);
+    });
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      handleEnd();
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      loadPreset('infinity');
+    });
+
+    // Preset loader
+    function loadPreset(name) {
+      let pts = [];
+      let numPoints = parseInt(resampleSelect.value);
+      
+      if (name === 'infinity') {
+        for (let i = 0; i < numPoints; i++) {
+          let t = (i / numPoints) * Math.PI * 2;
+          pts.push({
+            x: Math.cos(t) * 170,
+            y: Math.sin(2 * t) * 85
+          });
+        }
+      } else if (name === 'heart') {
+        for (let i = 0; i < numPoints; i++) {
+          let t = (i / numPoints) * Math.PI * 2;
+          let x = 16 * Math.pow(Math.sin(t), 3);
+          let y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+          pts.push({ x: x * 11, y: -y * 11 });
+        }
+      } else if (name === 'rose') {
+        for (let i = 0; i < numPoints; i++) {
+          let t = (i / numPoints) * Math.PI * 2;
+          let r = 180 * Math.sin(6 * t);
+          pts.push({
+            x: r * Math.cos(t),
+            y: r * Math.sin(t)
+          });
+        }
+      } else if (name === 'square') {
+        let side = 300;
+        let half = side / 2;
+        let pPerSide = Math.floor(numPoints / 4);
+        for (let i = 0; i < pPerSide; i++) pts.push({ x: -half + (i/pPerSide)*side, y: -half });
+        for (let i = 0; i < pPerSide; i++) pts.push({ x: half, y: -half + (i/pPerSide)*side });
+        for (let i = 0; i < pPerSide; i++) pts.push({ x: half - (i/pPerSide)*side, y: half });
+        for (let i = 0; i < pPerSide; i++) pts.push({ x: -half, y: half - (i/pPerSide)*side });
+      } else if (name === 'spiral') {
+        for (let i = 0; i < numPoints; i++) {
+          let ratio = i / numPoints;
+          let t = ratio * Math.PI * 8;
+          pts.push({
+            x: Math.cos(t) * ratio * 180,
+            y: Math.sin(t) * ratio * 180
+          });
+        }
+        pts.push({ x: 0, y: 0 }); // close cleanly
+      } else if (name === 'hexo') {
+        // Hexo cyber shape
+        for (let i = 0; i <= 6; i++) {
+          let angle = (i / 6) * Math.PI * 2;
+          pts.push({ x: Math.cos(angle) * 170, y: Math.sin(angle) * 170 });
+        }
+        for (let i = 0; i <= 3; i++) {
+          let angle = (i / 3) * Math.PI * 2 + Math.PI/6;
+          pts.push({ x: Math.cos(angle) * 90, y: Math.sin(angle) * 90 });
+        }
+        for (let i = 0; i < 30; i++) {
+          let ratio = i / 30;
+          let angle = ratio * Math.PI * 4;
+          pts.push({ x: Math.cos(angle) * 50 * (1-ratio), y: Math.sin(angle) * 50 * (1-ratio) });
+        }
+      }
+      
+      // Center
+      let cx = 0, cy = 0;
+      pts.forEach(p => { cx += p.x; cy += p.y; });
+      cx /= pts.length;
+      cy /= pts.length;
+      originalPoints = pts.map(p => ({ x: p.x - cx, y: p.y - cy }));
+      
+      resampledPoints = resamplePath(originalPoints, numPoints);
+      dftResult = computeDFT(resampledPoints);
+      dftResult.sort((a, b) => b.amp - a.amp);
+      
+      time = 0;
+      trail = [];
+      document.getElementById('statusOverlay').innerHTML = "status: <span>running preset orbit</span>";
+      
+      updateAudioOscillators();
+      drawSpectrum();
+    }
+
+    // Animation Loop
+    function animate() {
+      ctx.fillStyle = '#05050a';
+      ctx.fillRect(0, 0, width, height);
+      
+      // 1. Draw coordinate grid lines
+      ctx.strokeStyle = '#0e0e1a';
+      ctx.lineWidth = 1;
+      let gridSpacing = 40;
+      for (let x = 0; x < width; x += gridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      
+      // 2. Draw user path if drawing
+      if (isDrawing) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(originalPoints[0].x, originalPoints[0].y);
+        for (let i = 1; i < originalPoints.length; i++) {
+          ctx.lineTo(originalPoints[i].x, originalPoints[i].y);
+        }
+        ctx.stroke();
+      } else if (dftResult.length > 0) {
+        // We are playing epicycles
+        let x = width / 2;
+        let y = height / 2;
+        
+        let numEpicycles = parseInt(harmonicsSlider.value);
+        numEpicycles = Math.min(numEpicycles, dftResult.length);
+        
+        // Tracing math
+        ctx.lineWidth = 1;
+        for (let i = 0; i < numEpicycles; i++) {
+          let prevX = x;
+          let prevY = y;
+          
+          let freq = dftResult[i].freq;
+          let amp = dftResult[i].amp;
+          let phase = dftResult[i].phase;
+          
+          x += amp * Math.cos(freq * time + phase);
+          y += amp * Math.sin(freq * time + phase);
+          
+          // Draw epicycle circle
+          ctx.strokeStyle = 'rgba(0, 243, 255, 0.08)';
+          ctx.beginPath();
+          ctx.arc(prevX, prevY, amp, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          // Draw connector vector
+          ctx.strokeStyle = 'rgba(0, 243, 255, 0.35)';
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          
+          // Small vector tip dot
+          if (i === numEpicycles - 1) {
+            ctx.fillStyle = '#ff007f';
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        
+        // Add final tip position to trail
+        trail.push({ x, y });
+        let maxDecay = parseInt(decaySlider.value);
+        if (trail.length > maxDecay) {
+          trail.shift();
+        }
+        
+        // Draw the neon glowing trail
+        ctx.lineWidth = 3.5;
+        for (let i = 1; i < trail.length; i++) {
+          let alpha = i / trail.length;
+          ctx.strokeStyle = `rgba(255, 0, 127, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(trail[i-1].x, trail[i-1].y);
+          ctx.lineTo(trail[i].x, trail[i].y);
+          ctx.stroke();
+        }
+        
+        // Advance time
+        let speed = parseFloat(speedSlider.value) / 1000;
+        time += speed;
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    // Load Default
+    loadPreset('infinity');
+    animate();
+  </script>
+</body>
+</html>
