@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hexo // synapse-flow neural circuit & audio sandbox</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #020206;
+      --bg-gradient: radial-gradient(circle at 50% 50%, #08081a 0%, #020206 100%);
+      --panel-bg: rgba(8, 8, 20, 0.75);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-glow: rgba(0, 243, 255, 0.35);
+      --cyan: #00f3ff;
+      --magenta: #ff007f;
+      --purple: #9d00ff;
+      --green: #39ff14;
+      --yellow: #ffd700;
+      --orange: #ff5722;
+      --text: #f0f3fa;
+      --text-muted: #6e768e;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      background-image: var(--bg-gradient);
+      color: var(--text);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    header {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .header-left h1 {
+      font-family: var(--font-mono);
+      font-size: 1.8rem;
+      text-transform: lowercase;
+      letter-spacing: -0.02em;
+      color: var(--cyan);
+      text-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+    }
+
+    .header-left .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .header-right {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--magenta);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 20px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+    }
+
+    @media (max-width: 1100px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .canvas-container {
+      position: relative;
+      flex: 1;
+      min-height: 580px;
+      background: rgba(0, 0, 2, 0.4);
+      cursor: default;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .overlay-controls {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+
+    .overlay-controls button {
+      background: rgba(10, 10, 30, 0.85);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .overlay-controls button:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--cyan);
+    }
+
+    .overlay-controls button.active {
+      background: rgba(0, 243, 255, 0.25);
+      border-color: var(--cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    .card h2 {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      text-transform: lowercase;
+      color: var(--cyan);
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Boid Arena Panel */
+    .arena-container {
+      width: 100%;
+      height: 200px;
+      background: #000;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* UI Knobs & Sliders */
+    .control-row {
+      margin-bottom: 12px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .control-label span.value {
+      color: var(--cyan);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--cyan);
+    }
+
+    /* Selection Inspector */
+    .inspector-content {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .inspector-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .inspector-item span.label {
+      color: var(--text-muted);
+    }
+
+    .inspector-item span.val {
+      color: var(--text);
+    }
+
+    /* Audio Lock Screen Overlay */
+    .audio-lock {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 3, 10, 0.92);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .lock-content {
+      max-width: 420px;
+      border: 1px solid var(--border);
+      background: rgba(10, 10, 25, 0.8);
+      border-radius: 16px;
+      padding: 35px;
+      box-shadow: 0 0 30px rgba(0, 243, 255, 0.15);
+    }
+
+    .lock-content h3 {
+      font-family: var(--font-mono);
+      color: var(--cyan);
+      margin-bottom: 12px;
+      font-size: 1.2rem;
+      letter-spacing: 0.05em;
+    }
+
+    .lock-content p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+
+    .btn-engage {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      font-family: var(--font-mono);
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.35);
+      transition: all 0.2s;
+    }
+
+    .btn-engage:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.5);
+    }
+
+    .node-type-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .node-type-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 6px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .node-type-btn:hover {
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .node-type-btn.active[data-type="input"] { border-color: var(--green); color: var(--green); background: rgba(57, 255, 20, 0.1); }
+    .node-type-btn.active[data-type="hidden"] { border-color: var(--purple); color: var(--purple); background: rgba(157, 0, 255, 0.1); }
+    .node-type-btn.active[data-type="output"] { border-color: var(--magenta); color: var(--magenta); background: rgba(255, 0, 127, 0.1); }
+
+    .help-box {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      font-family: var(--font-mono);
+      background: rgba(255,255,255,0.02);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.04);
+      margin-top: 10px;
+    }
+
+    .presets-select {
+      background: rgba(10, 10, 25, 0.85);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      width: 100%;
+      outline: none;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+
+    .presets-select:hover {
+      border-color: var(--cyan);
+    }
+
+    /* Mini Dashboard below canvas */
+    .dashboard {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      right: 15px;
+      background: rgba(5, 5, 12, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 12px 15px;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .dash-item span.val {
+      color: var(--cyan);
+      font-weight: bold;
+    }
+
+    .btn-action {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text);
+      padding: 8px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .btn-action:hover {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--cyan);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <h1>synapse-flow</h1>
+      <div class="subtitle">spiking SNN & generative FM synthesizer sandbox // hexo-blog-toys</div>
+    </div>
+    <div class="header-right">rock-2a: 2026-07-25</div>
+  </header>
+
+  <div class="main-grid">
+    <div class="panel">
+      <div class="canvas-container">
+        <!-- Audio Unlock Overlay -->
+        <div id="audioLock" class="audio-lock">
+          <div class="lock-content">
+            <h3>[ engage neural audio ]</h3>
+            <p>this patch compiles an artificial neural network simulating leaky integrate-and-fire spike dynamics. synapse currents will be piped to a real-time web audio frequency modulation synth cluster.</p>
+            <button class="btn-engage" onclick="unlockAudio()">unlock synthesizer</button>
+          </div>
+        </div>
+
+        <!-- Tool Overlay Controls -->
+        <div class="overlay-controls">
+          <button id="tool-select" class="active" onclick="setTool('select')">
+            select / drag
+          </button>
+          <button id="tool-node" onclick="setTool('node')">
+            add neuron
+          </button>
+          <button id="tool-conn" onclick="setTool('connect')">
+            draw synapse
+          </button>
+          <button id="tool-erase" onclick="setTool('erase')">
+            erase
+          </button>
+        </div>
+
+        <canvas id="editorCanvas"></canvas>
+
+        <!-- Stats Dashboard -->
+        <div class="dashboard">
+          <div class="dash-item">neurons: <span id="dash-nodes" class="val">0</span></div>
+          <div class="dash-item">synapses: <span id="dash-edges" class="val">0</span></div>
+          <div class="dash-item">spikes in flight: <span id="dash-spikes" class="val">0</span></div>
+          <div class="dash-item">global firing rate: <span id="dash-rate" class="val">0Hz</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <!-- Neural Presets -->
+      <div class="card">
+        <h2>presets</h2>
+        <select id="presets" class="presets-select" onchange="loadPreset()">
+          <option value="phototaxis">Phototaxis Boid (Light Chaser)</option>
+          <option value="arpeggiator">Generative Ambient Arpeggiator</option>
+          <option value="plasticity">Hebbian Plasticity (Auto-Tuner)</option>
+          <option value="chaos">Recurrent Spiking Chaos</option>
+          <option value="blank">Empty Workspace</option>
+        </select>
+        <div class="help-box">
+          spikes (white dots) travel down axons. upon arrival, they add (excitatory, blue) or subtract (inhibitory, red) charge from target membrane potential (V).
+        </div>
+      </div>
+
+      <!-- Autonomous Agent Arena -->
+      <div class="card">
+        <h2>neural boid agent</h2>
+        <div class="arena-container">
+          <canvas id="arenaCanvas"></canvas>
+        </div>
+        <div class="help-box" style="margin-top:10px;">
+          boid sensors map food vector to current. boid motors drive steering based on motor node firing rates.
+        </div>
+      </div>
+
+      <!-- Global Simulation settings -->
+      <div class="card">
+        <h2>network physics</h2>
+        <div class="control-row">
+          <div class="control-label">sim speed <span class="value" id="val-speed">1x</span></div>
+          <input type="range" id="param-speed" min="1" max="5" value="1" step="1" oninput="updateParam('speed')">
+        </div>
+        <div class="control-row">
+          <div class="control-label">membrane decay (&tau;) <span class="value" id="val-tau">30ms</span></div>
+          <input type="range" id="param-tau" min="10" max="150" value="30" step="5" oninput="updateParam('tau')">
+        </div>
+        <div class="control-row">
+          <div class="control-label">plasticity rate (STDP) <span class="value" id="val-stdp">off</span></div>
+          <input type="range" id="param-stdp" min="0" max="100" value="0" step="5" oninput="updateParam('stdp')">
+        </div>
+        <div class="control-row">
+          <div class="control-label">synth volume <span class="value" id="val-volume">60%</span></div>
+          <input type="range" id="param-volume" min="0" max="100" value="60" step="5" oninput="updateParam('volume')">
+        </div>
+      </div>
+
+      <!-- Inspector Card -->
+      <div class="card">
+        <h2>inspector</h2>
+        <div id="inspector" class="inspector-content">
+          no element selected. click a neuron or synapse to inspect and configure parameters.
+        </div>
+        <div id="inspector-edit-panel" style="display:none; margin-top:12px;">
+          <div class="node-type-selector" id="insp-node-types" style="display:none;">
+            <button class="node-type-btn" data-type="input" onclick="setInspNodeType('input')">input</button>
+            <button class="node-type-btn" data-type="hidden" onclick="setInspNodeType('hidden')">hidden</button>
+            <button class="node-type-btn" data-type="output" onclick="setInspNodeType('output')">output</button>
+          </div>
+          <div class="control-row" id="insp-input-func-row" style="display:none;">
+            <div class="control-label">input source</div>
+            <select id="insp-input-func" class="presets-select" onchange="updateInspInputFunc()" style="margin-bottom:0;">
+              <option value="sensor-l">Boid Left Sensor</option>
+              <option value="sensor-r">Boid Right Sensor</option>
+              <option value="oscillator">LFO Sine Wave</option>
+              <option value="mouse">Mouse Proximity</option>
+              <option value="pulse">Constant Pulse</option>
+            </select>
+          </div>
+          <div class="control-row" id="insp-output-func-row" style="display:none;">
+            <div class="control-label">output mapping</div>
+            <select id="insp-output-func" class="presets-select" onchange="updateInspOutputFunc()" style="margin-bottom:0;">
+              <option value="motor-l">Motor Left Drive</option>
+              <option value="motor-r">Motor Right Drive</option>
+              <option value="synth-c4">Synth Scale: Note 1</option>
+              <option value="synth-e4">Synth Scale: Note 2</option>
+              <option value="synth-g4">Synth Scale: Note 3</option>
+              <option value="synth-a4">Synth Scale: Note 4</option>
+              <option value="synth-c5">Synth Scale: Note 5</option>
+            </select>
+          </div>
+          <div class="control-row" id="insp-slider-row" style="display:none;">
+            <div class="control-label" id="insp-slider-label">weight <span class="value" id="val-insp-slider">0.5</span></div>
+            <input type="range" id="insp-slider" min="-200" max="200" value="50" oninput="updateInspSlider()">
+          </div>
+          <button class="btn-action" style="border-color:rgba(255,0,127,0.3); color:var(--magenta);" onclick="deleteSelected()">delete element</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Spiking Neural Network (LIF Model) Config ---
+    let nodes = [];
+    let synapses = [];
+    let activeTool = 'select';
+    let selectedElement = null;
+    let dragNode = null;
+    let connectingSourceNode = null;
+    let mousePos = { x: 0, y: 0 };
+    let canvas, ctx;
+    let simSpeed = 1;
+    let tau = 30; // ms membrane time decay
+    let stdpRate = 0.0; // spike timing dependent plasticity multiplier
+    let masterVolume = 0.6;
+    let globalFireCount = 0;
+    let lastFireRateTime = Date.now();
+    let globalFireRate = 0;
+
+    // Simulation loop
+    let lastTime = 0;
+    let stepCount = 0;
+
+    // --- Web Audio Synthesizer Setup ---
+    let audioCtx = null;
+    let mainGain = null;
+    let delayNode = null;
+    let delayFeedback = null;
+
+    // Pentatonic scale base frequencies (C minor / A-flat major-ish vibes)
+    const scaleFreqs = {
+      'synth-c4': 261.63,
+      'synth-e4': 293.66,
+      'synth-g4': 329.63,
+      'synth-a4': 392.00,
+      'synth-c5': 440.00
+    };
+
+    // --- Boid & Arena Variables ---
+    let arenaCanvas, arenaCtx;
+    let boid = {
+      x: 100, y: 100,
+      vx: 0, vy: 0,
+      angle: 0,
+      motorL: 0,
+      motorR: 0,
+      sensorL: 0,
+      sensorR: 0
+    };
+    let food = { x: 150, y: 120 };
+    let arenaBkgGrid = [];
+
+    // --- Particle System for Visual Sparkles ---
+    let particles = [];
+
+    // --- Predefined Presets ---
+    const presetNetworks = {
+      phototaxis: {
+        nodes: [
+          { id: 1, type: 'input', x: 120, y: 150, label: 'L-Sensor', inputFunc: 'sensor-l' },
+          { id: 2, type: 'input', x: 120, y: 350, label: 'R-Sensor', inputFunc: 'sensor-r' },
+          { id: 3, type: 'hidden', x: 260, y: 180, label: 'Excit-L' },
+          { id: 4, type: 'hidden', x: 260, y: 320, label: 'Excit-R' },
+          { id: 5, type: 'output', x: 420, y: 150, label: 'L-Motor', outputFunc: 'motor-l' },
+          { id: 6, type: 'output', x: 420, y: 350, label: 'R-Motor', outputFunc: 'motor-r' },
+          { id: 7, type: 'output', x: 300, y: 250, label: 'Synth Freq', outputFunc: 'synth-g4' }
+        ],
+        synapses: [
+          { from: 1, to: 3, weight: 1.2 },
+          { from: 2, to: 4, weight: 1.2 },
+          { from: 3, to: 6, weight: 1.8 }, // Cross-connections for steering (Braitenberg 2b)
+          { from: 4, to: 5, weight: 1.8 },
+          { from: 1, to: 7, weight: 1.0 },
+          { from: 2, to: 7, weight: -0.8 } // Inhibits to create musical balance
+        ]
+      },
+      arpeggiator: {
+        nodes: [
+          { id: 1, type: 'input', x: 100, y: 250, label: 'Pulse Oscillator', inputFunc: 'oscillator' },
+          { id: 2, type: 'hidden', x: 220, y: 150, label: 'Gate A' },
+          { id: 3, type: 'hidden', x: 220, y: 350, label: 'Gate B' },
+          { id: 4, type: 'output', x: 380, y: 100, label: 'Note 1 (C4)', outputFunc: 'synth-c4' },
+          { id: 5, type: 'output', x: 380, y: 180, label: 'Note 2 (E4)', outputFunc: 'synth-e4' },
+          { id: 6, type: 'output', x: 380, y: 320, label: 'Note 3 (G4)', outputFunc: 'synth-g4' },
+          { id: 7, type: 'output', x: 380, y: 400, label: 'Note 4 (A4)', outputFunc: 'synth-a4' }
+        ],
+        synapses: [
+          { from: 1, to: 2, weight: 1.5 },
+          { from: 1, to: 3, weight: 1.3 },
+          { from: 2, to: 4, weight: 1.2 },
+          { from: 2, to: 5, weight: 1.0 },
+          { from: 3, to: 6, weight: 1.1 },
+          { from: 3, to: 7, weight: 1.3 },
+          { from: 4, to: 2, weight: -0.8 }, // feedback loop inhibition
+          { from: 6, to: 3, weight: -0.9 }
+        ]
+      },
+      plasticity: {
+        nodes: [
+          { id: 1, type: 'input', x: 100, y: 200, label: 'Oscillator A', inputFunc: 'oscillator' },
+          { id: 2, type: 'input', x: 100, y: 300, label: 'Pulse B', inputFunc: 'pulse' },
+          { id: 3, type: 'hidden', x: 250, y: 250, label: 'Coincide Node' },
+          { id: 4, type: 'output', x: 400, y: 250, label: 'Melody Trigger', outputFunc: 'synth-c5' }
+        ],
+        synapses: [
+          { from: 1, to: 3, weight: 0.4 }, // Initial weights low, will strengthen with STDP
+          { from: 2, to: 3, weight: 0.3 },
+          { from: 3, to: 4, weight: 1.5 }
+        ]
+      },
+      chaos: {
+        nodes: [
+          { id: 1, type: 'input', x: 100, y: 250, label: 'Stimulus', inputFunc: 'pulse' },
+          { id: 2, type: 'hidden', x: 250, y: 150, label: 'Recurrent A' },
+          { id: 3, type: 'hidden', x: 250, y: 350, label: 'Recurrent B' },
+          { id: 4, type: 'output', x: 400, y: 120, label: 'Synth Note A', outputFunc: 'synth-e4' },
+          { id: 5, type: 'output', x: 400, y: 380, label: 'Synth Note B', outputFunc: 'synth-a4' }
+        ],
+        synapses: [
+          { from: 1, to: 2, weight: 1.6 },
+          { from: 2, to: 3, weight: 1.8 },
+          { from: 3, to: 2, weight: -1.2 }, // negative feedback loop
+          { from: 2, to: 4, weight: 1.0 },
+          { from: 3, to: 5, weight: 1.0 },
+          { from: 3, to: 3, weight: 0.8 }  // self-excitation loop
+        ]
+      },
+      blank: { nodes: [], synapses: [] }
+    };
+
+    // --- initialization ---
+    window.onload = function() {
+      canvas = document.getElementById('editorCanvas');
+      ctx = canvas.getContext('2d');
+      arenaCanvas = document.getElementById('arenaCanvas');
+      arenaCtx = arenaCanvas.getContext('2d');
+
+      resizeCanvas();
+      window.onresize = resizeCanvas;
+
+      // Event listeners for editor canvas
+      canvas.addEventListener('mousedown', onMouseDown);
+      canvas.addEventListener('mousemove', onMouseMove);
+      canvas.addEventListener('mouseup', onMouseUp);
+
+      // Load initial preset
+      loadPreset('phototaxis');
+
+      // Initialize arena particles
+      for (let i = 0; i < 20; i++) {
+        arenaBkgGrid.push({
+          x: Math.random() * arenaCanvas.width,
+          y: Math.random() * arenaCanvas.height,
+          size: Math.random() * 2 + 1,
+          speed: Math.random() * 0.1 + 0.05
+        });
+      }
+
+      // Start core animation loop
+      requestAnimationFrame(tick);
+    };
+
+    function resizeCanvas() {
+      const container = canvas.parentElement;
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+      arenaCanvas.width = arenaCanvas.parentElement.clientWidth;
+      arenaCanvas.height = arenaCanvas.parentElement.clientHeight;
+    }
+
+    // --- Web Audio Unlocking ---
+    function unlockAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Main node routing
+      mainGain = audioCtx.createGain();
+      mainGain.gain.setValueAtTime(masterVolume, audioCtx.currentTime);
+
+      delayNode = audioCtx.createDelay(1.0);
+      delayFeedback = audioCtx.createGain();
+      
+      delayNode.delayTime.setValueAtTime(0.35, audioCtx.currentTime);
+      delayFeedback.gain.setValueAtTime(0.4, audioCtx.currentTime);
+
+      // Route FM voices through delay
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+
+      mainGain.connect(audioCtx.destination);
+      delayNode.connect(mainGain);
+
+      document.getElementById('audioLock').style.opacity = 0;
+      setTimeout(() => {
+        document.getElementById('audioLock').style.display = 'none';
+      }, 500);
+    }
+
+    // Play Synth trigger
+    function playSynth(freq) {
+      if (!audioCtx || audioCtx.state === 'suspended') return;
+
+      const now = audioCtx.currentTime;
+
+      // FM Synth Architecture
+      // Carrier
+      const carrier = audioCtx.createOscillator();
+      carrier.type = 'sine';
+      carrier.frequency.setValueAtTime(freq, now);
+
+      // Modulator
+      const modulator = audioCtx.createOscillator();
+      modulator.type = 'triangle';
+      modulator.frequency.setValueAtTime(freq * 1.5, now);
+
+      // Modulation Index Gain
+      const modGain = audioCtx.createGain();
+      modGain.gain.setValueAtTime(freq * 0.8, now);
+      modGain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+      // Envelope Generator
+      const env = audioCtx.createGain();
+      env.gain.setValueAtTime(0, now);
+      env.gain.linearRampToValueAtTime(0.2, now + 0.005);
+      env.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+      // Filter sweep
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(800, now);
+      filter.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+
+      // Connect modulator to carrier frequency
+      modulator.connect(modGain);
+      modGain.connect(carrier.frequency);
+
+      // Connect carrier to outputs
+      carrier.connect(filter);
+      filter.connect(env);
+      
+      env.connect(mainGain);
+      env.connect(delayNode);
+
+      modulator.start(now);
+      carrier.start(now);
+
+      modulator.stop(now + 0.8);
+      carrier.stop(now + 0.8);
+    }
+
+    // --- SNN Physics and LIF math ---
+    class SpikingNeuron {
+      constructor(id, type, x, y, label = '') {
+        this.id = id;
+        this.type = type; // 'input', 'hidden', 'output'
+        this.x = x;
+        this.y = y;
+        this.label = label || `${type}-${id}`;
+        
+        // LIF dynamics vars
+        this.V = 0.0; // Current Membrane Potential
+        this.V_thresh = 1.0;
+        this.V_reset = 0.0;
+        this.refractory = 0; // Steps of absolute refractory
+        this.lastSpikeTime = 0;
+        this.firingActivity = 0.0; // continuous running avg of firing
+
+        // Input & Output custom mappings
+        this.inputFunc = 'pulse'; // 'sensor-l', 'sensor-r', 'oscillator', 'mouse', 'pulse'
+        this.outputFunc = 'synth-c4'; // 'motor-l', 'motor-r', 'synth-xx'
+      }
+
+      update(dt) {
+        // Continuous activity metric decay
+        this.firingActivity *= 0.95;
+
+        // Refractory countdown
+        if (this.refractory > 0) {
+          this.refractory--;
+          this.V = this.V_reset;
+          return false;
+        }
+
+        // Apply Leakage decay constant (tau parameter)
+        // V decay: V = V * e^(-dt/tau)
+        const leakFactor = Math.exp(-dt / tau);
+        this.V *= leakFactor;
+
+        // Clip negative potentials
+        if (this.V < 0) this.V = 0;
+
+        // check spike
+        if (this.V >= this.V_thresh) {
+          this.V = this.V_reset;
+          this.refractory = 5; // absolute refractory step limit
+          this.lastSpikeTime = Date.now();
+          this.firingActivity += 1.0;
+          globalFireCount++;
+          return true;
+        }
+        return false;
+      }
+    }
+
+    class Synapse {
+      constructor(fromNode, toNode, weight = 1.0) {
+        this.from = fromNode;
+        this.to = toNode;
+        this.weight = weight; // excitatory (+) or inhibitory (-)
+        this.spikes = []; // spikes in flight: array of {progress: 0.0, speed: 0.05}
+      }
+
+      update() {
+        let reached = [];
+        this.spikes.forEach((s, idx) => {
+          s.progress += s.speed * simSpeed;
+          if (s.progress >= 1.0) {
+            reached.push(idx);
+          }
+        });
+
+        // Apply weight injections
+        reached.reverse().forEach(idx => {
+          this.spikes.splice(idx, 1);
+          // Inject current into post-synaptic neuron
+          if (this.to.refractory === 0) {
+            this.to.V += this.weight;
+          }
+        });
+      }
+    }
+
+    // Preset loader
+    function loadPreset(key) {
+      const presetKey = key || document.getElementById('presets').value;
+      const config = presetNetworks[presetKey];
+      if (!config) return;
+
+      nodes = [];
+      synapses = [];
+      selectedElement = null;
+      document.getElementById('inspector-edit-panel').style.display = 'none';
+      document.getElementById('inspector').innerText = "no element selected.";
+
+      config.nodes.forEach(n => {
+        let node = new SpikingNeuron(n.id, n.type, n.x, n.y, n.label);
+        if (n.inputFunc) node.inputFunc = n.inputFunc;
+        if (n.outputFunc) node.outputFunc = n.outputFunc;
+        nodes.push(node);
+      });
+
+      config.synapses.forEach(s => {
+        let fromNode = nodes.find(n => n.id === s.from);
+        let toNode = nodes.find(n => n.id === s.to);
+        if (fromNode && toNode) {
+          synapses.push(new Synapse(fromNode, toNode, s.weight));
+        }
+      });
+
+      // Position Boid back to middle
+      boid.x = arenaCanvas.width / 2;
+      boid.y = arenaCanvas.height / 2;
+      boid.vx = 0;
+      boid.vy = 0;
+    }
+
+    // --- Editor Input Handlers ---
+    function setTool(tool) {
+      activeTool = tool;
+      document.querySelectorAll('.overlay-controls button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tool-${tool}`).classList.add('active');
+      connectingSourceNode = null;
+    }
+
+    function onMouseDown(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Click detection threshold
+      const hitNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) < 22);
+
+      if (activeTool === 'select') {
+        if (hitNode) {
+          dragNode = hitNode;
+          selectedElement = hitNode;
+          openInspector(hitNode);
+        } else {
+          // Check synapse hit
+          const hitSyn = synapses.find(s => {
+            return distToSegment({x, y}, s.from, s.to) < 8;
+          });
+          if (hitSyn) {
+            selectedElement = hitSyn;
+            openInspector(hitSyn);
+          } else {
+            selectedElement = null;
+            closeInspector();
+          }
+        }
+      } else if (activeTool === 'node') {
+        if (!hitNode) {
+          // add node
+          const newId = nodes.length > 0 ? Math.max(...nodes.map(n => n.id)) + 1 : 1;
+          const type = getAddNodeType(x);
+          const n = new SpikingNeuron(newId, type, x, y);
+          nodes.push(n);
+          selectedElement = n;
+          openInspector(n);
+        }
+      } else if (activeTool === 'connect') {
+        if (hitNode) {
+          connectingSourceNode = hitNode;
+        }
+      } else if (activeTool === 'erase') {
+        if (hitNode) {
+          nodes = nodes.filter(n => n !== hitNode);
+          synapses = synapses.filter(s => s.from !== hitNode && s.to !== hitNode);
+          selectedElement = null;
+          closeInspector();
+        } else {
+          const hitSyn = synapses.find(s => distToSegment({x, y}, s.from, s.to) < 10);
+          if (hitSyn) {
+            synapses = synapses.filter(s => s !== hitSyn);
+            selectedElement = null;
+            closeInspector();
+          }
+        }
+      }
+    }
+
+    function onMouseMove(e) {
+      const rect = canvas.getBoundingClientRect();
+      mousePos.x = e.clientX - rect.left;
+      mousePos.y = e.clientY - rect.top;
+
+      if (activeTool === 'select' && dragNode) {
+        dragNode.x = mousePos.x;
+        dragNode.y = mousePos.y;
+      }
+    }
+
+    function onMouseUp(e) {
+      if (activeTool === 'connect' && connectingSourceNode) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const hitNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) < 22);
+        
+        if (hitNode && hitNode !== connectingSourceNode) {
+          // Check if synapse already exists
+          const exists = synapses.some(s => s.from === connectingSourceNode && s.to === hitNode);
+          if (!exists) {
+            synapses.push(new Synapse(connectingSourceNode, hitNode, 1.0));
+          }
+        }
+      }
+      dragNode = null;
+      connectingSourceNode = null;
+    }
+
+    // Helper for line segment collision
+    function distToSegment(p, v, w) {
+      const l2 = Math.hypot(v.x - w.x, v.y - w.y) ** 2;
+      if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+      let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+    }
+
+    // Determine type based on where user clicks in X dimension of editor canvas
+    function getAddNodeType(x) {
+      if (x < canvas.width * 0.3) return 'input';
+      if (x > canvas.width * 0.7) return 'output';
+      return 'hidden';
+    }
+
+    // --- Inspector Panel Sync ---
+    function openInspector(el) {
+      document.getElementById('inspector-edit-panel').style.display = 'block';
+      const insp = document.getElementById('inspector');
+
+      if (el instanceof SpikingNeuron) {
+        insp.innerHTML = `
+          <div class="inspector-item"><span class="label">element:</span><span class="val">neuron (LIF)</span></div>
+          <div class="inspector-item"><span class="label">ID:</span><span class="val">#${el.id}</span></div>
+          <div class="inspector-item"><span class="label">potential (V):</span><span class="val">${el.V.toFixed(2)}</span></div>
+        `;
+        
+        // Sync node type buttons
+        document.getElementById('insp-node-types').style.display = 'grid';
+        document.querySelectorAll('.node-type-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-type') === el.type);
+        });
+
+        // Sync inputs / outputs selector dropdowns
+        document.getElementById('insp-input-func-row').style.display = el.type === 'input' ? 'block' : 'none';
+        document.getElementById('insp-input-func').value = el.inputFunc;
+
+        document.getElementById('insp-output-func-row').style.display = el.type === 'output' ? 'block' : 'none';
+        document.getElementById('insp-output-func').value = el.outputFunc;
+
+        // Hide synapse weight sliders
+        document.getElementById('insp-slider-row').style.display = 'none';
+
+      } else if (el instanceof Synapse) {
+        insp.innerHTML = `
+          <div class="inspector-item"><span class="label">element:</span><span class="val">synapse</span></div>
+          <div class="inspector-item"><span class="label">source:</span><span class="val">#${el.from.id}</span></div>
+          <div class="inspector-item"><span class="label">target:</span><span class="val">#${el.to.id}</span></div>
+        `;
+
+        document.getElementById('insp-node-types').style.display = 'none';
+        document.getElementById('insp-input-func-row').style.display = 'none';
+        document.getElementById('insp-output-func-row').style.display = 'none';
+
+        // Show weight slider
+        document.getElementById('insp-slider-row').style.display = 'block';
+        document.getElementById('insp-slider-label').innerHTML = `weight: <span class="value" id="val-insp-slider">${el.weight.toFixed(2)}</span>`;
+        // slider goes from -2.00 to 2.00
+        document.getElementById('insp-slider').value = el.weight * 100;
+      }
+    }
+
+    function closeInspector() {
+      document.getElementById('inspector-edit-panel').style.display = 'none';
+      document.getElementById('inspector').innerText = "no element selected.";
+    }
+
+    function setInspNodeType(type) {
+      if (selectedElement instanceof SpikingNeuron) {
+        selectedElement.type = type;
+        openInspector(selectedElement);
+      }
+    }
+
+    function updateInspInputFunc() {
+      if (selectedElement instanceof SpikingNeuron) {
+        selectedElement.inputFunc = document.getElementById('insp-input-func').value;
+      }
+    }
+
+    function updateInspOutputFunc() {
+      if (selectedElement instanceof SpikingNeuron) {
+        selectedElement.outputFunc = document.getElementById('insp-output-func').value;
+      }
+    }
+
+    function updateInspSlider() {
+      if (selectedElement instanceof Synapse) {
+        const val = parseFloat(document.getElementById('insp-slider').value) / 100;
+        selectedElement.weight = val;
+        document.getElementById('val-insp-slider').innerText = val.toFixed(2);
+      }
+    }
+
+    function deleteSelected() {
+      if (!selectedElement) return;
+      if (selectedElement instanceof SpikingNeuron) {
+        nodes = nodes.filter(n => n !== selectedElement);
+        synapses = synapses.filter(s => s.from !== selectedElement && s.to !== selectedElement);
+      } else if (selectedElement instanceof Synapse) {
+        synapses = synapses.filter(s => s !== selectedElement);
+      }
+      selectedElement = null;
+      closeInspector();
+    }
+
+    // --- Slider parameters sync ---
+    function updateParam(param) {
+      const val = document.getElementById(`param-${param}`).value;
+      if (param === 'speed') {
+        simSpeed = parseInt(val);
+        document.getElementById('val-speed').innerText = `${simSpeed}x`;
+      } else if (param === 'tau') {
+        tau = parseInt(val);
+        document.getElementById('val-tau').innerText = `${tau}ms`;
+      } else if (param === 'stdp') {
+        stdpRate = parseFloat(val) / 2000.0;
+        document.getElementById('val-stdp').innerText = val === '0' ? 'off' : (parseFloat(val)/100).toFixed(2);
+      } else if (param === 'volume') {
+        masterVolume = parseFloat(val) / 100.0;
+        document.getElementById('val-volume').innerText = `${val}%`;
+        if (mainGain) {
+          mainGain.gain.setValueAtTime(masterVolume, audioCtx.currentTime);
+        }
+      }
+    }
+
+    // --- Core Canvas Renderer (Editor) ---
+    function drawEditor() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Grid Background
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Draw Connection line preview
+      if (activeTool === 'connect' && connectingSourceNode) {
+        ctx.beginPath();
+        ctx.moveTo(connectingSourceNode.x, connectingSourceNode.y);
+        ctx.lineTo(mousePos.x, mousePos.y);
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Draw Synapses
+      synapses.forEach(s => {
+        const isSelected = selectedElement === s;
+        ctx.beginPath();
+        ctx.moveTo(s.from.x, s.from.y);
+        ctx.lineTo(s.to.x, s.to.y);
+
+        // Synapse color based on weight sign
+        if (s.weight > 0) {
+          ctx.strokeStyle = isSelected ? 'rgba(0, 243, 255, 0.9)' : `rgba(0, 150, 255, ${0.2 + Math.min(Math.abs(s.weight)*0.3, 0.6)})`;
+        } else {
+          ctx.strokeStyle = isSelected ? 'rgba(255, 0, 127, 0.9)' : `rgba(255, 50, 50, ${0.2 + Math.min(Math.abs(s.weight)*0.3, 0.6)})`;
+        }
+
+        ctx.lineWidth = isSelected ? 4 : 2;
+        ctx.stroke();
+
+        // Draw Synapse Arrow pointing to target boundary (22px radius node)
+        const angle = Math.atan2(s.to.y - s.from.y, s.to.x - s.from.x);
+        const arrowX = s.to.x - Math.cos(angle) * 23;
+        const arrowY = s.to.y - Math.sin(angle) * 23;
+        ctx.beginPath();
+        ctx.moveTo(arrowX, arrowY);
+        ctx.lineTo(arrowX - 8 * Math.cos(angle - Math.PI/6), arrowY - 8 * Math.sin(angle - Math.PI/6));
+        ctx.lineTo(arrowX - 8 * Math.cos(angle + Math.PI/6), arrowY - 8 * Math.sin(angle + Math.PI/6));
+        ctx.closePath();
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.fill();
+
+        // Draw Spikes traveling
+        s.spikes.forEach(sp => {
+          const spX = s.from.x + (s.to.x - s.from.x) * sp.progress;
+          const spY = s.from.y + (s.to.y - s.from.y) * sp.progress;
+          
+          ctx.beginPath();
+          ctx.arc(spX, spY, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff';
+          ctx.shadowColor = '#fff';
+          ctx.shadowBlur = 8;
+          ctx.fill();
+          ctx.shadowBlur = 0; // Reset blur
+        });
+      });
+
+      // Draw Neurons
+      nodes.forEach(n => {
+        const isSelected = selectedElement === n;
+        const isSpiking = (Date.now() - n.lastSpikeTime) < 100;
+        
+        // Glow effect
+        if (isSpiking) {
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, 28, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
+
+        // Core fill colors
+        let gradient = ctx.createRadialGradient(n.x - 5, n.y - 5, 2, n.x, n.y, 20);
+        if (n.type === 'input') {
+          gradient.addColorStop(0, '#a5ff79');
+          gradient.addColorStop(1, '#1b6300');
+        } else if (n.type === 'hidden') {
+          gradient.addColorStop(0, '#c77dff');
+          gradient.addColorStop(1, '#3c096c');
+        } else { // output
+          gradient.addColorStop(0, '#ff70a6');
+          gradient.addColorStop(1, '#8f003b');
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Membrane Potential outer ring mapping
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
+        ctx.lineWidth = isSelected ? 3 : 1.5;
+        if (isSelected) {
+          ctx.strokeStyle = varColor('--cyan');
+        } else {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.15 + Math.min(n.V, 1.0)*0.7})`;
+        }
+        ctx.stroke();
+
+        // Inner circular energy meter indicating voltage
+        if (n.V > 0 && n.refractory === 0) {
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, 16 * Math.min(n.V / n.V_thresh, 1.2), 0, Math.PI*2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.fill();
+        }
+
+        // Draw node labels & potential
+        ctx.font = '8px monospace';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label, n.x, n.y + 4);
+
+        ctx.font = '8px monospace';
+        ctx.fillStyle = 'rgba(0, 243, 255, 0.6)';
+        ctx.fillText(`V:${n.V.toFixed(1)}`, n.x, n.y - 25);
+      });
+    }
+
+    // Get color value from CSS variable
+    function varColor(variable) {
+      return getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+    }
+
+    // --- Boid Simulation Arena ---
+    function updateBoidSim() {
+      // 1. Collect inputs from SNN output motor neurons
+      let mLDrive = 0;
+      let mRDrive = 0;
+
+      nodes.forEach(n => {
+        if (n.type === 'output') {
+          if (n.outputFunc === 'motor-l') mLDrive += n.firingActivity * 2.0;
+          if (n.outputFunc === 'motor-r') mRDrive += n.firingActivity * 2.0;
+        }
+      });
+
+      // Apply motors smoothing
+      boid.motorL = boid.motorL * 0.9 + mLDrive * 0.1;
+      boid.motorR = boid.motorR * 0.9 + mRDrive * 0.1;
+
+      // 2. Physics Equations of steering (differential drive model)
+      const baseSpeed = 1.0 + (boid.motorL + boid.motorR) * 0.8;
+      const turnRate = (boid.motorL - boid.motorR) * 0.12;
+
+      boid.angle += turnRate;
+      
+      // Update velocities
+      boid.vx = Math.cos(boid.angle) * baseSpeed;
+      boid.vy = Math.sin(boid.angle) * baseSpeed;
+
+      // Update positions
+      boid.x += boid.vx * simSpeed;
+      boid.y += boid.vy * simSpeed;
+
+      // Wrap around walls
+      if (boid.x < 0) boid.x = arenaCanvas.width;
+      if (boid.x > arenaCanvas.width) boid.x = 0;
+      if (boid.y < 0) boid.y = arenaCanvas.height;
+      if (boid.y > arenaCanvas.height) boid.y = 0;
+
+      // 3. Spawning & Eating Food
+      const distToFood = Math.hypot(boid.x - food.x, boid.y - food.y);
+      if (distToFood < 12) {
+        // Trigger visual splash particles
+        spawnSplashParticles(food.x, food.y, '#39ff14', 10);
+        // Trigger small FM chime
+        playSynth(659.25); // high E note chime
+
+        // relocate food
+        food.x = 30 + Math.random() * (arenaCanvas.width - 60);
+        food.y = 30 + Math.random() * (arenaCanvas.height - 60);
+      }
+
+      // 4. Calculate sensory currents mapping to feed back into inputs
+      // Calculate angle of food relative to boid heading
+      const angleToFood = Math.atan2(food.y - boid.y, food.x - boid.x);
+      let diffAngle = angleToFood - boid.angle;
+
+      // Normalize diffAngle to -PI to PI
+      diffAngle = Math.atan2(Math.sin(diffAngle), Math.cos(diffAngle));
+
+      // Sensor fields: Left sensor centered at -45 deg, Right at +45 deg
+      const leftSensorAngle = -Math.PI / 4;
+      const rightSensorAngle = Math.PI / 4;
+
+      const leftActivation = Math.max(0, Math.cos(diffAngle - leftSensorAngle));
+      const rightActivation = Math.max(0, Math.cos(diffAngle - rightSensorAngle));
+
+      const proximityFactor = 150.0 / (distToFood + 50.0); // stronger near food
+
+      boid.sensorL = leftActivation * proximityFactor;
+      boid.sensorR = rightActivation * proximityFactor;
+    }
+
+    function drawArena() {
+      arenaCtx.fillStyle = '#010103';
+      arenaCtx.fillRect(0, 0, arenaCanvas.width, arenaCanvas.height);
+
+      // Draw starry bkg grid
+      arenaBkgGrid.forEach(p => {
+        p.x += p.speed;
+        if (p.x > arenaCanvas.width) p.x = 0;
+        arenaCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        arenaCtx.fillRect(p.x, p.y, p.size, p.size);
+      });
+
+      // Draw Food
+      arenaCtx.beginPath();
+      arenaCtx.arc(food.x, food.y, 6, 0, Math.PI * 2);
+      arenaCtx.fillStyle = '#39ff14';
+      arenaCtx.shadowColor = '#39ff14';
+      arenaCtx.shadowBlur = 8;
+      arenaCtx.fill();
+      arenaCtx.shadowBlur = 0;
+
+      // Draw Boid ship
+      arenaCtx.save();
+      arenaCtx.translate(boid.x, boid.y);
+      arenaCtx.rotate(boid.angle);
+
+      // Ship body
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(12, 0);
+      arenaCtx.lineTo(-8, -6);
+      arenaCtx.lineTo(-4, 0);
+      arenaCtx.lineTo(-8, 6);
+      arenaCtx.closePath();
+      arenaCtx.fillStyle = '#00f3ff';
+      arenaCtx.shadowColor = '#00f3ff';
+      arenaCtx.shadowBlur = 5;
+      arenaCtx.fill();
+      arenaCtx.shadowBlur = 0;
+
+      // Left feeler / sensor visual
+      arenaCtx.strokeStyle = `rgba(57, 255, 20, ${0.2 + boid.sensorL * 0.8})`;
+      arenaCtx.lineWidth = 1.5;
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(12, 0);
+      arenaCtx.lineTo(25, -12);
+      arenaCtx.stroke();
+
+      // Right feeler
+      arenaCtx.strokeStyle = `rgba(57, 255, 20, ${0.2 + boid.sensorR * 0.8})`;
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(12, 0);
+      arenaCtx.lineTo(25, 12);
+      arenaCtx.stroke();
+
+      arenaCtx.restore();
+    }
+
+    // --- Particle System Functions ---
+    function spawnSplashParticles(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 2 + 1;
+        particles.push({
+          x: x, y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1.0,
+          decay: Math.random() * 0.05 + 0.02,
+          color: color
+        });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    function drawParticles() {
+      particles.forEach(p => {
+        arenaCtx.fillStyle = p.color;
+        arenaCtx.globalAlpha = p.life;
+        arenaCtx.fillRect(p.x, p.y, 3, 3);
+      });
+      arenaCtx.globalAlpha = 1.0;
+    }
+
+    // --- SNN Physics Updates ---
+    function updateSNNPhysics() {
+      // 1. Process Input Neurons external currents
+      nodes.forEach(n => {
+        if (n.type === 'input') {
+          let current = 0;
+          if (n.inputFunc === 'sensor-l') current = boid.sensorL * 0.4;
+          else if (n.inputFunc === 'sensor-r') current = boid.sensorR * 0.4;
+          else if (n.inputFunc === 'oscillator') {
+            // LFO wave generator
+            current = (Math.sin(Date.now() / 400.0) + 1.0) * 0.3;
+          } else if (n.inputFunc === 'mouse') {
+            const dist = Math.hypot(n.x - mousePos.x, n.y - mousePos.y);
+            current = dist < 120 ? (120 - dist) / 200.0 : 0;
+          } else if (n.inputFunc === 'pulse') {
+            current = 0.25; // steady stream
+          }
+
+          if (n.refractory === 0) {
+            n.V += current;
+          }
+        }
+      });
+
+      // 2. Update neurons membrane equations & detect spikes
+      nodes.forEach(n => {
+        // simulation time step is ~16ms per tick divided by tau parameter
+        const spiked = n.update(16 * simSpeed);
+
+        if (spiked) {
+          // Trigger FM voice chime if mapped to output
+          if (n.type === 'output' && n.outputFunc.startsWith('synth-')) {
+            const freq = scaleFreqs[n.outputFunc];
+            if (freq) playSynth(freq);
+          }
+
+          // Emit pulses down axons
+          synapses.forEach(s => {
+            if (s.from === n) {
+              s.spikes.push({
+                progress: 0.0,
+                speed: 0.04 + Math.random()*0.02 // slight variation in delay speed
+              });
+            }
+          });
+
+          // STDP updates
+          if (stdpRate > 0) {
+            applySTDP(n);
+          }
+        }
+      });
+
+      // 3. Update active pulses in synapses
+      synapses.forEach(s => s.update());
+    }
+
+    // Spike-Timing-Dependent Plasticity (STDP) Hebbian Learning
+    function applySTDP(firingNode) {
+      const now = Date.now();
+      synapses.forEach(s => {
+        // Pre-synaptic spike logic: strengthens synapse if pre-synaptic node fired just before post-synaptic
+        if (s.to === firingNode) {
+          const timeDiff = now - s.from.lastSpikeTime;
+          if (timeDiff > 0 && timeDiff < 150) {
+            s.weight = Math.min(2.0, s.weight + stdpRate * (150 - timeDiff));
+          }
+        }
+        // Post-synaptic spike logic: weakens synapse if pre-synaptic node fired after post-synaptic
+        if (s.from === firingNode) {
+          const timeDiff = now - s.to.lastSpikeTime;
+          if (timeDiff > 0 && timeDiff < 150) {
+            s.weight = Math.max(-2.0, s.weight - stdpRate * 0.8 * (150 - timeDiff));
+          }
+        }
+      });
+    }
+
+    // --- Core Master Animation loop ---
+    function tick(timestamp) {
+      const dt = timestamp - lastTime;
+      lastTime = timestamp;
+
+      // Run multiple physics updates per frame if simSpeed is active
+      for (let s = 0; s < simSpeed; s++) {
+        updateSNNPhysics();
+        updateBoidSim();
+        updateParticles();
+      }
+
+      // Drawing routines
+      drawEditor();
+      drawArena();
+      drawParticles();
+
+      // Update HUD/Dashboard metrics
+      const now = Date.now();
+      if (now - lastFireRateTime > 1000) {
+        globalFireRate = Math.round(globalFireCount / ((now - lastFireRateTime) / 1000));
+        globalFireCount = 0;
+        lastFireRateTime = now;
+      }
+
+      document.getElementById('dash-nodes').innerText = nodes.length;
+      document.getElementById('dash-edges').innerText = synapses.length;
+      
+      const flightSpikes = synapses.reduce((acc, s) => acc + s.spikes.length, 0);
+      document.getElementById('dash-spikes').innerText = flightSpikes;
+      document.getElementById('dash-rate').innerText = `${globalFireRate}Hz`;
+
+      // Live Inspector stats mapping
+      if (selectedElement instanceof SpikingNeuron) {
+        openInspector(selectedElement);
+      }
+
+      requestAnimationFrame(tick);
+    }
+  </script>
+</body>
+</html>
