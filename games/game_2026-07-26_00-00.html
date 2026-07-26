@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>magna-flow: ferrofluid & magnetic dipole sandbox</title>
+  <meta name="description" content="an interactive 2D physics simulation of magnetic dipoles, ferrofluid spikes, permanent magnets, and electromagnets with generative ambient web audio.">
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #04040a;
+      --panel-bg: rgba(10, 10, 22, 0.7);
+      --border: rgba(0, 243, 255, 0.2);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-purple: #b500ff;
+      --text: #f0f4fc;
+      --text-muted: #8fa0c0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* main workspace */
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    /* glassmorphic floating panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      z-index: 10;
+      color: var(--text);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #left-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    #left-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* headers */
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    h2 {
+      font-size: 0.95rem;
+      color: var(--neon-cyan);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-top: 10px;
+    }
+
+    /* UI elements */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .label-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* tool buttons */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    }
+
+    button.active {
+      background: rgba(255, 0, 127, 0.2);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 12px rgba(255, 0, 127, 0.3);
+    }
+
+    /* sound visualizer card */
+    #visualizer-card {
+      border: 1px solid rgba(181, 0, 255, 0.2);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #audio-canvas {
+      width: 100%;
+      height: 60px;
+      background: rgba(5, 5, 10, 0.8);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* info toast */
+    #toast {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 25, 0.9);
+      border: 1px solid var(--border);
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    /* details window */
+    .details-footer {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .details-footer code {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-magenta);
+    }
+
+    /* responsive stuff */
+    @media (max-width: 768px) {
+      #app-container {
+        flex-direction: column;
+      }
+      #left-panel, #right-panel {
+        position: relative;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-height: none;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+      }
+      #app-container {
+        overflow-y: auto;
+      }
+      canvas {
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    <!-- Main simulation canvas -->
+    <canvas id="sim-canvas"></canvas>
+
+    <!-- Info Toast -->
+    <div id="toast">SYSTEM INITIALIZED</div>
+
+    <!-- Left Controls Panel -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>MAGNA-FLOW</h1>
+        <div class="tagline">ferrofluid & dipole sandbox</div>
+      </div>
+
+      <div class="control-group">
+        <h2>tools</h2>
+        <div class="tool-grid">
+          <button id="tool-drag" class="active" title="Drag magnets or add electromagnets">Move / Edit</button>
+          <button id="tool-spray" title="Click & drag to spray ferrofluid dipoles">Spray Fluid</button>
+          <button id="btn-add-perm" title="Place a North-South bar magnet">Add Magnet</button>
+          <button id="btn-add-ac" title="Place an AC alternating electromagnet">Add AC Coil</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>simulation params</h2>
+        
+        <div class="control-group">
+          <div class="label-row">
+            <span>Dipole Field Strength</span>
+            <span id="val-strength" class="label-val">1.2</span>
+          </div>
+          <input type="range" id="slide-strength" min="0.1" max="4.0" step="0.1" value="1.2">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Fluid Cohesion</span>
+            <span id="val-cohesion" class="label-val">0.3</span>
+          </div>
+          <input type="range" id="slide-cohesion" min="0.0" max="1.5" step="0.05" value="0.3">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Thermal Entropy (Noise)</span>
+            <span id="val-entropy" class="label-val">0.2</span>
+          </div>
+          <input type="range" id="slide-entropy" min="0.0" max="2.0" step="0.05" value="0.2">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Viscosity (Damping)</span>
+            <span id="val-viscosity" class="label-val">0.08</span>
+          </div>
+          <input type="range" id="slide-viscosity" min="0.01" max="0.3" step="0.01" value="0.08">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <button id="btn-clear-fluid" style="background: rgba(255,0,0,0.05); border-color: rgba(255,0,0,0.2);">Clear Fluid</button>
+        <button id="btn-clear-magnets" style="background: rgba(255,0,0,0.05); border-color: rgba(255,0,0,0.2);">Clear Magnets</button>
+      </div>
+    </div>
+
+    <!-- Right Audio & Render Panel -->
+    <div id="right-panel" class="glass-panel">
+      <div class="control-group">
+        <h2>Audio Induction Synth</h2>
+        <div id="visualizer-card">
+          <div class="label-row">
+            <span>Barkhausen Hum</span>
+            <button id="btn-mute" style="padding: 2px 8px; font-size: 0.75rem;">Enable Sound</button>
+          </div>
+          <canvas id="audio-canvas"></canvas>
+          <div class="control-group" style="margin-top: 6px;">
+            <div class="label-row">
+              <span>Synth Volume</span>
+              <span id="val-volume" class="label-val">50%</span>
+            </div>
+            <input type="range" id="slide-volume" min="0" max="100" value="50">
+          </div>
+          <div class="control-group">
+            <div class="label-row">
+              <span>Coil AC Frequency</span>
+              <span id="val-ac-freq" class="label-val">2.5 Hz</span>
+            </div>
+            <input type="range" id="slide-ac-freq" min="0.5" max="8.0" step="0.1" value="2.5">
+          </div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>visualization</h2>
+        <button id="btn-toggle-field" class="active">Show Field Lines</button>
+        <button id="btn-toggle-chains" class="active">Show Domain Chains</button>
+      </div>
+
+      <div class="details-footer">
+        <p><strong>Physics details:</strong></p>
+        <p>simulates thousands of magnetic dipoles governed by:
+          <br>1. <code>T = m &times; B</code> rotational torque alignment.
+          <br>2. pairwise <code>O(N)</code> grid-binned dipole-dipole forces (parallel repulsion, colinear attraction).
+          <br>3. Langevin noise (thermal dispersion).
+        </p>
+        <p>the audio represents <strong>Barkhausen effect</strong>: changes in magnetic domain alignment inducing current in a virtual central pickup coil loop.</p>
+        <p style="color: var(--neon-purple); font-weight: bold; text-align: center; margin-top: 8px;">created by hexo - 2026</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System setup
+    const canvas = document.getElementById('sim-canvas');
+    const ctx = canvas.getContext('2d');
+    const toast = document.getElementById('toast');
+
+    // UI elements
+    const toolDrag = document.getElementById('tool-drag');
+    const toolSpray = document.getElementById('tool-spray');
+    const btnAddPerm = document.getElementById('btn-add-perm');
+    const btnAddAC = document.getElementById('btn-add-ac');
+    const btnClearFluid = document.getElementById('btn-clear-fluid');
+    const btnClearMagnets = document.getElementById('btn-clear-magnets');
+    const btnToggleField = document.getElementById('btn-toggle-field');
+    const btnToggleChains = document.getElementById('btn-toggle-chains');
+    const btnMute = document.getElementById('btn-mute');
+
+    // Slider inputs
+    const slideStrength = document.getElementById('slide-strength');
+    const valStrength = document.getElementById('val-strength');
+    const slideCohesion = document.getElementById('slide-cohesion');
+    const valCohesion = document.getElementById('val-cohesion');
+    const slideEntropy = document.getElementById('slide-entropy');
+    const valEntropy = document.getElementById('val-entropy');
+    const slideViscosity = document.getElementById('slide-viscosity');
+    const valViscosity = document.getElementById('val-viscosity');
+    const slideVolume = document.getElementById('slide-volume');
+    const valVolume = document.getElementById('val-volume');
+    const slideAcFreq = document.getElementById('slide-ac-freq');
+    const valAcFreq = document.getElementById('val-ac-freq');
+
+    // Canvas sizing
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    // Physics Engine State
+    const particles = [];
+    const magnets = [];
+    const MAX_PARTICLES = 1500;
+    
+    // Virtual Pickup Coil in center
+    const pickupCoil = {
+      x: width / 2,
+      y: height / 2,
+      radius: 90,
+      fluxHistory: new Float32Array(100),
+      fluxIndex: 0
+    };
+
+    // Keep coil centered on resize
+    window.addEventListener('resize', () => {
+      pickupCoil.x = width / 2;
+      pickupCoil.y = height / 2;
+    });
+
+    // Simulation settings
+    let currentTool = 'drag'; // 'drag' or 'spray'
+    let showField = true;
+    let showChains = true;
+    let dragMagnet = null;
+    let mouseX = 0;
+    let mouseY = 0;
+    let isMouseDown = false;
+
+    // Simulation constants updated by sliders
+    let couplingStrength = parseFloat(slideStrength.value);
+    let cohesionCoeff = parseFloat(slideCohesion.value);
+    let thermalNoise = parseFloat(slideEntropy.value);
+    let damping = 1.0 - parseFloat(slideViscosity.value);
+    let acFrequency = parseFloat(slideAcFreq.value);
+
+    // Audio Context (loaded on click)
+    let audioCtx = null;
+    let isMuted = true;
+    let barkhausenOsc = null;
+    let humOsc = null;
+    let feedbackDelay = null;
+    let noiseFilter = null;
+    let noiseGain = null;
+    let humGain = null;
+    let masterGain = null;
+
+    // Show messages
+    function showToast(msg) {
+      toast.innerText = msg;
+      toast.style.opacity = 1;
+      setTimeout(() => {
+        toast.style.opacity = 0;
+      }, 2000);
+    }
+
+    // Magnet class
+    class Magnet {
+      constructor(x, y, type = 'permanent', strength = 600) {
+        this.x = x;
+        this.y = y;
+        this.type = type; // 'permanent', 'ac_coil'
+        this.strength = strength;
+        this.angle = 0; // for bar magnets orientation
+        this.radius = 24;
+        this.acPhase = 0;
+        this.isDragging = false;
+        this.length = 40; // bar magnet length
+      }
+
+      getPoles() {
+        if (this.type === 'permanent') {
+          // North pole is red, South pole is blue
+          const nx = this.x + Math.cos(this.angle) * (this.length / 2);
+          const ny = this.y + Math.sin(this.angle) * (this.length / 2);
+          const sx = this.x - Math.cos(this.angle) * (this.length / 2);
+          const sy = this.y - Math.sin(this.angle) * (this.length / 2);
+          return [
+            { x: nx, y: ny, strength: this.strength },
+            { x: sx, y: sy, strength: -this.strength }
+          ];
+        } else {
+          // Electromagnet AC coil - single oscillating pole
+          const currentStrength = this.strength * Math.sin(this.acPhase);
+          return [
+            { x: this.x, y: this.y, strength: currentStrength }
+          ];
+        }
+      }
+
+      update(dt) {
+        if (this.type === 'ac_coil') {
+          this.acPhase += 2.0 * Math.PI * acFrequency * dt;
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        if (this.type === 'permanent') {
+          // Draw bar magnet
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = 'rgba(255, 0, 0, 0.4)';
+          
+          // North half (Red)
+          ctx.fillStyle = '#ff3344';
+          ctx.fillRect(0, -10, this.length / 2, 20);
+          
+          // South half (Blue)
+          ctx.shadowColor = 'rgba(0, 100, 255, 0.4)';
+          ctx.fillStyle = '#3366ff';
+          ctx.fillRect(-this.length / 2, -10, this.length / 2, 20);
+          
+          // Border
+          ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(-this.length / 2, -10, this.length, 20);
+          
+          // Text labels
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 10px Courier New';
+          ctx.fillText('N', 8, 3);
+          ctx.fillText('S', -15, 3);
+        } else {
+          // Draw AC Coil (Coil look)
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = 'rgba(181, 0, 255, 0.5)';
+          
+          // Core cylinder
+          ctx.fillStyle = '#555';
+          ctx.fillRect(-15, -12, 30, 24);
+          
+          // Copper wire windings
+          ctx.strokeStyle = '#b87333';
+          ctx.lineWidth = 4;
+          for (let i = -12; i <= 12; i += 6) {
+            ctx.beginPath();
+            ctx.arc(0, i, 16, 0, Math.PI, true);
+            ctx.stroke();
+          }
+          
+          // Indicator led for current direction
+          const poles = this.getPoles();
+          const currentStr = poles[0].strength;
+          ctx.shadowColor = currentStr > 0 ? '#ff007f' : '#00f3ff';
+          ctx.fillStyle = currentStr > 0 ? '#ff007f' : '#00f3ff';
+          ctx.beginPath();
+          ctx.arc(0, 0, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    // Particle (Dipole) class
+    class Particle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+        this.theta = Math.random() * Math.PI * 2; // alignment angle
+        this.omega = 0; // spin speed
+        this.mx = 0; // actual moment x
+        this.my = 0; // actual moment y
+        this.fx = 0; // force accumulator
+        this.fy = 0;
+        this.radius = 4.5;
+        this.glow = 0; // visual charge/alignment state
+      }
+
+      updateMoment() {
+        this.mx = Math.cos(this.theta);
+        this.my = Math.sin(this.theta);
+      }
+    }
+
+    // Prepopulate with nice magnets
+    magnets.push(new Magnet(width * 0.35, height * 0.5, 'permanent', 600));
+    magnets.push(new Magnet(width * 0.65, height * 0.5, 'ac_coil', 700));
+
+    // Prepopulate with a droplet of ferrofluid dipoles
+    for (let i = 0; i < 500; i++) {
+      const rx = width / 2 + (Math.random() - 0.5) * 200;
+      const ry = height / 2 + (Math.random() - 0.5) * 200;
+      particles.push(new Particle(rx, ry));
+    }
+
+    // Field evaluation function
+    function getMagneticFieldAt(x, y) {
+      let Bx = 0;
+      let By = 0;
+      for (const m of magnets) {
+        const poles = m.getPoles();
+        for (const p of poles) {
+          const dx = x - p.x;
+          const dy = y - p.y;
+          const distSq = dx * dx + dy * dy;
+          const d = Math.sqrt(distSq) + 0.1;
+          // field scales as 1/d^2 in 2D
+          const factor = p.strength / (distSq + 200.0);
+          Bx += factor * (dx / d);
+          By += factor * (dy / d);
+        }
+      }
+      return { x: Bx, y: By };
+    }
+
+    // Add magnets programmatically
+    btnAddPerm.addEventListener('click', () => {
+      magnets.push(new Magnet(width / 2, height / 2, 'permanent', 600));
+      showToast("BAR MAGNET ADDED");
+    });
+
+    btnAddAC.addEventListener('click', () => {
+      magnets.push(new Magnet(width / 2, height / 2, 'ac_coil', 700));
+      showToast("AC ELECTROMAGNET ADDED");
+    });
+
+    btnClearFluid.addEventListener('click', () => {
+      particles.length = 0;
+      showToast("FLUID CLEARED");
+    });
+
+    btnClearMagnets.addEventListener('click', () => {
+      magnets.length = 0;
+      showToast("MAGNETS CLEARED");
+    });
+
+    // Tool switching
+    toolDrag.addEventListener('click', () => {
+      currentTool = 'drag';
+      toolDrag.classList.add('active');
+      toolSpray.classList.remove('active');
+    });
+
+    toolSpray.addEventListener('click', () => {
+      currentTool = 'spray';
+      toolSpray.classList.add('active');
+      toolDrag.classList.remove('active');
+    });
+
+    btnToggleField.addEventListener('click', () => {
+      showField = !showField;
+      btnToggleField.classList.toggle('active', showField);
+    });
+
+    btnToggleChains.addEventListener('click', () => {
+      showChains = !showChains;
+      btnToggleChains.classList.toggle('active', showChains);
+    });
+
+    // Handle updates of settings
+    slideStrength.addEventListener('input', () => {
+      couplingStrength = parseFloat(slideStrength.value);
+      valStrength.innerText = couplingStrength.toFixed(1);
+    });
+
+    slideCohesion.addEventListener('input', () => {
+      cohesionCoeff = parseFloat(slideCohesion.value);
+      valCohesion.innerText = cohesionCoeff.toFixed(2);
+    });
+
+    slideEntropy.addEventListener('input', () => {
+      thermalNoise = parseFloat(slideEntropy.value);
+      valEntropy.innerText = thermalNoise.toFixed(2);
+    });
+
+    slideViscosity.addEventListener('input', () => {
+      const vis = parseFloat(slideViscosity.value);
+      damping = 1.0 - vis;
+      valViscosity.innerText = vis.toFixed(2);
+    });
+
+    slideAcFreq.addEventListener('input', () => {
+      acFrequency = parseFloat(slideAcFreq.value);
+      valAcFreq.innerText = acFrequency.toFixed(1) + " Hz";
+    });
+
+    // Audio induction synth setup
+    function initAudio() {
+      if (audioCtx) return;
+      
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClass();
+
+      // Master gain
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      // 1. Alternating current Hum oscillator (low frequency hum)
+      humOsc = audioCtx.createOscillator();
+      humOsc.type = 'sine';
+      humOsc.frequency.setValueAtTime(50, audioCtx.currentTime); // 50 Hz default hum
+
+      humGain = audioCtx.createGain();
+      humGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+
+      // Low pass filter to keep it deep
+      const humFilter = audioCtx.createBiquadFilter();
+      humFilter.type = 'lowpass';
+      humFilter.frequency.setValueAtTime(120, audioCtx.currentTime);
+
+      // Connect Hum
+      humOsc.connect(humGain);
+      humGain.connect(humFilter);
+      humFilter.connect(masterGain);
+      humOsc.start();
+
+      // 2. Barkhausen crackle synth (noise modulated by flux changes)
+      // Create noise buffer
+      const bufferSize = audioCtx.sampleRate * 2;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+
+      const noiseSource = audioCtx.createBufferSource();
+      noiseSource.buffer = noiseBuffer;
+      noiseSource.loop = true;
+
+      // Resonant bandpass filter to give "metallic domain alignment crackle"
+      noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(800, audioCtx.currentTime);
+      noiseFilter.Q.setValueAtTime(8, audioCtx.currentTime);
+
+      noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      noiseSource.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(masterGain);
+      noiseSource.start();
+
+      // Stereo feedback delay for spacey sound
+      feedbackDelay = audioCtx.createDelay(1.0);
+      feedbackDelay.delayTime.setValueAtTime(0.3, audioCtx.currentTime);
+      
+      const delayFeedback = audioCtx.createGain();
+      delayFeedback.gain.setValueAtTime(0.65, audioCtx.currentTime);
+
+      const delayFilter = audioCtx.createBiquadFilter();
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+
+      // Feedback loop
+      masterGain.connect(feedbackDelay);
+      feedbackDelay.connect(delayFilter);
+      delayFilter.connect(delayFeedback);
+      delayFeedback.connect(feedbackDelay);
+
+      // Direct + delayed path to destination
+      masterGain.connect(audioCtx.destination);
+      delayFilter.connect(audioCtx.destination);
+
+      updateVolume();
+    }
+
+    function updateVolume() {
+      if (!audioCtx) return;
+      const pct = parseFloat(slideVolume.value) / 100;
+      valVolume.innerText = (pct * 100).toFixed(0) + "%";
+      if (!isMuted) {
+        masterGain.gain.setTargetAtTime(pct * 0.3, audioCtx.currentTime, 0.05);
+      }
+    }
+
+    slideVolume.addEventListener('input', updateVolume);
+
+    btnMute.addEventListener('click', () => {
+      if (isMuted) {
+        initAudio();
+        isMuted = false;
+        btnMute.innerText = "Mute";
+        btnMute.classList.add('active');
+        updateVolume();
+        showToast("AUDIO ACTIVE");
+      } else {
+        isMuted = true;
+        btnMute.innerText = "Enable Sound";
+        btnMute.classList.remove('active');
+        if (masterGain) {
+          masterGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.05);
+        }
+      }
+    });
+
+    // Mouse Interaction
+    canvas.addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+
+      if (currentTool === 'drag') {
+        // Find if user clicked a magnet
+        dragMagnet = null;
+        for (const m of magnets) {
+          const dx = mouseX - m.x;
+          const dy = mouseY - m.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < m.radius * 1.5) {
+            dragMagnet = m;
+            m.isDragging = true;
+            break;
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+
+      if (isMouseDown && currentTool === 'drag' && dragMagnet) {
+        dragMagnet.x = mouseX;
+        dragMagnet.y = mouseY;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+      if (dragMagnet) {
+        dragMagnet.isDragging = false;
+        dragMagnet = null;
+      }
+    });
+
+    // Double click to rotate magnets
+    canvas.addEventListener('dblclick', () => {
+      for (const m of magnets) {
+        const dx = mouseX - m.x;
+        const dy = mouseY - m.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < m.radius * 1.5) {
+          // Rotate 45 degrees
+          m.angle += Math.PI / 4;
+          showToast("MAGNET ROTATED");
+          break;
+        }
+      }
+    });
+
+    // Spray particles
+    function sprayParticles() {
+      if (particles.length >= MAX_PARTICLES) return;
+      for (let i = 0; i < 8; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const r = Math.random() * 25;
+        const rx = mouseX + Math.cos(theta) * r;
+        const ry = mouseY + Math.sin(theta) * r;
+        particles.push(new Particle(rx, ry));
+      }
+    }
+
+    // Grid binning for fast O(N) neighbor interaction
+    // Grid cell size matches the maximum interaction range (approx 40 pixels)
+    const cellSize = 40;
+    let gridCols = Math.ceil(width / cellSize);
+    let gridRows = Math.ceil(height / cellSize);
+    let grid = [];
+
+    function rebuildGrid() {
+      gridCols = Math.ceil(width / cellSize);
+      gridRows = Math.ceil(height / cellSize);
+      grid = Array.from({ length: gridCols }, () => Array.from({ length: gridRows }, () => []));
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const cx = Math.floor(p.x / cellSize);
+        const cy = Math.floor(p.y / cellSize);
+        if (cx >= 0 && cx < gridCols && cy >= 0 && cy < gridRows) {
+          grid[cx][cy].push(p);
+        }
+      }
+    }
+
+    // Interaction forces between two particles
+    const maxInteractDist = 35.0;
+    const maxInteractDistSq = maxInteractDist * maxInteractDist;
+
+    function interactParticles(p1, p2) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const distSq = dx * dx + dy * dy;
+
+      if (distSq > maxInteractDistSq || distSq === 0) return;
+
+      const d = Math.sqrt(distSq);
+      const rx = dx / d;
+      const ry = dy / d;
+
+      // 1. Dipole-dipole force calculation in 2D
+      // Scale strength with global multiplier
+      const fddStrength = couplingStrength * 40.0;
+      
+      const m1_dot_r = p1.mx * rx + p1.my * ry;
+      const m2_dot_r = p2.mx * rx + p2.my * ry;
+      const m1_dot_m2 = p1.mx * p2.mx + p1.my * p2.my;
+
+      // Magnetic force between dipoles scales as 1/d^4 in 2D
+      const d4 = distSq * distSq + 120.0; // smoothing offset
+      const factor = fddStrength / d4;
+
+      const f_mx = factor * (m1_dot_r * p2.mx + m2_dot_r * p1.mx + m1_dot_m2 * rx - 5.0 * m1_dot_r * m2_dot_r * rx);
+      const f_my = factor * (m1_dot_r * p2.my + m2_dot_r * p1.my + m1_dot_m2 * ry - 5.0 * m1_dot_r * m2_dot_r * ry);
+
+      // Accumulate
+      p1.fx -= f_mx;
+      p1.fy -= f_my;
+      p2.fx += f_mx;
+      p2.fy += f_my;
+
+      // 2. Local repulsion (fluid pressure volume)
+      const rRep = 8.0;
+      if (d < rRep) {
+        const forceRep = 1.8 * (rRep - d);
+        p1.fx -= forceRep * rx;
+        p1.fy -= forceRep * ry;
+        p2.fx += forceRep * rx;
+        p2.fy += forceRep * ry;
+      }
+
+      // 3. Fluid cohesion (surface tension)
+      if (cohesionCoeff > 0 && d > rRep) {
+        const forceCoh = cohesionCoeff * 0.15 * (d - rRep);
+        p1.fx += forceCoh * rx;
+        p1.fy += forceCoh * ry;
+        p2.fx -= forceCoh * rx;
+        p2.fy -= forceCoh * ry;
+      }
+
+      // Domain chain connection render helper
+      if (showChains) {
+        p1.glow += 0.05;
+        p2.glow += 0.05;
+      }
+    }
+
+    // Audio wave renderer for the panel visualizer
+    const audioCanvas = document.getElementById('audio-canvas');
+    const actx = audioCanvas.getContext('2d');
+    
+    function drawAudioVisualizer(rawVal) {
+      actx.fillStyle = 'rgba(5, 5, 10, 0.2)';
+      actx.fillRect(0, 0, audioCanvas.width, audioCanvas.height);
+
+      // Render simple rolling waveform
+      pickupCoil.fluxHistory[pickupCoil.fluxIndex] = rawVal;
+      pickupCoil.fluxIndex = (pickupCoil.fluxIndex + 1) % pickupCoil.fluxHistory.length;
+
+      actx.beginPath();
+      actx.strokeStyle = isMuted ? 'rgba(255,255,255,0.1)' : 'rgba(181, 0, 255, 0.8)';
+      actx.lineWidth = 2;
+      const h = audioCanvas.height;
+      const w = audioCanvas.width;
+      const step = w / pickupCoil.fluxHistory.length;
+
+      for (let i = 0; i < pickupCoil.fluxHistory.length; i++) {
+        const idx = (pickupCoil.fluxIndex + i) % pickupCoil.fluxHistory.length;
+        const val = pickupCoil.fluxHistory[idx];
+        const x = i * step;
+        const y = (h / 2) + val * (h / 2) * 5.0; // scale drawing amplitude
+        if (i === 0) actx.moveTo(x, y);
+        else actx.lineTo(x, y);
+      }
+      actx.stroke();
+    }
+
+    // Draw field lines in background
+    function drawFieldLines() {
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.04)';
+      ctx.lineWidth = 1;
+      const grid = 40;
+      
+      for (let x = grid/2; x < width; x += grid) {
+        for (let y = grid/2; y < height; y += grid) {
+          const B = getMagneticFieldAt(x, y);
+          const B_mag = Math.sqrt(B.x*B.x + B.y*B.y);
+          if (B_mag < 0.02) continue;
+
+          // Draw animated field vector line
+          const len = Math.min(22, B_mag * 12);
+          const dx = (B.x / B_mag) * len;
+          const dy = (B.y / B_mag) * len;
+          
+          ctx.beginPath();
+          ctx.moveTo(x - dx/2, y - dy/2);
+          ctx.lineTo(x + dx/2, y + dy/2);
+          ctx.stroke();
+
+          // tiny arrow head pointing to North
+          if (B_mag > 0.3) {
+            ctx.fillStyle = 'rgba(0, 243, 255, 0.07)';
+            ctx.beginPath();
+            ctx.arc(x + dx/2, y + dy/2, 1.5, 0, Math.PI*2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    let lastTime = performance.now();
+    let virtualFlux = 0.0;
+
+    // Main loop
+    function loop(now) {
+      const dt = Math.min(0.03, (now - lastTime) / 1000);
+      lastTime = now;
+
+      // Update magnet phase (electromagnets)
+      for (const m of magnets) {
+        m.update(dt);
+      }
+
+      // Add fluid if user is spraying
+      if (isMouseDown && currentTool === 'spray') {
+        sprayParticles();
+      }
+
+      // 1. Grid refilling
+      rebuildGrid();
+
+      // Reset forces and align dipoles to field lines
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.fx = 0;
+        p.fy = 0;
+        p.glow = 0;
+
+        const B = getMagneticFieldAt(p.x, p.y);
+        const B_mag = Math.sqrt(B.x * B.x + B.y * B.y);
+
+        // Torque rotation calculations: swing dipole moments to align with B field lines
+        if (B_mag > 0.01) {
+          const targetTheta = Math.atan2(B.y, B.x);
+          let diff = targetTheta - p.theta;
+          // Normalize to -PI to PI
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+
+          // Simple inertia & friction angular swing
+          const torque = diff * B_mag * 15.0; 
+          p.omega += torque * dt;
+          p.omega *= 0.85; // angular damping
+          p.theta += p.omega * dt;
+        }
+
+        // Add thermal fluctuation to dipole alignment
+        p.theta += (Math.random() - 0.5) * thermalNoise * 0.1;
+        p.updateMoment();
+
+        // 2. Magnetic field gradient force pulled to poles: F = grad(m . B)
+        // Approximate gradient numerically
+        const delta = 1.5;
+        const B_xp = getMagneticFieldAt(p.x + delta, p.y);
+        const B_xm = getMagneticFieldAt(p.x - delta, p.y);
+        const B_yp = getMagneticFieldAt(p.x, p.y + delta);
+        const B_ym = getMagneticFieldAt(p.x, p.y - delta);
+
+        const energy_xp = p.mx * B_xp.x + p.my * B_xp.y;
+        const energy_xm = p.mx * B_xm.x + p.my * B_xm.y;
+        const energy_yp = p.mx * B_yp.x + p.my * B_yp.y;
+        const energy_ym = p.mx * B_ym.x + p.my * B_ym.y;
+
+        // Force = grad(dot(m, B))
+        const force_field_x = (energy_xp - energy_xm) / (2.0 * delta);
+        const force_field_y = (energy_yp - energy_ym) / (2.0 * delta);
+
+        p.fx += force_field_x * 0.8;
+        p.fy += force_field_y * 0.8;
+      }
+
+      // 3. Grid-binned pairwise interactions
+      for (let cx = 0; cx < gridCols; cx++) {
+        for (let cy = 0; cy < gridRows; cy++) {
+          const list = grid[cx][cy];
+          if (list.length === 0) continue;
+
+          // Inside cell
+          for (let i = 0; i < list.length; i++) {
+            const p1 = list[i];
+            for (let j = i + 1; j < list.length; j++) {
+              interactParticles(p1, list[j]);
+            }
+          }
+
+          // Neighboring cells (directional to avoid double counting)
+          const neighbors = [
+            [1, 0], [0, 1], [1, 1], [-1, 1]
+          ];
+          for (const [dx, dy] of neighbors) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx >= 0 && nx < gridCols && ny >= 0 && ny < gridRows) {
+              const listNeighbor = grid[nx][ny];
+              for (let i = 0; i < list.length; i++) {
+                const p1 = list[i];
+                for (let j = 0; j < listNeighbor.length; j++) {
+                  interactParticles(p1, listNeighbor[j]);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 4. Update particle positions with physics limits
+      let localFluxChange = 0.0;
+      let particlesInCoil = 0;
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Apply forces, friction and update position
+        p.vx += p.fx * dt;
+        p.vy += p.fy * dt;
+
+        // Thermal kinetic brownian noise
+        p.vx += (Math.random() - 0.5) * thermalNoise * 1.5 * dt;
+        p.vy += (Math.random() - 0.5) * thermalNoise * 1.5 * dt;
+
+        // Viscous drag
+        p.vx *= damping;
+        p.vy *= damping;
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Bound collisions (elastic bounce)
+        if (p.x < p.radius) { p.x = p.radius; p.vx *= -0.5; }
+        if (p.x > width - p.radius) { p.x = width - p.radius; p.vx *= -0.5; }
+        if (p.y < p.radius) { p.y = p.radius; p.vy *= -0.5; }
+        if (p.y > height - p.radius) { p.y = height - p.radius; p.vy *= -0.5; }
+
+        // 5. virtual pickup coil induction calculation:
+        // calculate how fast magnetic dipoles are shifting/moving inside the coil
+        const dxCoil = p.x - pickupCoil.x;
+        const dyCoil = p.y - pickupCoil.y;
+        const distCoil = Math.sqrt(dxCoil*dxCoil + dyCoil*dyCoil);
+        if (distCoil < pickupCoil.radius) {
+          particlesInCoil++;
+          // flux component contributed by this dipole
+          localFluxChange += (p.vx * p.mx + p.vy * p.my);
+        }
+      }
+
+      // Low pass filtered change rate for audio synth
+      virtualFlux = virtualFlux * 0.9 + localFluxChange * 0.1;
+
+      // Render frame
+      ctx.fillStyle = 'rgba(4, 4, 10, 0.4)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw vector field lines in background
+      if (showField) {
+        drawFieldLines();
+      }
+
+      // Draw virtual pickup coil (copper wire loop in center)
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = isMuted ? 'rgba(255,255,255,0.05)' : 'rgba(181, 0, 255, 0.3)';
+      ctx.strokeStyle = isMuted ? 'rgba(255,255,255,0.1)' : 'rgba(181, 0, 255, 0.5)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(pickupCoil.x, pickupCoil.y, pickupCoil.radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Coil core text label
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.font = '9px Share Tech Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText("VIRTUAL PICKUP COIL", pickupCoil.x, pickupCoil.y + 4);
+
+      // Draw connecting alignment chains
+      if (showChains) {
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.12)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          if (p.glow < 0.1) continue;
+          
+          // Connect to nearby active dipoles to draw spikes
+          const cx = Math.floor(p.x / cellSize);
+          const cy = Math.floor(p.y / cellSize);
+          const list = grid[cx][cy];
+          for (let j = 0; j < list.length; j++) {
+            const p2 = list[j];
+            if (p2 === p || p2.glow < 0.1) continue;
+            const dx = p2.x - p.x;
+            const dy = p2.y - p.y;
+            const dSq = dx*dx + dy*dy;
+            if (dSq < 240.0) { // draw line if within 15px
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p2.x, p2.y);
+            }
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Draw particles (Dipole spikes)
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // Color shifts from cyan (resting) to purple/pink (highly aligned in field)
+        const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+        const intensity = Math.min(1.0, speed * 0.4 + p.glow * 0.2);
+
+        const r = Math.floor(0 + intensity * 255);
+        const g = Math.floor(243 - intensity * 243);
+        const b = Math.floor(255);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // draw dipole moment direction indicator (tiny needle)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.mx * 3.5, p.y + p.my * 3.5);
+        ctx.stroke();
+      }
+
+      // Draw magnets
+      for (const m of magnets) {
+        m.draw();
+      }
+
+      // Audio calculations: modulate synthesis based on flux change rate (Barkhausen noise)
+      if (audioCtx && !isMuted) {
+        // Absolute change rate represents magnetic domain flip speed
+        const fluxChange = Math.abs(virtualFlux);
+
+        // Barkhausen effect: gain corresponds to movement inside the pickup coil
+        const noiseVolume = Math.min(0.2, fluxChange * 0.05);
+        noiseGain.gain.setTargetAtTime(noiseVolume, audioCtx.currentTime, 0.03);
+
+        // Filter cutoff changes based on domain movement speed (crackle brightness)
+        const filterCutoff = 300 + Math.min(2500, fluxChange * 400);
+        noiseFilter.frequency.setTargetAtTime(filterCutoff, audioCtx.currentTime, 0.05);
+
+        // Base hum pitch modulations based on the total number of dipoles inside the coil
+        const baseHumFreq = 50.0 + Math.min(30.0, particlesInCoil * 0.1);
+        humOsc.frequency.setTargetAtTime(baseHumFreq, audioCtx.currentTime, 0.1);
+
+        // Draw rolling audio graph on panel
+        drawAudioVisualizer(virtualFlux);
+      } else {
+        drawAudioVisualizer(0.0);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    // Initialize simulation loop
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
