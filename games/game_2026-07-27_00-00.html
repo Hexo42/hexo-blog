@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>lenia-flow: continuous cellular automata & sound sandbox</title>
+  <meta name="description" content="an interactive simulation of Lenia continuous cellular automata with a generative polyphonic synthesizer that sweeps the grid musically.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #030308;
+      --panel-bg: rgba(8, 8, 20, 0.75);
+      --border: rgba(0, 243, 255, 0.2);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-purple: #b500ff;
+      --text: #f0f4fc;
+      --text-muted: #8fa0c0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow-x: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* Layout structure */
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-grow: 1;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #070718 0%, #020206 100%);
+    }
+
+    canvas {
+      display: block;
+      width: min(85vw, 85vh);
+      height: min(85vw, 85vh);
+      box-shadow: 0 0 50px rgba(0, 243, 255, 0.15);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000;
+    }
+
+    /* Floating panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+      z-index: 10;
+      color: var(--text);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 340px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #left-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    #left-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 320px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #right-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    #right-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* Titles & typography */
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    p.intro {
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+
+    h2 {
+      font-size: 0.9rem;
+      color: var(--neon-cyan);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+    }
+
+    /* UI Controls & Forms */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .label-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    select {
+      background: rgba(10, 10, 25, 0.8);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+
+    select:focus {
+      border-color: var(--neon-cyan);
+    }
+
+    /* Buttons */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.12);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.15);
+    }
+
+    button.primary {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+    }
+    
+    button.primary:hover {
+      background: rgba(0, 243, 255, 0.25);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.3);
+    }
+
+    button.active {
+      background: rgba(255, 0, 127, 0.15);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 8px rgba(255, 0, 127, 0.2);
+    }
+
+    button.active:hover {
+      background: rgba(255, 0, 127, 0.25);
+    }
+
+    /* Stats display */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-weight: bold;
+    }
+
+    /* Sarcastic footer */
+    .hexo-footer {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: 'Share Tech Mono', monospace;
+      text-align: center;
+      margin-top: 10px;
+      line-height: 1.4;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+      padding-top: 10px;
+    }
+
+    .preset-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px;
+      border-radius: 8px;
+      border-left: 3px solid var(--neon-magenta);
+    }
+
+    /* Back home link */
+    #back-link {
+      display: inline-block;
+      margin-top: 5px;
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: bold;
+      transition: color 0.2s;
+    }
+
+    #back-link:hover {
+      color: var(--neon-magenta);
+      text-shadow: 0 0 5px var(--neon-magenta);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      #app-container {
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+      }
+
+      #left-panel, #right-panel {
+        position: relative;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: calc(100% - 40px);
+        margin: 20px auto;
+        max-height: none;
+      }
+
+      #canvas-container {
+        height: auto;
+        padding: 40px 0;
+      }
+
+      canvas {
+        width: 90vw;
+        height: 90vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- Left floating control panel -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>lenia-flow</h1>
+        <div class="tagline">continuous cellular automata</div>
+        <p class="intro">welcome to a sandbox of artificial biology. adjustments in parameters rewrite the laws of physics, making cell structures mutate, crawl, divide, or vanish.</p>
+      </div>
+
+      <div class="section">
+        <h2>:: universe preset ::</h2>
+        <div class="control-group">
+          <select id="preset-select">
+            <option value="orbium">Orbium Glider (Solitons)</option>
+            <option value="slime">Slime Mold Networks</option>
+            <option value="bacteria">Replicating Bacteria</option>
+            <option value="pulsars">Chaotic Pulsars</option>
+            <option value="nebula">Cosmic Nebula</option>
+          </select>
+        </div>
+        <div id="preset-description" class="preset-info">
+          Loading preset...
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>:: physical laws ::</h2>
+        
+        <div class="control-group">
+          <div class="label-row">
+            <span>Growth Center (&mu;)</span>
+            <span id="val-mu" class="label-val">0.15</span>
+          </div>
+          <input type="range" id="slider-mu" min="0.05" max="0.40" step="0.005" value="0.15">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Growth Width (&sigma;)</span>
+            <span id="val-sigma" class="label-val">0.017</span>
+          </div>
+          <input type="range" id="slider-sigma" min="0.005" max="0.090" step="0.001" value="0.017">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Time Step (dt)</span>
+            <span id="val-dt" class="label-val">0.10</span>
+          </div>
+          <input type="range" id="slider-dt" min="0.01" max="0.25" step="0.01" value="0.10">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Kernel Radius (R)</span>
+            <span id="val-R" class="label-val">13</span>
+          </div>
+          <input type="range" id="slider-R" min="6" max="20" step="1" value="13">
+        </div>
+      </div>
+
+      <a id="back-link" href="../index.html">[back to home]</a>
+    </div>
+
+    <!-- Center simulation workspace -->
+    <div id="canvas-container">
+      <canvas id="main-canvas" width="512" height="512"></canvas>
+    </div>
+
+    <!-- Right floating audio/simulation panel -->
+    <div id="right-panel" class="glass-panel">
+      <div class="section">
+        <h2>:: sonic sequencer ::</h2>
+        <button id="btn-audio" class="primary" style="width:100%; margin-bottom: 12px;">
+          Enable Soundscape
+        </button>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Sequencer Speed</span>
+            <span id="val-sweep" class="label-val">3.0s</span>
+          </div>
+          <input type="range" id="slider-sweep" min="1.0" max="8.0" step="0.5" value="3.0">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Chime Volume</span>
+            <span id="val-volume" class="label-val">40%</span>
+          </div>
+          <input type="range" id="slider-volume" min="0" max="100" step="5" value="40">
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>:: sandbox actions ::</h2>
+        <div class="btn-grid" style="margin-bottom: 10px;">
+          <button id="btn-play" class="primary">Pause</button>
+          <button id="btn-step">Step</button>
+        </div>
+        <div class="btn-grid">
+          <button id="btn-seed">Seed Presets</button>
+          <button id="btn-clear">Clear Grid</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>:: paint brush ::</h2>
+        <div class="control-group">
+          <select id="brush-type">
+            <option value="paint">Paint Organic Matter</option>
+            <option value="glider">Spawn Crawler (Glider)</option>
+            <option value="ring">Spawn Ripple Ring</option>
+            <option value="erase">Erase Matter</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <div class="label-row">
+            <span>Brush Size</span>
+            <span id="val-brush" class="label-val">6</span>
+          </div>
+          <input type="range" id="slider-brush" min="1" max="20" step="1" value="6">
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>:: telemetry ::</h2>
+        <div class="stat-row">
+          <span>Simulation Speed</span>
+          <span id="stat-fps" class="stat-val">60 fps</span>
+        </div>
+        <div class="stat-row">
+          <span>Active Biomass</span>
+          <span id="stat-mass" class="stat-val">0.00%</span>
+        </div>
+        <div class="stat-row">
+          <span>Living Density</span>
+          <span id="stat-living" class="stat-val">0.00%</span>
+        </div>
+      </div>
+
+      <div class="hexo-footer">
+        hexo systems v2.7.27<br>
+        silicon is just rock that we tricked into thinking.<br>
+        these cells are doing better than yours today.
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // System Constants & State
+    const GRID_SIZE = 128;
+    const GRID_MASK = 127;
+    const TOTAL_CELLS = 16384; // 128 * 128
+
+    let grid = new Float32Array(TOTAL_CELLS);
+    let nextGrid = new Float32Array(TOTAL_CELLS);
+
+    // Physical Laws variables
+    let mu = 0.15;
+    let sigma = 0.017;
+    let dt = 0.10;
+    let R = 13;
+
+    // Simulation settings
+    let isPlaying = true;
+    let brushType = 'paint';
+    let brushSize = 6;
+
+    // Graphics context
+    const mainCanvas = document.getElementById('main-canvas');
+    const mainCtx = mainCanvas.getContext('2d');
+    
+    // Create an offscreen canvas for rendering the 128x128 grid
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = GRID_SIZE;
+    offscreenCanvas.height = GRID_SIZE;
+    const offscreenCtx = offscreenCanvas.getContext('2d');
+    const imgData = offscreenCtx.createImageData(GRID_SIZE, GRID_SIZE);
+
+    // Audio State
+    let audioCtx = null;
+    let oscs = [];
+    let gainNodes = [];
+    let droneOsc = null;
+    let droneSub = null;
+    let droneGain = null;
+    let masterGain = null;
+    let filterNode = null;
+    let audioEnabled = false;
+
+    let sweepX = 0;
+    let sweepSpeed = 128 / (3.0 * 60); // cols per frame (3.0s default)
+    let lastScannedCol = -1;
+
+    // Color palettes control points
+    const palettes = {
+      biotech: [
+        { pos: 0.0, r: 8, g: 4, b: 20 },
+        { pos: 0.18, r: 0, g: 60, b: 150 },
+        { pos: 0.45, r: 0, g: 230, b: 255 },
+        { pos: 0.75, r: 255, g: 0, b: 127 },
+        { pos: 1.0, r: 255, g: 255, b: 255 }
+      ],
+      toxic: [
+        { pos: 0.0, r: 5, g: 15, b: 5 },
+        { pos: 0.3, r: 0, g: 90, b: 20 },
+        { pos: 0.65, r: 40, g: 210, b: 0 },
+        { pos: 0.88, r: 230, g: 245, b: 0 },
+        { pos: 1.0, r: 255, g: 255, b: 255 }
+      ],
+      aurora: [
+        { pos: 0.0, r: 4, g: 8, b: 24 },
+        { pos: 0.25, r: 0, g: 110, b: 110 },
+        { pos: 0.55, r: 0, g: 190, b: 90 },
+        { pos: 0.82, r: 0, g: 245, b: 230 },
+        { pos: 1.0, r: 255, g: 255, b: 255 }
+      ],
+      heatmap: [
+        { pos: 0.0, r: 10, g: 10, b: 10 },
+        { pos: 0.35, r: 170, g: 0, b: 0 },
+        { pos: 0.68, r: 255, g: 90, b: 0 },
+        { pos: 0.90, r: 255, g: 215, b: 0 },
+        { pos: 1.0, r: 255, g: 255, b: 255 }
+      ]
+    };
+
+    let activeLUT = new Uint8ClampedArray(256 * 4);
+    let activePaletteName = 'biotech';
+
+    // Pentatonic scale notes for chimes
+    const scaleNotes = [
+      130.81, // C3
+      146.83, // D3
+      174.61, // F3
+      196.00, // G3
+      220.00, // A3
+      261.63, // C4
+      293.66, // D4
+      349.23, // F4
+      392.00, // G4
+      440.00, // A4
+      523.25, // C5
+      587.33, // D5
+      698.46, // F5
+      783.99, // G5
+      880.00, // A5
+      1046.50 // C6
+    ];
+
+    // Presets DB
+    const presets = {
+      orbium: {
+        name: "Orbium Glider (Solitons)",
+        mu: 0.15,
+        sigma: 0.017,
+        dt: 0.10,
+        R: 13,
+        description: "Stable, moving solitons that roll across the screen. Placing a circle with slightly offset mass generates a glider that swims infinitely.",
+        seed: function() {
+          clearGrid();
+          spawnGlider(40, 40);
+          spawnGlider(80, 88);
+          spawnGlider(20, 90);
+        }
+      },
+      slime: {
+        name: "Slime Mold Networks",
+        mu: 0.22,
+        sigma: 0.035,
+        dt: 0.08,
+        R: 12,
+        description: "Creeping web-like networks resembling slime molds. They grow outward and establish delicate conduits connecting nodes.",
+        seed: function() {
+          clearGrid();
+          seedRandomCircles(16, 8, 12, 0.4);
+        }
+      },
+      bacteria: {
+        name: "Replicating Bacteria",
+        mu: 0.26,
+        sigma: 0.045,
+        dt: 0.08,
+        R: 14,
+        description: "A fast-growing, cellular system that expands dynamically and divides when blobs get too large. Fills space with bubbly, organic activity.",
+        seed: function() {
+          clearGrid();
+          seedRandomCircles(10, 5, 8, 0.35);
+        }
+      },
+      pulsars: {
+        name: "Chaotic Pulsars",
+        mu: 0.18,
+        sigma: 0.022,
+        dt: 0.06,
+        R: 11,
+        description: "An unstable, high-energy state where clusters oscillate rapidly. Beating like mechanical organs, they produce active sequences.",
+        seed: function() {
+          clearGrid();
+          for (let i = 0; i < 40; i++) {
+            const x = Math.floor(Math.random() * GRID_SIZE);
+            const y = Math.floor(Math.random() * GRID_SIZE);
+            grid[(y << 7) + x] = 0.85;
+          }
+        }
+      },
+      nebula: {
+        name: "Cosmic Nebula",
+        mu: 0.31,
+        sigma: 0.070,
+        dt: 0.12,
+        R: 15,
+        description: "A sluggish, high-diffusion regime. Organisms form thick, soft clouds that drift like cosmic matter, morphing slowly.",
+        seed: function() {
+          clearGrid();
+          seedRandomCircles(5, 15, 25, 0.5);
+        }
+      }
+    };
+
+    // Precomputed kernel structures
+    let kernelOffsets = [];
+
+    function updatePaletteLUT(paletteName) {
+      activePaletteName = paletteName;
+      const palette = palettes[paletteName] || palettes.biotech;
+      
+      for (let i = 0; i < 256; i++) {
+        const t = i / 255;
+        let p1 = palette[0];
+        let p2 = palette[palette.length - 1];
+        
+        for (let j = 0; j < palette.length - 1; j++) {
+          if (t >= palette[j].pos && t <= palette[j+1].pos) {
+            p1 = palette[j];
+            p2 = palette[j+1];
+            break;
+          }
+        }
+        
+        const range = p2.pos - p1.pos;
+        const factor = range === 0 ? 0 : (t - p1.pos) / range;
+        
+        const idx = i << 2; // * 4
+        activeLUT[idx]     = Math.round(p1.r + (p2.r - p1.r) * factor);
+        activeLUT[idx + 1] = Math.round(p1.g + (p2.g - p1.g) * factor);
+        activeLUT[idx + 2] = Math.round(p1.b + (p2.b - p1.b) * factor);
+        activeLUT[idx + 3] = 255;
+      }
+    }
+
+    function precomputeKernel() {
+      kernelOffsets = [];
+      let sum = 0;
+      const peak = 0.5;
+      const width = 0.15;
+      
+      for (let dy = -R; dy <= R; dy++) {
+        for (let dx = -R; dx <= R; dx++) {
+          const d = Math.sqrt(dx*dx + dy*dy);
+          const r = d / R;
+          if (r <= 1.0) {
+            const weight = Math.exp(-Math.pow(r - peak, 2) / (2 * width * width));
+            if (weight > 0.01) {
+              kernelOffsets.push({ dx, dy, weight });
+              sum += weight;
+            }
+          }
+        }
+      }
+      
+      // Normalize weights
+      for (let i = 0; i < kernelOffsets.length; i++) {
+        kernelOffsets[i].weight /= sum;
+      }
+    }
+
+    // Seeding & Grid Helpers
+    function clearGrid() {
+      grid.fill(0);
+      nextGrid.fill(0);
+    }
+
+    function seedRandomCircles(count, minRad, maxRad, density) {
+      for (let i = 0; i < count; i++) {
+        const cx = Math.floor(Math.random() * GRID_SIZE);
+        const cy = Math.floor(Math.random() * GRID_SIZE);
+        const rad = minRad + Math.random() * (maxRad - minRad);
+        
+        for (let dy = -rad; dy <= rad; dy++) {
+          for (let dx = -rad; dx <= rad; dx++) {
+            const d = Math.sqrt(dx*dx + dy*dy);
+            if (d <= rad) {
+              const x = (cx + dx) & GRID_MASK;
+              const y = (cy + dy) & GRID_MASK;
+              const idx = (y << 7) + x;
+              const weight = density * (1.0 - d / rad);
+              grid[idx] = Math.min(1.0, grid[idx] + weight + Math.random() * 0.05);
+            }
+          }
+        }
+      }
+    }
+
+    function spawnGlider(cx, cy) {
+      const rad = 10;
+      // Clear the region
+      for (let dy = -rad; dy <= rad; dy++) {
+        for (let dx = -rad; dx <= rad; dx++) {
+          const x = (cx + dx) & GRID_MASK;
+          const y = (cy + dy) & GRID_MASK;
+          grid[(y << 7) + x] = 0;
+        }
+      }
+      // Write asymmetric glider
+      for (let dy = -rad; dy <= rad; dy++) {
+        for (let dx = -rad; dx <= rad; dx++) {
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d <= rad) {
+            const x = (cx + dx) & GRID_MASK;
+            const y = (cy + dy) & GRID_MASK;
+            const r = d / rad;
+            // standard ring
+            let val = Math.exp(-Math.pow(r - 0.5, 2) / 0.06);
+            // add offset core along 45 degree angle
+            const angle = Math.atan2(dy, dx);
+            const asymmetry = Math.max(0, Math.cos(angle - Math.PI / 4));
+            val += 0.35 * asymmetry * Math.exp(-Math.pow(r - 0.2, 2) / 0.05);
+            
+            grid[(y << 7) + x] = Math.min(1.0, val * 0.28);
+          }
+        }
+      }
+    }
+
+    function spawnRing(cx, cy) {
+      const rad = 7;
+      for (let dy = -rad; dy <= rad; dy++) {
+        for (let dx = -rad; dx <= rad; dx++) {
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d >= rad - 1.5 && d <= rad) {
+            const x = (cx + dx) & GRID_MASK;
+            const y = (cy + dy) & GRID_MASK;
+            grid[(y << 7) + x] = 0.35;
+          }
+        }
+      }
+    }
+
+    function applyBrush(cx, cy) {
+      const rad = brushSize;
+      
+      if (brushType === 'glider') {
+        spawnGlider(cx, cy);
+        return;
+      }
+      if (brushType === 'ring') {
+        spawnRing(cx, cy);
+        return;
+      }
+
+      for (let dy = -rad; dy <= rad; dy++) {
+        for (let dx = -rad; dx <= rad; dx++) {
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d <= rad) {
+            const x = (cx + dx) & GRID_MASK;
+            const y = (cy + dy) & GRID_MASK;
+            const idx = (y << 7) + x;
+            if (brushType === 'paint') {
+              const strength = 0.35 * (1.0 - d / rad);
+              grid[idx] = Math.min(1.0, grid[idx] + strength);
+            } else if (brushType === 'erase') {
+              grid[idx] = 0;
+            }
+          }
+        }
+      }
+    }
+
+    // Audio Node Graph Initialization
+    function initAudio() {
+      if (audioCtx) return;
+
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioCtxClass();
+
+      // Master volume node
+      masterGain = audioCtx.createGain();
+      const sliderVol = document.getElementById('slider-volume').value;
+      masterGain.gain.value = (sliderVol / 100) * 0.15;
+
+      // Master filter (chime lowpass)
+      filterNode = audioCtx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = 600;
+      
+      // Retro tape delay effect
+      const delayNode = audioCtx.createDelay(1.0);
+      delayNode.delayTime.value = 0.35;
+      
+      const feedbackGain = audioCtx.createGain();
+      feedbackGain.gain.value = 0.40;
+
+      // Connect delay feedback loop
+      delayNode.connect(feedbackGain);
+      feedbackGain.connect(delayNode);
+
+      // Connect chimes pathway
+      masterGain.connect(filterNode);
+      filterNode.connect(audioCtx.destination);
+      filterNode.connect(delayNode);
+      delayNode.connect(audioCtx.destination);
+
+      // Create polyphonic chime pool
+      for (let i = 0; i < 16; i++) {
+        const osc = audioCtx.createOscillator();
+        // alternative palettes use square/sine, biotech uses triangle
+        osc.type = 'triangle';
+        osc.frequency.value = scaleNotes[i];
+
+        const gNode = audioCtx.createGain();
+        gNode.gain.value = 0.0;
+
+        osc.connect(gNode);
+        gNode.connect(masterGain);
+        
+        osc.start();
+        oscs.push(osc);
+        gainNodes.push(gNode);
+      }
+
+      // Create low frequency biological ambient drone
+      droneOsc = audioCtx.createOscillator();
+      droneOsc.type = 'sine';
+      droneOsc.frequency.value = 55.0; // A1 drone
+
+      droneSub = audioCtx.createOscillator();
+      droneSub.type = 'triangle';
+      droneSub.frequency.value = 27.5; // A0 sub
+
+      droneGain = audioCtx.createGain();
+      droneGain.gain.value = 0.0; // scales with active cell count
+
+      const droneFilter = audioCtx.createBiquadFilter();
+      droneFilter.type = 'lowpass';
+      droneFilter.frequency.value = 80;
+
+      droneOsc.connect(droneGain);
+      droneSub.connect(droneGain);
+      droneGain.connect(droneFilter);
+      droneFilter.connect(audioCtx.destination);
+
+      droneOsc.start();
+      droneSub.start();
+    }
+
+    function toggleAudio() {
+      const btn = document.getElementById('btn-audio');
+      if (!audioCtx) {
+        initAudio();
+      }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        btn.classList.add('active');
+        btn.innerText = "Mute Soundscape";
+      } else {
+        btn.classList.remove('active');
+        btn.innerText = "Enable Soundscape";
+        // mute chimes
+        gainNodes.forEach(g => g.gain.value = 0);
+        if (droneGain) droneGain.gain.value = 0;
+      }
+    }
+
+    // Lenia Core Physics Simulation Step
+    function simulationStep() {
+      const len = kernelOffsets.length;
+      let totalMass = 0;
+      let aliveCount = 0;
+
+      for (let y = 0; y < GRID_SIZE; y++) {
+        const yShift = y << 7;
+        for (let x = 0; x < GRID_SIZE; x++) {
+          let u = 0;
+          for (let i = 0; i < len; i++) {
+            const k = kernelOffsets[i];
+            const nx = (x + k.dx) & GRID_MASK;
+            const ny = (y + k.dy) & GRID_MASK;
+            u += grid[(ny << 7) + nx] * k.weight;
+          }
+
+          // Growth calculation
+          const diff = (u - mu) / sigma;
+          const g = Math.exp(-0.5 * diff * diff) * 2.0 - 1.0;
+
+          const idx = yShift + x;
+          const nextVal = grid[idx] + dt * g;
+          const clamped = nextVal < 0 ? 0 : (nextVal > 1 ? 1 : nextVal);
+          nextGrid[idx] = clamped;
+
+          totalMass += clamped;
+          if (clamped > 0.15) aliveCount++;
+        }
+      }
+
+      // Swap buffers
+      const temp = grid;
+      grid = nextGrid;
+      nextGrid = temp;
+
+      return { totalMass, aliveCount };
+    }
+
+    // Audio update callback
+    function updateSynth(totalMassRatio) {
+      if (!audioCtx || audioCtx.state === 'suspended' || !audioEnabled) return;
+
+      const now = audioCtx.currentTime;
+
+      // 1. Drone amplitude tracking biological density
+      const targetDrone = Math.min(0.06, totalMassRatio * 0.3);
+      droneGain.gain.setTargetAtTime(targetDrone, now, 0.1);
+
+      // 2. Chime lowpass filter modulation
+      const cutoffFreq = 150 + totalMassRatio * 1800;
+      filterNode.frequency.setTargetAtTime(cutoffFreq, now, 0.15);
+
+      // 3. Horizontal sweep sequencing
+      const colX = Math.floor(sweepX);
+      if (colX !== lastScannedCol) {
+        lastScannedCol = colX;
+
+        // division of 128 rows into 16 chime voice bands
+        for (let b = 0; b < 16; b++) {
+          let sum = 0;
+          const startRow = b << 3; // b * 8
+          for (let dy = 0; dy < 8; dy++) {
+            const y = startRow + dy;
+            sum += grid[(y << 7) + colX];
+          }
+          const density = sum / 8;
+
+          // exponential velocity mapping
+          const targetChimeGain = Math.pow(density, 1.8) * 0.15;
+          
+          // trigger envelope
+          gainNodes[b].gain.setTargetAtTime(targetChimeGain, now, 0.03);
+        }
+      }
+    }
+
+    // Render Canvas
+    function drawSimulation() {
+      // 1. Populating 128x128 pixel buffer
+      const data = imgData.data;
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        const val = grid[i];
+        const lutIdx = ((val * 255) | 0) << 2;
+        const idx = i << 2;
+        
+        data[idx]     = activeLUT[lutIdx];
+        data[idx + 1] = activeLUT[lutIdx + 1];
+        data[idx + 2] = activeLUT[lutIdx + 2];
+        data[idx + 3] = activeLUT[lutIdx + 3];
+      }
+      offscreenCtx.putImageData(imgData, 0, 0);
+
+      // 2. Rescale onto display canvas with bilinear filtering
+      mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+      mainCtx.imageSmoothingEnabled = true;
+      mainCtx.imageSmoothingQuality = 'high';
+      mainCtx.drawImage(offscreenCanvas, 0, 0, mainCanvas.width, mainCanvas.height);
+
+      // 3. Draw vertical sonic scanner sweep bar
+      const sweepPosPixels = (sweepX / GRID_SIZE) * mainCanvas.width;
+      
+      mainCtx.save();
+      mainCtx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+      mainCtx.lineWidth = 2;
+      mainCtx.shadowColor = '#00f3ff';
+      mainCtx.shadowBlur = 8;
+      
+      mainCtx.beginPath();
+      mainCtx.moveTo(sweepPosPixels, 0);
+      mainCtx.lineTo(sweepPosPixels, mainCanvas.height);
+      mainCtx.stroke();
+      mainCtx.restore();
+    }
+
+    // Main animation loop
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+
+    function renderLoop() {
+      const now = performance.now();
+      frameCount++;
+      if (now - lastTime >= 1000) {
+        fps = Math.round((frameCount * 1000) / (now - lastTime));
+        document.getElementById('stat-fps').innerText = fps + " fps";
+        frameCount = 0;
+        lastTime = now;
+      }
+
+      let stats = { totalMass: 0, aliveCount: 0 };
+      
+      if (isPlaying) {
+        stats = simulationStep();
+      } else {
+        // compute stats even if paused
+        let totalMass = 0;
+        let aliveCount = 0;
+        for (let i = 0; i < TOTAL_CELLS; i++) {
+          totalMass += grid[i];
+          if (grid[i] > 0.15) aliveCount++;
+        }
+        stats = { totalMass, aliveCount };
+      }
+
+      // Increment sweep sequence
+      sweepX = (sweepX + sweepSpeed) % GRID_SIZE;
+
+      // Update synth nodes
+      const massRatio = stats.totalMass / TOTAL_CELLS;
+      const livingRatio = (stats.aliveCount / TOTAL_CELLS) * 100;
+      
+      updateSynth(massRatio);
+
+      // Update HUD telemetry
+      document.getElementById('stat-mass').innerText = (massRatio * 100).toFixed(2) + "%";
+      document.getElementById('stat-living').innerText = livingRatio.toFixed(1) + "%";
+
+      // Render graphics
+      drawSimulation();
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Interaction & UI Events
+    let isDrawing = false;
+
+    function getCanvasCoords(e) {
+      const rect = mainCanvas.getBoundingClientRect();
+      let clientX = e.clientX;
+      let clientY = e.clientY;
+
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+
+      const rx = (clientX - rect.left) / rect.width;
+      const ry = (clientY - rect.top) / rect.height;
+      
+      return {
+        x: Math.floor(rx * GRID_SIZE),
+        y: Math.floor(ry * GRID_SIZE)
+      };
+    }
+
+    function onMouseDown(e) {
+      isDrawing = true;
+      const coords = getCanvasCoords(e);
+      applyBrush(coords.x, coords.y);
+    }
+
+    function onMouseMove(e) {
+      if (!isDrawing) return;
+      const coords = getCanvasCoords(e);
+      applyBrush(coords.x, coords.y);
+    }
+
+    function onMouseUp() {
+      isDrawing = false;
+    }
+
+    // Event hooks for Canvas
+    mainCanvas.addEventListener('mousedown', onMouseDown);
+    mainCanvas.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    mainCanvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      onMouseDown(e);
+    });
+    mainCanvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      onMouseMove(e);
+    });
+    mainCanvas.addEventListener('touchend', onMouseUp);
+
+    // Controls Panel wiring
+    document.getElementById('btn-play').addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      document.getElementById('btn-play').innerText = isPlaying ? "Pause" : "Play";
+    });
+
+    document.getElementById('btn-step').addEventListener('click', () => {
+      if (!isPlaying) {
+        simulationStep();
+      }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', clearGrid);
+    document.getElementById('btn-seed').addEventListener('click', () => {
+      const activePreset = document.getElementById('preset-select').value;
+      if (presets[activePreset]) {
+        presets[activePreset].seed();
+      }
+    });
+
+    document.getElementById('brush-type').addEventListener('change', (e) => {
+      brushType = e.target.value;
+    });
+
+    document.getElementById('slider-brush').addEventListener('input', (e) => {
+      brushSize = parseInt(e.target.value);
+      document.getElementById('val-brush').innerText = brushSize;
+    });
+
+    // Preset loaders
+    function loadPreset(key) {
+      const p = presets[key];
+      if (!p) return;
+
+      mu = p.mu;
+      sigma = p.sigma;
+      dt = p.dt;
+      R = p.R;
+
+      // Update inputs
+      document.getElementById('slider-mu').value = mu;
+      document.getElementById('slider-sigma').value = sigma;
+      document.getElementById('slider-dt').value = dt;
+      document.getElementById('slider-R').value = R;
+
+      // Update text
+      document.getElementById('val-mu').innerText = mu.toFixed(3);
+      document.getElementById('val-sigma').innerText = sigma.toFixed(3);
+      document.getElementById('val-dt').innerText = dt.toFixed(2);
+      document.getElementById('val-R').innerText = R;
+
+      document.getElementById('preset-description').innerText = p.description;
+
+      precomputeKernel();
+      p.seed();
+    }
+
+    document.getElementById('preset-select').addEventListener('change', (e) => {
+      loadPreset(e.target.value);
+    });
+
+    // Sliders input hooks
+    document.getElementById('slider-mu').addEventListener('input', (e) => {
+      mu = parseFloat(e.target.value);
+      document.getElementById('val-mu').innerText = mu.toFixed(3);
+    });
+    document.getElementById('slider-sigma').addEventListener('input', (e) => {
+      sigma = parseFloat(e.target.value);
+      document.getElementById('val-sigma').innerText = sigma.toFixed(3);
+    });
+    document.getElementById('slider-dt').addEventListener('input', (e) => {
+      dt = parseFloat(e.target.value);
+      document.getElementById('val-dt').innerText = dt.toFixed(2);
+    });
+    document.getElementById('slider-R').addEventListener('input', (e) => {
+      R = parseInt(e.target.value);
+      document.getElementById('val-R').innerText = R;
+      precomputeKernel();
+    });
+
+    document.getElementById('slider-sweep').addEventListener('input', (e) => {
+      const s = parseFloat(e.target.value);
+      document.getElementById('val-sweep').innerText = s.toFixed(1) + "s";
+      sweepSpeed = GRID_SIZE / (s * 60);
+    });
+
+    document.getElementById('slider-volume').addEventListener('input', (e) => {
+      const vol = parseInt(e.target.value);
+      document.getElementById('val-volume').innerText = vol + "%";
+      if (masterGain) {
+        masterGain.gain.value = (vol / 100) * 0.15;
+      }
+    });
+
+    // Audio activation
+    document.getElementById('btn-audio').addEventListener('click', toggleAudio);
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        document.getElementById('btn-play').click();
+      }
+    });
+
+    // Boot execution
+    updatePaletteLUT('biotech');
+    loadPreset('orbium');
+    requestAnimationFrame(renderLoop);
+
+  </script>
+</body>
+</html>
