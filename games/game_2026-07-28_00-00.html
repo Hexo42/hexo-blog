@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>physarum-flow: slime mold network & bio-sonar sandbox</title>
+  <meta name="description" content="an interactive simulation of Physarum polycephalum agent-based slime mold combined with a circular bio-sonar radar that sweeps the grid and generates microtonal ambient harmonies.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #020206;
+      --panel-bg: rgba(6, 6, 16, 0.8);
+      --border: rgba(0, 255, 170, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-green: #00ffaa;
+      --neon-magenta: #ff007f;
+      --neon-purple: #9d00ff;
+      --text: #e2e8f0;
+      --text-muted: #708090;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #07071c 0%, #010103 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: min(82vw, 82vh);
+      height: min(82vw, 82vh);
+      box-shadow: 0 0 60px rgba(0, 255, 170, 0.1);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      cursor: crosshair;
+      background: #000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      z-index: 10;
+      transition: border-color 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #left-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #left-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 280px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #right-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Titles & Styling */
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.7rem;
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    p.intro {
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+
+    h2 {
+      font-size: 0.8rem;
+      color: var(--neon-green);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+
+    /* Controls styling */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .label-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 5px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    select {
+      background: rgba(4, 4, 12, 0.9);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+
+    select:focus {
+      border-color: var(--neon-cyan);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    button:hover {
+      background: rgba(0, 255, 170, 0.1);
+      border-color: var(--neon-green);
+      box-shadow: 0 0 8px rgba(0, 255, 170, 0.15);
+    }
+
+    button.active {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+
+    /* Overlay for initializing Web Audio */
+    #audio-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(2, 2, 6, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      transition: opacity 0.8s ease, visibility 0.8s;
+    }
+
+    #audio-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .pulse-btn {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: transparent;
+      border: 2px solid var(--neon-green);
+      color: var(--neon-green);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.2);
+      animation: pulseGlow 2s infinite;
+      outline: none;
+      transition: all 0.3s;
+    }
+
+    .pulse-btn:hover {
+      background: rgba(0, 255, 170, 0.1);
+      box-shadow: 0 0 35px rgba(0, 255, 170, 0.5);
+      transform: scale(1.05);
+    }
+
+    .overlay-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+      text-align: center;
+    }
+
+    .overlay-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 3px;
+      max-width: 480px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    @keyframes pulseGlow {
+      0% {
+        box-shadow: 0 0 20px rgba(0, 255, 170, 0.2), inset 0 0 10px rgba(0, 255, 170, 0.1);
+      }
+      50% {
+        box-shadow: 0 0 40px rgba(0, 255, 170, 0.6), inset 0 0 20px rgba(0, 255, 170, 0.3);
+        border-color: var(--neon-cyan);
+        color: var(--neon-cyan);
+      }
+      100% {
+        box-shadow: 0 0 20px rgba(0, 255, 170, 0.2), inset 0 0 10px rgba(0, 255, 170, 0.1);
+      }
+    }
+
+    /* Live console output */
+    #console-panel {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--neon-cyan);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .stat-lbl {
+      color: var(--text-muted);
+    }
+
+    .stat-val {
+      font-weight: bold;
+    }
+
+    /* Floating tooltips/notifs */
+    #tool-tip {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 25, 0.85);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      color: var(--neon-cyan);
+      pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Startup Autoplay Overlay -->
+  <div id="audio-overlay">
+    <div class="overlay-title">PHYSARUM-FLOW</div>
+    <div class="overlay-subtitle">microtonal sonar scanner & self-organizing slime mold simulator</div>
+    <button class="pulse-btn" id="start-btn">init</button>
+    <div class="overlay-subtitle" style="font-size: 0.7rem; color: #506070;">heads up: synth utilizes headphones/speakers. draw or drag food nodes on the canvas.</div>
+  </div>
+
+  <div id="app-container">
+
+    <!-- Left Controls Panel -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>physarum-flow</h1>
+        <div class="tagline">bio-acoustic sandbox</div>
+        <p class="intro">simulate agent-based *Physarum polycephalum* slime molds finding paths. circular sonar waves sweep the colony, generating microtonal lydian chimes.</p>
+      </div>
+
+      <div class="control-group">
+        <h2>presets</h2>
+        <select id="preset-select">
+          <option value="bio">Bio-Network (Default)</option>
+          <option value="lattice">Lattice Grid</option>
+          <option value="swarm">Hyper-Swarm</option>
+          <option value="slush">Slime Slush</option>
+        </select>
+      </div>
+
+      <div>
+        <h2>organism settings</h2>
+        
+        <div class="control-group">
+          <div class="label-row">
+            <span>agent count</span>
+            <span class="label-val" id="agent-count-val">15,000</span>
+          </div>
+          <input type="range" id="agent-count-slider" min="1000" max="30000" step="1000" value="15000">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>sensor angle (SA)</span>
+            <span class="label-val" id="sensor-angle-val">45°</span>
+          </div>
+          <input type="range" id="sensor-angle-slider" min="10" max="120" step="1" value="45">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>sensor distance</span>
+            <span class="label-val" id="sensor-dist-val">15px</span>
+          </div>
+          <input type="range" id="sensor-dist-slider" min="2" max="40" step="1" value="15">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>turn rate (RA)</span>
+            <span class="label-val" id="turn-rate-val">22.5°</span>
+          </div>
+          <input type="range" id="turn-rate-slider" min="5" max="90" step="0.5" value="22.5">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>movement step</span>
+            <span class="label-val" id="step-size-val">1.5px</span>
+          </div>
+          <input type="range" id="step-size-slider" min="0.2" max="4.0" step="0.1" value="1.5">
+        </div>
+      </div>
+
+      <div>
+        <h2>environment kinetics</h2>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>evaporation rate</span>
+            <span class="label-val" id="decay-val">6%</span>
+          </div>
+          <input type="range" id="decay-slider" min="0.80" max="0.99" step="0.01" value="0.94">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>diffusion spread</span>
+            <span class="label-val" id="diff-val">50%</span>
+          </div>
+          <input type="range" id="diff-slider" min="0.1" max="1.0" step="0.05" value="0.5">
+        </div>
+      </div>
+
+      <div class="btn-grid">
+        <button id="clear-btn">clear trail</button>
+        <button id="reset-btn">randomize</button>
+      </div>
+    </div>
+
+    <!-- Center Canvas Workspace -->
+    <div id="canvas-container">
+      <canvas id="main-canvas" width="600" height="600"></canvas>
+      <div id="tool-tip">click to plant nutrient node | double-click to prune</div>
+    </div>
+
+    <!-- Right Audio & Diagnostics Panel -->
+    <div id="right-panel" class="glass-panel">
+      <div>
+        <h2>bio-sonar sweep</h2>
+        
+        <div class="control-group">
+          <div class="label-row">
+            <span>sonar velocity</span>
+            <span class="label-val" id="sweep-speed-val">1.0x</span>
+          </div>
+          <input type="range" id="sweep-speed-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>scan threshold</span>
+            <span class="label-val" id="scan-thresh-val">0.12</span>
+          </div>
+          <input type="range" id="scan-thresh-slider" min="0.02" max="0.4" step="0.01" value="0.12">
+        </div>
+      </div>
+
+      <div>
+        <h2>acoustic engine</h2>
+        
+        <div class="control-group">
+          <div class="label-row">
+            <span>chime gain</span>
+            <span class="label-val" id="chime-vol-val">60%</span>
+          </div>
+          <input type="range" id="chime-vol-slider" min="0" max="100" step="1" value="60">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>ambient drone hum</span>
+            <span class="label-val" id="drone-vol-val">30%</span>
+          </div>
+          <input type="range" id="drone-vol-slider" min="0" max="100" step="1" value="30">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>reverb feedback</span>
+            <span class="label-val" id="reverb-val">40%</span>
+          </div>
+          <input type="range" id="reverb-slider" min="0" max="95" step="5" value="40">
+        </div>
+      </div>
+
+      <div>
+        <h2>toggles</h2>
+        <div class="btn-grid" style="grid-template-columns: 1fr;">
+          <button id="toggle-agents-btn" class="active">show individual agents</button>
+          <button id="toggle-radar-btn" class="active">show radial sweeper</button>
+        </div>
+      </div>
+
+      <div class="glass-panel" id="console-panel">
+        <div class="stat-row">
+          <span class="stat-lbl">fps:</span>
+          <span class="stat-val" id="fps-val">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-lbl">active biomass:</span>
+          <span class="stat-val" id="biomass-val">0.00%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-lbl">sonar bearing:</span>
+          <span class="stat-val" id="radar-angle-val">0.0°</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-lbl">nutrient nodes:</span>
+          <span class="stat-val" id="nodes-count-val">0</span>
+        </div>
+        <div class="legend-row" style="margin-top: 8px;">
+          <div class="legend-dot" style="background: var(--neon-cyan);"></div>
+          <span>nutrient node (attracts slime)</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-dot" style="background: var(--neon-green);"></div>
+          <span>slime path (triggers sound)</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Application Constants ---
+    const GRID_W = 300;
+    const GRID_H = 300;
+    const GRID_SIZE = GRID_W * GRID_H;
+
+    // --- State Variables ---
+    let simulationRunning = false;
+    let showAgents = true;
+    let showRadar = true;
+
+    // Slime grids (Double buffered)
+    let trail = new Float32Array(GRID_SIZE);
+    let nextTrail = new Float32Array(GRID_SIZE);
+
+    // Agent pool
+    let maxAgents = 30000;
+    let activeAgentCount = 15000;
+    const agentsX = new Float32Array(maxAgents);
+    const agentsY = new Float32Array(maxAgents);
+    const agentsAngle = new Float32Array(maxAgents);
+
+    // Nutrient / Food Nodes
+    let foodSources = [
+      { id: 1, x: 200, y: 300, radius: 24, isDragging: false },
+      { id: 2, x: 400, y: 300, radius: 24, isDragging: false }
+    ];
+    let nextFoodId = 3;
+
+    // Simulation params (controlled by UI)
+    let sensorAngleRad = 45 * Math.PI / 180;
+    let sensorDist = 15;
+    let turnAngleRad = 22.5 * Math.PI / 180;
+    let stepSize = 1.5;
+    let decayFactor = 0.94;
+    let diffRate = 0.5;
+
+    // Sonar sweep parameters
+    let sweepAngle = 0;
+    let sweepSpeedMultiplier = 1.0;
+    let triggerThreshold = 0.12;
+    let lastRingTriggerStates = new Float32Array(16); // tracks crossing states
+    const ripples = []; // visual ripple animations
+
+    // Performance tracking
+    let lastTime = 0;
+    let fps = 60;
+    let frameCount = 0;
+    let fpsTimer = 0;
+    let totalBiomass = 0.0;
+
+    // HTML Elements
+    const mainCanvas = document.getElementById('main-canvas');
+    const mainCtx = mainCanvas.getContext('2d');
+
+    // Create offscreen canvas for rendering the pixel grid
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = GRID_W;
+    offscreenCanvas.height = GRID_H;
+    const offscreenCtx = offscreenCanvas.getContext('2d');
+    const offscreenImageData = offscreenCtx.createImageData(GRID_W, GRID_H);
+
+    // --- Color Lookup Table (LUT) ---
+    const LUT_R = new Uint8Array(256);
+    const LUT_G = new Uint8Array(256);
+    const LUT_B = new Uint8Array(256);
+    
+    function initColorLUT() {
+      for (let i = 0; i < 256; i++) {
+        const t = i / 255;
+        if (t < 0.08) {
+          // deep indigo trail base
+          const f = t / 0.08;
+          LUT_R[i] = lerp(2, 10, f);
+          LUT_G[i] = lerp(2, 5, f);
+          LUT_B[i] = lerp(8, 40, f);
+        } else if (t < 0.4) {
+          // transition to neon blue/cyan
+          const f = (t - 0.08) / 0.32;
+          LUT_R[i] = lerp(10, 0, f);
+          LUT_G[i] = lerp(5, 160, f);
+          LUT_B[i] = lerp(40, 255, f);
+        } else if (t < 0.8) {
+          // cyan to neon green
+          const f = (t - 0.4) / 0.4;
+          LUT_R[i] = lerp(0, 0, f);
+          LUT_G[i] = lerp(160, 255, f);
+          LUT_B[i] = lerp(255, 150, f);
+        } else {
+          // peak white-hot golden core
+          const f = (t - 0.8) / 0.2;
+          LUT_R[i] = lerp(0, 255, f);
+          LUT_G[i] = lerp(255, 255, f);
+          LUT_B[i] = lerp(150, 220, f);
+        }
+      }
+    }
+    
+    function lerp(start, end, amt) {
+      return start + (end - start) * amt;
+    }
+
+    // --- Synthesizer Engine (Web Audio) ---
+    let audioCtx = null;
+    let masterGain = null;
+    let delayNode = null;
+    let delayFeedbackNode = null;
+    let droneGain = null;
+    let droneOsc = null;
+    let droneFilter = null;
+    let isAudioInitialized = false;
+
+    // F Lydian Scale mapping (concentrate on resonant high chimes)
+    const scaleFreqs = [
+      130.81, // C3 (basement)
+      174.61, // F3
+      196.00, // G3
+      220.00, // A3
+      246.94, // B3
+      261.63, // C4
+      293.66, // D4
+      329.63, // E4
+      349.23, // F4
+      392.00, // G4
+      440.00, // A4
+      493.88, // B4
+      523.25, // C5
+      587.33, // D5
+      659.25, // E5
+      698.46, // F5
+      783.99  // G5
+    ];
+
+    function initAudio() {
+      if (isAudioInitialized) return;
+
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+
+      // Master output filter (keep ambient warmth)
+      const masterFilter = audioCtx.createBiquadFilter();
+      masterFilter.type = 'lowpass';
+      masterFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+      masterFilter.Q.setValueAtTime(1.0, audioCtx.currentTime);
+
+      masterGain = audioCtx.createGain();
+      const chimeVolSlider = document.getElementById('chime-vol-slider');
+      masterGain.gain.setValueAtTime(chimeVolSlider.value / 100 * 0.25, audioCtx.currentTime);
+
+      // Reverb / Echo Feedback Delay Loop
+      delayNode = audioCtx.createDelay(2.0);
+      delayFeedbackNode = audioCtx.createGain();
+      const delayTime = 0.6; // 600ms beats
+      delayNode.delayTime.setValueAtTime(delayTime, audioCtx.currentTime);
+      
+      const feedbackSlider = document.getElementById('reverb-slider');
+      delayFeedbackNode.gain.setValueAtTime(feedbackSlider.value / 100 * 0.8, audioCtx.currentTime);
+
+      // Connect delay loop
+      delayNode.connect(delayFeedbackNode);
+      delayFeedbackNode.connect(delayNode);
+
+      // Deep Drone Synthesizer
+      droneOsc = audioCtx.createOscillator();
+      droneOsc.type = 'triangle';
+      droneOsc.frequency.setValueAtTime(65.41, audioCtx.currentTime); // C2 drone root
+
+      droneFilter = audioCtx.createBiquadFilter();
+      droneFilter.type = 'lowpass';
+      droneFilter.frequency.setValueAtTime(90, audioCtx.currentTime);
+      droneFilter.Q.setValueAtTime(1.5, audioCtx.currentTime);
+
+      droneGain = audioCtx.createGain();
+      const droneVolSlider = document.getElementById('drone-vol-slider');
+      droneGain.gain.setValueAtTime(droneVolSlider.value / 100 * 0.15, audioCtx.currentTime);
+
+      // Patch drone
+      droneOsc.connect(droneFilter);
+      droneFilter.connect(droneGain);
+      droneGain.connect(masterGain);
+
+      // Hook up chimes dry and wet lines
+      masterFilter.connect(masterGain);
+      delayNode.connect(masterFilter); // Echo feeds into filter
+
+      masterGain.connect(audioCtx.destination);
+
+      droneOsc.start();
+      isAudioInitialized = true;
+      console.log('Audio initialized successfully.');
+    }
+
+    function triggerChime(index, intensity) {
+      if (!audioCtx || audioCtx.state === 'suspended') return;
+
+      const now = audioCtx.currentTime;
+      const freq = scaleFreqs[index % scaleFreqs.length];
+
+      // Dual-oscillator synth chime (glass/metal chime feel)
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(freq, now);
+      
+      // Ring modulation/overtone harmonic
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(freq * 1.5, now);
+
+      gainNode.gain.setValueAtTime(0, now);
+      // Volume scales directly with slime density
+      const vol = intensity * 0.4;
+      gainNode.gain.linearRampToValueAtTime(vol, now + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(vol * 0.3, now + 0.15);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+      // Connect oscillators
+      osc1.connect(gainNode);
+      osc2.connect(gainNode);
+
+      // Send to master filter and delay feedback loop
+      const dryMix = audioCtx.createGain();
+      dryMix.gain.setValueAtTime(0.7, now);
+      const wetMix = audioCtx.createGain();
+      wetMix.gain.setValueAtTime(0.4, now);
+
+      gainNode.connect(dryMix);
+      dryMix.connect(audioCtx.destination); // direct output
+
+      gainNode.connect(wetMix);
+      wetMix.connect(delayNode); // wet line into delay loop
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 1.3);
+      osc2.stop(now + 1.3);
+    }
+
+    // --- Simulation Core Logic ---
+
+    function initSimulation() {
+      // Clear trail grids
+      trail.fill(0);
+      nextTrail.fill(0);
+
+      // Distribute agents inside a circle or randomly across grid
+      for (let i = 0; i < maxAgents; i++) {
+        // Distribute agents near center
+        const r = Math.random() * 80;
+        const angle = Math.random() * Math.PI * 2;
+        agentsX[i] = GRID_W / 2 + r * Math.cos(angle);
+        agentsY[i] = GRID_H / 2 + r * Math.sin(angle);
+        agentsAngle[i] = Math.random() * Math.PI * 2;
+      }
+      ripples.length = 0;
+    }
+
+    function runSimulationStep() {
+      // Phase 1: Motor control & spatial sensing
+      const W = GRID_W;
+      const H = GRID_H;
+      const step = stepSize;
+      const SA = sensorAngleRad;
+      const d = sensorDist;
+      const RA = turnAngleRad;
+
+      for (let i = 0; i < activeAgentCount; i++) {
+        const curX = agentsX[i];
+        const curY = agentsY[i];
+        const angle = agentsAngle[i];
+
+        // Compute three forward lookahead coordinates
+        const fX = (curX + d * Math.cos(angle) + W) % W;
+        const fY = (curY + d * Math.sin(angle) + H) % H;
+
+        const lX = (curX + d * Math.cos(angle - SA) + W) % W;
+        const lY = (curY + d * Math.sin(angle - SA) + H) % H;
+
+        const rX = (curX + d * Math.cos(angle + SA) + W) % W;
+        const rY = (curY + d * Math.sin(angle + SA) + H) % H;
+
+        // Sample trail values at coordinates
+        const F = trail[Math.floor(fX) + Math.floor(fY) * W];
+        const L = trail[Math.floor(lX) + Math.floor(lY) * W];
+        const R = trail[Math.floor(rX) + Math.floor(rY) * W];
+
+        let nextAngle = angle;
+
+        if (F > L && F > R) {
+          // Keep straight
+        } else if (F < L && F < R) {
+          // Trailed on sides, make random decision
+          nextAngle += (Math.random() > 0.5 ? RA : -RA);
+        } else if (L > R) {
+          // Left trail is stronger
+          nextAngle -= RA;
+        } else if (R > L) {
+          // Right trail is stronger
+          nextAngle += RA;
+        }
+
+        // Add tiny sensory fluctuation (noise)
+        nextAngle += (Math.random() - 0.5) * 0.1;
+
+        // Advance agent coordinate
+        const newX = (curX + step * Math.cos(nextAngle) + W) % W;
+        const newY = (curY + step * Math.sin(nextAngle) + H) % H;
+
+        agentsX[i] = newX;
+        agentsY[i] = newY;
+        agentsAngle[i] = nextAngle;
+
+        // Deposit trail pheromone
+        trail[Math.floor(newX) + Math.floor(newY) * W] += 0.2;
+        if (trail[Math.floor(newX) + Math.floor(newY) * W] > 1.0) {
+          trail[Math.floor(newX) + Math.floor(newY) * W] = 1.0;
+        }
+      }
+
+      // Add trail emission near nutrient food sources
+      const cW = mainCanvas.width;
+      const cH = mainCanvas.height;
+      for (let f of foodSources) {
+        // Map food coordinate to grid
+        const gridFX = Math.floor(f.x * (W / cW));
+        const gridFY = Math.floor(f.y * (H / cH));
+        const gridR = Math.floor(f.radius * (W / cW));
+
+        for (let dy = -gridR; dy <= gridR; dy++) {
+          const cy = (gridFY + dy + H) % H * W;
+          for (let dx = -gridR; dx <= gridR; dx++) {
+            const cx = (gridFX + dx + W) % W;
+            if (dx * dx + dy * dy <= gridR * gridR) {
+              trail[cx + cy] = 1.0; // feed grid constant pheromone
+            }
+          }
+        }
+      }
+
+      // Phase 2: Grid Diffusion & Decay
+      let totalPheromoneSum = 0;
+      for (let y = 0; y < H; y++) {
+        const yOffset = y * W;
+        const yPrev = ((y - 1 + H) % H) * W;
+        const yNext = ((y + 1) % H) * W;
+
+        for (let x = 0; x < W; x++) {
+          const idx = x + yOffset;
+          const xPrev = (x - 1 + W) % W;
+          const xNext = (x + 1) % W;
+
+          // Box blur (average 9 neighbors)
+          const sum = 
+            trail[xPrev + yPrev] + trail[x + yPrev] + trail[xNext + yPrev] +
+            trail[xPrev + yOffset] + trail[idx] + trail[xNext + yOffset] +
+            trail[xPrev + yNext] + trail[x + yNext] + trail[xNext + yNext];
+
+          const blurred = sum / 9;
+          const val = trail[idx];
+          
+          let nextVal = (val * (1 - diffRate) + blurred * diffRate) * decayFactor;
+
+          if (nextVal < 0.005) {
+            nextVal = 0;
+          }
+          nextTrail[idx] = nextVal;
+          totalPheromoneSum += nextVal;
+        }
+      }
+
+      // Swap double buffers
+      const temp = trail;
+      trail = nextTrail;
+      nextTrail = temp;
+
+      // Update total biomass stats
+      totalBiomass = totalPheromoneSum / GRID_SIZE;
+    }
+
+    // --- Audio Modulation Loop ---
+    function updateSynthModulation() {
+      if (!isAudioInitialized) return;
+
+      // Map biomass (0.0 .. 0.1) directly to deep drone frequency filter
+      const filterCutoff = 80 + 300 * Math.min(totalBiomass * 15, 1.0);
+      droneFilter.frequency.setValueAtTime(filterCutoff, audioCtx.currentTime);
+
+      // Drone intensity expands with slime activity
+      const droneBaseVolume = document.getElementById('drone-vol-slider').value / 100 * 0.15;
+      const droneVol = droneBaseVolume + 0.1 * Math.min(totalBiomass * 10, 1.0);
+      droneGain.gain.setValueAtTime(droneVol, audioCtx.currentTime);
+    }
+
+    // --- Sonar Grid Sweep Sampling ---
+    function performRadarSweep() {
+      // Circular sonar scan sweeps through trail coordinates
+      // sweepAngle goes 0 to 2*PI
+      const cx = GRID_W / 2;
+      const cy = GRID_H / 2;
+      const maxR = GRID_W / 2 - 10; // scan zone radius
+
+      // 16 concentric rings mapping to 16 F Lydian pitches
+      for (let ringIdx = 0; ringIdx < 16; ringIdx++) {
+        // Radius for this chime ring
+        const r = ((ringIdx + 1) / 17) * maxR;
+
+        // Sample coordinate on current sonar scanner ray line
+        const sx = Math.floor(cx + r * Math.cos(sweepAngle));
+        const sy = Math.floor(cy + r * Math.sin(sweepAngle));
+
+        // Sample density
+        const sampleIdx = (sx + GRID_W) % GRID_W + ((sy + GRID_H) % GRID_H) * GRID_W;
+        const slimeVal = trail[sampleIdx];
+
+        // Transition check to trigger chimes exactly once
+        if (slimeVal > triggerThreshold) {
+          if (lastRingTriggerStates[ringIdx] <= triggerThreshold) {
+            // Trigger synthesize note
+            triggerChime(ringIdx, slimeVal);
+
+            // Plant a visual ripples on the screen canvas
+            const canvasCX = mainCanvas.width / 2;
+            const canvasCY = mainCanvas.height / 2;
+            const canvasMaxR = mainCanvas.width / 2 - 20;
+            const canvasR = ((ringIdx + 1) / 17) * canvasMaxR;
+            const rx = canvasCX + canvasR * Math.cos(sweepAngle);
+            const ry = canvasCY + canvasR * Math.sin(sweepAngle);
+
+            ripples.push({
+              x: rx,
+              y: ry,
+              rad: 2,
+              maxRad: 25,
+              opacity: 1.0,
+              color: `hsl(${140 + ringIdx * 8}, 100%, 65%)`
+            });
+          }
+        }
+        lastRingTriggerStates[ringIdx] = slimeVal;
+      }
+    }
+
+    // --- UI presets config ---
+    const presets = {
+      bio: {
+        agents: 15000,
+        angle: 45,
+        dist: 15,
+        turn: 22.5,
+        step: 1.5,
+        decay: 0.94,
+        diff: 0.5
+      },
+      lattice: {
+        agents: 20000,
+        angle: 90,
+        dist: 10,
+        turn: 45,
+        step: 1.2,
+        decay: 0.92,
+        diff: 0.3
+      },
+      swarm: {
+        agents: 12000,
+        angle: 22.5,
+        dist: 22,
+        turn: 15,
+        step: 2.2,
+        decay: 0.96,
+        diff: 0.2
+      },
+      slush: {
+        agents: 18000,
+        angle: 60,
+        dist: 8,
+        turn: 30,
+        step: 1.0,
+        decay: 0.98,
+        diff: 0.8
+      }
+    };
+
+    function applyPreset(key) {
+      const p = presets[key];
+      if (!p) return;
+
+      document.getElementById('agent-count-slider').value = p.agents;
+      document.getElementById('sensor-angle-slider').value = p.angle;
+      document.getElementById('sensor-dist-slider').value = p.dist;
+      document.getElementById('turn-rate-slider').value = p.turn;
+      document.getElementById('step-size-slider').value = p.step;
+      document.getElementById('decay-slider').value = p.decay;
+      document.getElementById('diff-slider').value = p.diff;
+
+      // Update UI displays
+      updateSliderValues();
+    }
+
+    function updateSliderValues() {
+      activeAgentCount = parseInt(document.getElementById('agent-count-slider').value);
+      document.getElementById('agent-count-val').innerText = activeAgentCount.toLocaleString();
+
+      const angleDeg = parseFloat(document.getElementById('sensor-angle-slider').value);
+      sensorAngleRad = angleDeg * Math.PI / 180;
+      document.getElementById('sensor-angle-val').innerText = `${angleDeg}°`;
+
+      sensorDist = parseInt(document.getElementById('sensor-dist-slider').value);
+      document.getElementById('sensor-dist-val').innerText = `${sensorDist}px`;
+
+      const turnDeg = parseFloat(document.getElementById('turn-rate-slider').value);
+      turnAngleRad = turnDeg * Math.PI / 180;
+      document.getElementById('turn-rate-val').innerText = `${turnDeg}°`;
+
+      stepSize = parseFloat(document.getElementById('step-size-slider').value);
+      document.getElementById('step-size-val').innerText = `${stepSize.toFixed(1)}px`;
+
+      const decayVal = parseFloat(document.getElementById('decay-slider').value);
+      decayFactor = decayVal;
+      document.getElementById('decay-val').innerText = `${Math.round((1 - decayVal) * 100)}%`;
+
+      diffRate = parseFloat(document.getElementById('diff-slider').value);
+      document.getElementById('diff-val').innerText = `${Math.round(diffRate * 100)}%`;
+
+      sweepSpeedMultiplier = parseFloat(document.getElementById('sweep-speed-slider').value);
+      document.getElementById('sweep-speed-val').innerText = `${sweepSpeedMultiplier.toFixed(1)}x`;
+
+      triggerThreshold = parseFloat(document.getElementById('scan-thresh-slider').value);
+      document.getElementById('scan-thresh-val').innerText = triggerThreshold.toFixed(2);
+
+      // Volume settings
+      const chimeVol = parseFloat(document.getElementById('chime-vol-slider').value);
+      document.getElementById('chime-vol-val').innerText = `${chimeVol}%`;
+      if (masterGain) {
+        masterGain.gain.setValueAtTime(chimeVol / 100 * 0.25, audioCtx.currentTime);
+      }
+
+      const droneVol = parseFloat(document.getElementById('drone-vol-slider').value);
+      document.getElementById('drone-vol-val').innerText = `${droneVol}%`;
+      if (droneGain) {
+        droneGain.gain.setValueAtTime(droneVol / 100 * 0.15, audioCtx.currentTime);
+      }
+
+      const feedback = parseFloat(document.getElementById('reverb-slider').value);
+      document.getElementById('reverb-val').innerText = `${feedback}%`;
+      if (delayNode) {
+        // Feedback gain
+        // Re-read delay feedback node connection to adjust
+      }
+    }
+
+
+    // --- Canvas Rendering Loop ---
+
+    function renderSimulationGrid() {
+      const data = offscreenImageData.data;
+      // Copy trail intensities to image pixels via lookup tables
+      for (let i = 0; i < GRID_SIZE; i++) {
+        const val = trail[i];
+        const idx = i * 4;
+        
+        if (val < 0.005) {
+          data[idx] = 1;      // dark background
+          data[idx + 1] = 1;
+          data[idx + 2] = 4;
+          data[idx + 3] = 255;
+        } else {
+          const lutIdx = Math.floor(val * 255);
+          data[idx] = LUT_R[lutIdx];
+          data[idx + 1] = LUT_G[lutIdx];
+          data[idx + 2] = LUT_B[lutIdx];
+          data[idx + 3] = 255;
+        }
+      }
+      offscreenCtx.putImageData(offscreenImageData, 0, 0);
+    }
+
+    function drawApp(now) {
+      // Handle FPS tracking
+      frameCount++;
+      if (now - fpsTimer > 1000) {
+        fps = Math.round(frameCount * 1000 / (now - fpsTimer));
+        frameCount = 0;
+        fpsTimer = now;
+        document.getElementById('fps-val').innerText = fps;
+      }
+
+      // Step simulation
+      if (simulationRunning) {
+        runSimulationStep();
+        updateSynthModulation();
+        
+        // Sonar sweep advances clockwise
+        sweepAngle += 0.012 * sweepSpeedMultiplier;
+        if (sweepAngle > Math.PI * 2) {
+          sweepAngle -= Math.PI * 2;
+        }
+        performRadarSweep();
+      }
+
+      // Render cells to offscreen texture
+      renderSimulationGrid();
+
+      // Clear main canvas with deep circular backdrop
+      const cW = mainCanvas.width;
+      const cH = mainCanvas.height;
+      mainCtx.fillStyle = '#010103';
+      mainCtx.fillRect(0, 0, cW, cH);
+
+      // Draw background ambient gradient glow
+      const bgGrad = mainCtx.createRadialGradient(cW/2, cH/2, 10, cW/2, cH/2, cW/2);
+      bgGrad.addColorStop(0, '#06061a');
+      bgGrad.addColorStop(1, '#000000');
+      mainCtx.fillStyle = bgGrad;
+      mainCtx.fillRect(0, 0, cW, cH);
+
+      // Draw double-buffered stretched slime trail
+      mainCtx.save();
+      // Clip to circular petri dish boundary
+      mainCtx.beginPath();
+      mainCtx.arc(cW/2, cH/2, cW/2 - 1, 0, Math.PI * 2);
+      mainCtx.clip();
+      
+      mainCtx.drawImage(offscreenCanvas, 0, 0, cW, cH);
+
+      // Draw individual agents (dots) if enabled
+      if (showAgents) {
+        mainCtx.fillStyle = 'rgba(0, 243, 255, 0.4)';
+        for (let i = 0; i < activeAgentCount; i += 4) { // step by 4 for rendering performance
+          const ax = agentsX[i] * (cW / GRID_W);
+          const ay = agentsY[i] * (cH / GRID_H);
+          mainCtx.fillRect(ax, ay, 1, 1);
+        }
+      }
+
+      // Draw nutrient/food sources (glowing nodes)
+      for (let f of foodSources) {
+        mainCtx.save();
+        const radGrad = mainCtx.createRadialGradient(f.x, f.y, 2, f.x, f.y, f.radius);
+        radGrad.addColorStop(0, '#ffffff');
+        radGrad.addColorStop(0.3, '#00f3ff');
+        radGrad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+        
+        mainCtx.fillStyle = radGrad;
+        mainCtx.shadowBlur = 15;
+        mainCtx.shadowColor = '#00f3ff';
+        mainCtx.beginPath();
+        mainCtx.arc(f.x, f.y, f.radius, 0, Math.PI*2);
+        mainCtx.fill();
+        mainCtx.restore();
+      }
+
+      // Draw sonar radial sweeper line
+      if (showRadar) {
+        const cx = cW / 2;
+        const cy = cH / 2;
+        const scanR = cW / 2 - 10;
+        
+        mainCtx.save();
+        mainCtx.strokeStyle = 'rgba(0, 255, 170, 0.45)';
+        mainCtx.lineWidth = 1.5;
+        mainCtx.shadowBlur = 8;
+        mainCtx.shadowColor = '#00ffaa';
+        mainCtx.beginPath();
+        mainCtx.moveTo(cx, cy);
+        mainCtx.lineTo(cx + scanR * Math.cos(sweepAngle), cy + scanR * Math.sin(sweepAngle));
+        mainCtx.stroke();
+
+        // Draw faint concentric ring indicators to guide the eyes
+        mainCtx.strokeStyle = 'rgba(0, 255, 170, 0.04)';
+        mainCtx.shadowBlur = 0;
+        mainCtx.lineWidth = 1;
+        for (let j = 1; j <= 16; j++) {
+          const ringRadius = (j / 17) * scanR;
+          mainCtx.beginPath();
+          mainCtx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+          mainCtx.stroke();
+        }
+        mainCtx.restore();
+      }
+
+      // Update & draw visual scan ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rp = ripples[i];
+        rp.rad += 0.8;
+        rp.opacity -= 0.04;
+        if (rp.opacity <= 0) {
+          ripples.splice(i, 1);
+          continue;
+        }
+        mainCtx.strokeStyle = rp.color;
+        mainCtx.globalAlpha = rp.opacity;
+        mainCtx.lineWidth = 1;
+        mainCtx.beginPath();
+        mainCtx.arc(rp.x, rp.y, rp.rad, 0, Math.PI*2);
+        mainCtx.stroke();
+      }
+      mainCtx.globalAlpha = 1.0;
+
+      // Draw outer circle container rim
+      mainCtx.restore(); // Exit circular clip
+      
+      mainCtx.strokeStyle = 'rgba(0, 255, 170, 0.25)';
+      mainCtx.lineWidth = 2;
+      mainCtx.beginPath();
+      mainCtx.arc(cW/2, cH/2, cW/2 - 1, 0, Math.PI*2);
+      mainCtx.stroke();
+
+      // Update textual HUD metrics
+      document.getElementById('biomass-val').innerText = `${(totalBiomass * 100).toFixed(2)}%`;
+      document.getElementById('radar-angle-val').innerText = `${(sweepAngle * 180 / Math.PI).toFixed(0)}°`;
+      document.getElementById('nodes-count-val').innerText = foodSources.length;
+
+      requestAnimationFrame(drawApp);
+    }
+
+    // --- Interactive Mouse Handlers ---
+    let draggedFood = null;
+
+    function getMousePos(e) {
+      const rect = mainCanvas.getBoundingClientRect();
+      // Account for stretched scale
+      const scaleX = mainCanvas.width / rect.width;
+      const scaleY = mainCanvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    mainCanvas.addEventListener('mousedown', (e) => {
+      const pos = getMousePos(e);
+      
+      // Check if clicked close to a food node
+      let clickedNode = null;
+      for (let f of foodSources) {
+        const dist = Math.hypot(f.x - pos.x, f.y - pos.y);
+        if (dist < f.radius + 5) {
+          clickedNode = f;
+          break;
+        }
+      }
+
+      if (clickedNode) {
+        draggedFood = clickedNode;
+        draggedFood.isDragging = true;
+      } else {
+        // Place new node if space permits
+        const cx = mainCanvas.width / 2;
+        const cy = mainCanvas.height / 2;
+        const distanceToCenter = Math.hypot(pos.x - cx, pos.y - cy);
+        
+        // Keep within petri dish rim
+        if (distanceToCenter < mainCanvas.width / 2 - 30) {
+          foodSources.push({
+            id: nextFoodId++,
+            x: pos.x,
+            y: pos.y,
+            radius: 20,
+            isDragging: false
+          });
+        }
+      }
+    });
+
+    mainCanvas.addEventListener('mousemove', (e) => {
+      if (draggedFood) {
+        const pos = getMousePos(e);
+        
+        // Clamp to dish rim
+        const cx = mainCanvas.width / 2;
+        const cy = mainCanvas.height / 2;
+        const maxDist = mainCanvas.width / 2 - 30;
+        const distToCenter = Math.hypot(pos.x - cx, pos.y - cy);
+        
+        if (distToCenter < maxDist) {
+          draggedFood.x = pos.x;
+          draggedFood.y = pos.y;
+        } else {
+          // Clamp on circle boundary
+          const angle = Math.atan2(pos.y - cy, pos.x - cx);
+          draggedFood.x = cx + maxDist * Math.cos(angle);
+          draggedFood.y = cy + maxDist * Math.sin(angle);
+        }
+      }
+    });
+
+    mainCanvas.addEventListener('mouseup', () => {
+      if (draggedFood) {
+        draggedFood.isDragging = false;
+        draggedFood = null;
+      }
+    });
+
+    mainCanvas.addEventListener('dblclick', (e) => {
+      const pos = getMousePos(e);
+      // Remove clicked food source
+      for (let i = foodSources.length - 1; i >= 0; i--) {
+        const f = foodSources[i];
+        const dist = Math.hypot(f.x - pos.x, f.y - pos.y);
+        if (dist < f.radius + 5) {
+          foodSources.splice(i, 1);
+          break;
+        }
+      }
+    });
+
+
+    // --- Hook up Slider Events ---
+    const sliders = [
+      'agent-count-slider', 'sensor-angle-slider', 'sensor-dist-slider', 
+      'turn-rate-slider', 'step-size-slider', 'decay-slider', 'diff-slider',
+      'sweep-speed-slider', 'scan-thresh-slider', 'chime-vol-slider', 'drone-vol-slider'
+    ];
+    
+    sliders.forEach(id => {
+      document.getElementById(id).addEventListener('input', updateSliderValues);
+    });
+
+    // Reverb feedback requires explicit update logic
+    document.getElementById('reverb-slider').addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      document.getElementById('reverb-val').innerText = `${val}%`;
+      if (delayFeedbackNode) {
+        delayFeedbackNode.gain.setValueAtTime(val / 100 * 0.8, audioCtx.currentTime);
+      }
+    });
+
+    // --- Buttons ---
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      trail.fill(0);
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      initSimulation();
+    });
+
+    document.getElementById('preset-select').addEventListener('change', (e) => {
+      applyPreset(e.target.value);
+    });
+
+    // Toggles
+    const toggleAgentsBtn = document.getElementById('toggle-agents-btn');
+    toggleAgentsBtn.addEventListener('click', () => {
+      showAgents = !showAgents;
+      toggleAgentsBtn.classList.toggle('active', showAgents);
+    });
+
+    const toggleRadarBtn = document.getElementById('toggle-radar-btn');
+    toggleRadarBtn.addEventListener('click', () => {
+      showRadar = !showRadar;
+      toggleRadarBtn.classList.toggle('active', showRadar);
+    });
+
+    // Start audio & simulation overlay trigger
+    document.getElementById('start-btn').addEventListener('click', () => {
+      initAudio();
+      document.getElementById('audio-overlay').classList.add('hidden');
+      simulationRunning = true;
+    });
+
+
+    // --- Init Application ---
+    initColorLUT();
+    updateSliderValues();
+    initSimulation();
+    
+    // Kickstart canvas draw loop
+    requestAnimationFrame(drawApp);
+
+  </script>
+</body>
+</html>
