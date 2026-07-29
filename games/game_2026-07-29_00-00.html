@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>phonon-flow: crystal lattice dynamics & acoustic phonon sandbox</title>
+  <meta name="description" content="an interactive solid-state physics simulation of crystal lattice dynamics, phonons, and bandgaps mapped to an ambient resonant audio synthesizer.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #03030c;
+      --panel-bg: rgba(6, 6, 20, 0.85);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #00ffaa;
+      --neon-yellow: #ffdd00;
+      --text: #e2e8f0;
+      --text-muted: #708090;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #0a0a28 0%, #020205 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(85vw, 85vh);
+      height: min(85vw, 85vh);
+      box-shadow: 0 0 60px rgba(0, 243, 255, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      z-index: 10;
+      transition: border-color 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 330px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #left-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #left-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #right-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.7rem;
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    p.intro {
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    h2 {
+      font-size: 0.8rem;
+      color: var(--neon-magenta);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+
+    /* Control Groups */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .label-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    /* Buttons & Selectors */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.08);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.15);
+    }
+
+    button.active {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+    }
+
+    .selector {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .select-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      font-size: 0.75rem;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-right: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    .tab:last-child {
+      border-right: none;
+    }
+
+    .tab.active {
+      background: rgba(0, 243, 255, 0.12);
+      color: var(--neon-cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+    }
+
+    /* Audio Switch */
+    #audio-switch {
+      background: rgba(255, 0, 127, 0.05);
+      border: 1px solid rgba(255, 0, 127, 0.2);
+      color: var(--neon-magenta);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 12px;
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 5px;
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.05);
+    }
+
+    #audio-switch:hover {
+      background: rgba(255, 0, 127, 0.1);
+      border-color: rgba(255, 0, 127, 0.4);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+    }
+
+    #audio-switch.active {
+      background: rgba(0, 255, 170, 0.15);
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.3);
+    }
+
+    /* Spectrogram Box */
+    #spectrogram-box {
+      width: 100%;
+      height: 120px;
+      background: #020205;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    canvas#spectrogram-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Active Tool Overlay */
+    #tool-bar {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      background: rgba(5, 5, 15, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      padding: 8px;
+      border-radius: 12px;
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+
+    #tool-bar button {
+      padding: 8px 14px;
+      font-size: 0.75rem;
+    }
+
+    /* Probe Indicators */
+    .probe-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 5px;
+    }
+
+    .probe-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .probe-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Hidden presets descriptions */
+    .preset-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+
+  <!-- LEFT PANEL: Configuration & Information -->
+  <div id="left-panel" class="glass-panel">
+    <div>
+      <h1>phonon-flow</h1>
+      <div class="tagline">crystal lattice & acoustic waves</div>
+      <p class="intro">an interactive physical simulator of solid-state atomic vibrations, elastic dispersion, and quantum lattice excitations mapped to a microtonal audio synthesizer.</p>
+    </div>
+
+    <!-- Audio Activation Switch -->
+    <button id="audio-switch" onclick="toggleAudio()">
+      <span id="audio-status-icon">○</span> <span id="audio-status-text">initialize synthesizer</span>
+    </button>
+
+    <!-- Lattice Selection -->
+    <div class="selector">
+      <h2>lattice structure</h2>
+      <div class="select-tabs" id="lattice-selector">
+        <div class="tab active" onclick="setLattice('square')">square</div>
+        <div class="tab" onclick="setLattice('triangular')">triangular</div>
+        <div class="tab" onclick="setLattice('honeycomb')">graphene</div>
+        <div class="tab" onclick="setLattice('chain1d')">1d chain</div>
+      </div>
+      <div id="lattice-description" class="preset-desc">square lattice with nearest-neighbor elastic spring bonds. supports both longitudinal and transverse wave propagation.</div>
+    </div>
+
+    <!-- Physics Parameters -->
+    <div>
+      <h2>lattice physics</h2>
+      
+      <div class="control-group">
+        <div class="label-row">
+          <span>spring stiffness (k)</span>
+          <span class="label-val" id="val-k">1.20</span>
+        </div>
+        <input type="range" id="param-k" min="0.2" max="3.0" step="0.05" value="1.2" oninput="updatePhysicsParam('k', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <span>medium damping (y)</span>
+          <span class="label-val" id="val-damping">0.015</span>
+        </div>
+        <input type="range" id="param-damping" min="0.0" max="0.1" step="0.002" value="0.015" oninput="updatePhysicsParam('damping', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <span>thermal excitation (temp)</span>
+          <span class="label-val" id="val-temp">0.0</span>
+        </div>
+        <input type="range" id="param-temp" min="0.0" max="1.5" step="0.05" value="0.0" oninput="updatePhysicsParam('temp', this.value)">
+      </div>
+
+      <div class="control-group" id="mass-ratio-control" style="display:none;">
+        <div class="label-row">
+          <span>diatomic mass ratio (m2/m1)</span>
+          <span class="label-val" id="val-massratio">3.50</span>
+        </div>
+        <input type="range" id="param-massratio" min="1.0" max="8.0" step="0.1" value="3.5" oninput="updatePhysicsParam('massratio', this.value)">
+      </div>
+    </div>
+
+    <!-- Lattice Boundary -->
+    <div class="selector">
+      <h2>boundary conditions</h2>
+      <div class="select-tabs" id="boundary-selector">
+        <div class="tab active" onclick="setBoundary('fixed')">fixed edges</div>
+        <div class="tab" onclick="setBoundary('free')">free borders</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTRAL VIEWPORT: The Interactive Physics Canvas -->
+  <div id="canvas-container">
+    <canvas id="simulation-canvas"></canvas>
+    
+    <!-- Floating Toolbar underneath canvas -->
+    <div id="tool-bar">
+      <button id="tool-pluck" class="active" onclick="setTool('pluck')">pluck (drag)</button>
+      <button id="tool-defect" onclick="setTool('defect')">+ isotope defect</button>
+      <button id="tool-probe" onclick="setTool('probe')">+ audio probe</button>
+      <button onclick="clearLattice()">reset lattice</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Wave Driver, Synthesizer & Spectrogram -->
+  <div id="right-panel" class="glass-panel">
+    
+    <!-- Continuous Driver -->
+    <div>
+      <h2>excitation source</h2>
+      
+      <div class="control-group">
+        <div class="label-row">
+          <span>driver frequency (f)</span>
+          <span class="label-val" id="val-drive-freq">0.45 Hz</span>
+        </div>
+        <input type="range" id="param-drive-freq" min="0.05" max="1.5" step="0.02" value="0.45" oninput="updatePhysicsParam('driveFreq', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <span>driver amplitude (a)</span>
+          <span class="label-val" id="val-drive-amp">0 px</span>
+        </div>
+        <input type="range" id="param-drive-amp" min="0" max="40" step="1" value="0" oninput="updatePhysicsParam('driveAmp', this.value)">
+      </div>
+      
+      <div class="btn-grid" style="margin-top: 8px;">
+        <button onclick="triggerImpulse()">impulse strike</button>
+        <button onclick="toggleDriverType()" id="driver-dir-btn">drive: transverse</button>
+      </div>
+    </div>
+
+    <!-- Synthesizer Parameters -->
+    <div>
+      <h2>phonon synthesizer</h2>
+      
+      <div class="selector" style="margin-bottom: 12px;">
+        <div class="select-tabs" id="synth-selector">
+          <div class="tab active" onclick="setSynthMode('chimes')">quantum chimes</div>
+          <div class="tab" onclick="setSynthMode('drone')">lattice drone</div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <span>synth scale</span>
+        </div>
+        <div class="select-tabs" id="scale-selector">
+          <div class="tab active" onclick="setSynthScale('lydian')">lydian</div>
+          <div class="tab" onclick="setSynthScale('pentatonic')">pentatonic</div>
+          <div class="tab" onclick="setSynthScale('microtonal')">microtonal</div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <span>master synth volume</span>
+          <span class="label-val" id="val-volume">65%</span>
+        </div>
+        <input type="range" id="param-volume" min="0" max="100" step="5" value="65" oninput="updateSynthParam('volume', this.value)">
+      </div>
+      
+      <!-- Audio Probes Status -->
+      <div style="margin-top: 8px;">
+        <div class="label-row" style="font-size:0.7rem; text-transform: uppercase; margin-bottom:4px;">active acoustics:</div>
+        <div class="probe-legend">
+          <div class="probe-item"><span class="probe-dot" style="background:#ffaa00;"></span> probe 1</div>
+          <div class="probe-item"><span class="probe-dot" style="background:#00ffaa;"></span> probe 2</div>
+          <div class="probe-item"><span class="probe-dot" style="background:#00f3ff;"></span> probe 3</div>
+          <div class="probe-item"><span class="probe-dot" style="background:#ff007f;"></span> probe 4</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-time Fourier Spectrum -->
+    <div>
+      <h2>excitation spectrum (fft)</h2>
+      <div id="spectrogram-box">
+        <canvas id="spectrogram-canvas"></canvas>
+      </div>
+      <div class="label-row" style="font-size:0.65rem; color:var(--text-muted); margin-top:4px;">
+        <span>0 Hz (DC)</span>
+        <span>real-time vibration modes</span>
+        <span>f_Nyquist</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Interactive Logic -->
+<script>
+  // Simulation Constants
+  const CANVAS_SIZE = 800;
+  
+  // Physics States
+  let atoms = [];
+  let springs = [];
+  let latticeType = 'square';
+  let boundaryMode = 'fixed';
+  let activeTool = 'pluck';
+  let isDragging = false;
+  let draggedAtom = null;
+  
+  // Physics Parameters
+  let paramK = 1.2;
+  let paramDamping = 0.015;
+  let paramTemp = 0.0;
+  let paramMassRatio = 3.5;
+  let driveFreq = 0.45;
+  let driveAmp = 0;
+  let driveDir = 'transverse'; // 'transverse' or 'longitudinal'
+  let driveTime = 0;
+  
+  // Driver node
+  let driverNode = null;
+  
+  // Visual amplification of displacements
+  const VISUAL_AMP = 3.0;
+  
+  // Sound States & Synthesizer
+  let audioCtx = null;
+  let audioInitialized = false;
+  let synthMode = 'chimes'; // 'chimes' or 'drone'
+  let synthScale = 'lydian';
+  let masterVolumeNode = null;
+  let activeProbes = []; // indices of atoms with probes
+  let probeSynths = []; // audio nodes corresponding to active probes
+  let noiseSourceNode = null; // pink/white noise for resonant filters
+  
+  // Waveform tracking buffer for FFT (Primary Probe, index 0 in activeProbes)
+  let displacementBuffer = new Float32Array(256);
+  let bufferWritePtr = 0;
+  
+  // Scale definition
+  // base frequencies in Hz mapped to probes
+  const scales = {
+    lydian: [174.61, 196.00, 220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99], // F Lydian
+    pentatonic: [146.83, 164.81, 196.00, 220.00, 293.66, 329.63, 392.00, 440.00, 587.33, 659.25, 783.99, 880.00, 1174.66, 1318.51, 1567.98, 1760.00], // D pentatonic minor
+    microtonal: [150.00, 172.30, 197.93, 227.35, 261.13, 299.94, 344.52, 395.73, 454.54, 522.09, 599.68, 688.80, 791.17, 908.74, 1043.79, 1198.92] // equal tempered non-western / alternate divisions
+  };
+  
+  // Probe layout config
+  const probeColors = ['#ffaa00', '#00ffaa', '#00f3ff', '#ff007f'];
+  
+  // Set up Canvas elements
+  const simCanvas = document.getElementById('simulation-canvas');
+  const simCtx = simCanvas.getContext('2d');
+  simCanvas.width = CANVAS_SIZE;
+  simCanvas.height = CANVAS_SIZE;
+  
+  const specCanvas = document.getElementById('spectrogram-canvas');
+  const specCtx = specCanvas.getContext('2d');
+  specCanvas.width = 300;
+  specCanvas.height = 120;
+  
+  // Atom class definition
+  class Atom {
+    constructor(x, y, idx) {
+      this.id = idx;
+      this.eqX = x;
+      this.eqY = y;
+      this.x = x;
+      this.y = y;
+      this.vx = 0;
+      this.vy = 0;
+      this.fx = 0;
+      this.fy = 0;
+      this.mass = 1.0;
+      this.fixed = false;
+      this.isDefect = false;
+      this.isDriver = false;
+      this.isProbe = false;
+      this.probeId = -1;
+      
+      // trigger tracking
+      this.lastVelocity = 0;
+      this.triggerDebounce = 0;
+    }
+  }
+  
+  // Spring bond class definition
+  class Spring {
+    constructor(idxA, idxB, type = 'primary') {
+      this.a = idxA;
+      this.b = idxB;
+      this.restLength = Math.hypot(atoms[idxA].eqX - atoms[idxB].eqX, atoms[idxA].eqY - atoms[idxB].eqY);
+      this.type = type; // 'primary' or 'diagonal'
+    }
+  }
+
+  // Initialize lattices
+  function initLattice() {
+    atoms = [];
+    springs = [];
+    activeProbes = [];
+    
+    document.getElementById('mass-ratio-control').style.display = (latticeType === 'chain1d') ? 'block' : 'none';
+    
+    if (latticeType === 'square') {
+      buildSquareLattice();
+    } else if (latticeType === 'triangular') {
+      buildTriangularLattice();
+    } else if (latticeType === 'honeycomb') {
+      buildHoneycombLattice();
+    } else if (latticeType === 'chain1d') {
+      build1DChain();
+    }
+    
+    // Auto-setup 3 default probes
+    setupDefaultProbes();
+    
+    // Reconfigure audio if active
+    if (audioInitialized) {
+      rebuildAudioGraph();
+    }
+  }
+  
+  function buildSquareLattice() {
+    const cols = 15;
+    const rows = 15;
+    const spacing = 35;
+    const offsetX = (CANVAS_SIZE - (cols - 1) * spacing) / 2;
+    const offsetY = (CANVAS_SIZE - (rows - 1) * spacing) / 2;
+    
+    let count = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        let x = offsetX + c * spacing;
+        let y = offsetY + r * spacing;
+        let atom = new Atom(x, y, count++);
+        
+        // Fix boundaries
+        if (boundaryMode === 'fixed') {
+          if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
+            atom.fixed = true;
+          }
+        }
+        atoms.push(atom);
+      }
+    }
+    
+    // Build Springs
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        let i = r * cols + c;
+        // Nearest neighbors
+        if (c < cols - 1) springs.push(new Spring(i, i + 1));
+        if (r < rows - 1) springs.push(new Spring(i, i + cols));
+        
+        // Diagonals (shear strength)
+        if (r < rows - 1 && c < cols - 1) {
+          springs.push(new Spring(i, i + cols + 1, 'diagonal'));
+          springs.push(new Spring(i + 1, i + cols, 'diagonal'));
+        }
+      }
+    }
+    
+    // Driver node in center-left
+    driverNode = atoms[Math.floor(rows / 2) * cols + 1];
+    driverNode.isDriver = true;
+  }
+  
+  function buildTriangularLattice() {
+    const cols = 16;
+    const rows = 14;
+    const spacing = 34;
+    const heightStep = spacing * Math.sqrt(3) / 2;
+    const offsetX = (CANVAS_SIZE - (cols - 1) * spacing) / 2;
+    const offsetY = (CANVAS_SIZE - (rows - 1) * heightStep) / 2;
+    
+    let count = 0;
+    for (let r = 0; r < rows; r++) {
+      let rOffset = (r % 2 === 0) ? 0 : spacing / 2;
+      for (let c = 0; c < cols; c++) {
+        let x = offsetX + c * spacing + rOffset;
+        let y = offsetY + r * heightStep;
+        let atom = new Atom(x, y, count++);
+        
+        if (boundaryMode === 'fixed') {
+          if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) {
+            atom.fixed = true;
+          }
+        }
+        atoms.push(atom);
+      }
+    }
+    
+    // Connections (6-fold neighbors)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        let i = r * cols + c;
+        // Horizontal
+        if (c < cols - 1) springs.push(new Spring(i, i + 1));
+        
+        // Diagonal rows
+        if (r < rows - 1) {
+          if (r % 2 === 0) {
+            springs.push(new Spring(i, i + cols));
+            if (c > 0) springs.push(new Spring(i, i + cols - 1));
+          } else {
+            springs.push(new Spring(i, i + cols));
+            if (c < cols - 1) springs.push(new Spring(i, i + cols + 1));
+          }
+        }
+      }
+    }
+    
+    driverNode = atoms[Math.floor(rows / 2) * cols + 1];
+    driverNode.isDriver = true;
+  }
+  
+  function buildHoneycombLattice() {
+    const spacing = 28;
+    const h = spacing * Math.sqrt(3) / 2;
+    const cols = 10; // hex columns
+    const rows = 8;  // hex rows
+    
+    let count = 0;
+    
+    // Generate graphene atoms
+    let yStart = (CANVAS_SIZE - (rows * 3 * spacing)) / 2;
+    let xStart = (CANVAS_SIZE - (cols * Math.sqrt(3) * spacing)) / 2;
+    
+    for (let r = 0; r < rows; r++) {
+      let y0 = yStart + r * 3 * spacing;
+      for (let c = 0; c < cols; c++) {
+        let x0 = xStart + c * Math.sqrt(3) * spacing;
+        
+        // 6 hexagon vertices (some will overlap or we can deduplicate - here we just deduplicate on close proximity)
+        let hexVerts = [
+          {x: x0, y: y0},
+          {x: x0 + h, y: y0 + spacing/2},
+          {x: x0 + h, y: y0 + 1.5*spacing},
+          {x: x0, y: y0 + 2*spacing},
+          {x: x0 - h, y: y0 + 1.5*spacing},
+          {x: x0 - h, y: y0 + spacing/2}
+        ];
+        
+        hexVerts.forEach(v => {
+          // Check duplicate
+          let duplicate = atoms.find(a => Math.hypot(a.eqX - v.x, a.eqY - v.y) < 5);
+          if (!duplicate) {
+            let atom = new Atom(v.x, v.y, count++);
+            atoms.push(atom);
+          }
+        });
+      }
+    }
+    
+    // Build Springs: connect nodes within threshold distance (approx spacing)
+    for (let i = 0; i < atoms.length; i++) {
+      let connects = [];
+      for (let j = i + 1; j < atoms.length; j++) {
+        let dist = Math.hypot(atoms[i].eqX - atoms[j].eqX, atoms[i].eqY - atoms[j].eqY);
+        if (dist < spacing * 1.1) {
+          springs.push(new Spring(i, j));
+        }
+      }
+      
+      // Fix boundaries
+      if (boundaryMode === 'fixed') {
+        let ax = atoms[i].eqX;
+        let ay = atoms[i].eqY;
+        if (ax < xStart + 10 || ax > xStart + cols*Math.sqrt(3)*spacing - 10 ||
+            ay < yStart + 10 || ay > yStart + rows*3*spacing - 10) {
+          atoms[i].fixed = true;
+        }
+      }
+    }
+    
+    driverNode = atoms.find(a => !a.fixed && a.eqX < xStart + 1.5 * Math.sqrt(3)*spacing);
+    if (driverNode) {
+      driverNode.isDriver = true;
+    }
+  }
+  
+  function build1DChain() {
+    const chainSize = 35;
+    const spacing = 18;
+    const startX = (CANVAS_SIZE - (chainSize - 1) * spacing) / 2;
+    const centerY = CANVAS_SIZE / 2;
+    
+    for (let i = 0; i < chainSize; i++) {
+      let x = startX + i * spacing;
+      let atom = new Atom(x, centerY, i);
+      
+      // Alternate masses for diatomic
+      if (i % 2 === 1) {
+        atom.mass = paramMassRatio;
+      }
+      
+      if (boundaryMode === 'fixed') {
+        if (i === 0 || i === chainSize - 1) {
+          atom.fixed = true;
+        }
+      }
+      atoms.push(atom);
+    }
+    
+    for (let i = 0; i < chainSize - 1; i++) {
+      springs.push(new Spring(i, i + 1));
+    }
+    
+    driverNode = atoms[1];
+    driverNode.isDriver = true;
+  }
+  
+  function setupDefaultProbes() {
+    if (atoms.length < 5) return;
+    
+    // Choose 3 distributed atoms that are not fixed
+    let activeCandidates = atoms.filter(a => !a.fixed && !a.isDriver);
+    if (activeCandidates.length < 3) return;
+    
+    let step = Math.floor(activeCandidates.length / 4);
+    let p1 = activeCandidates[step];
+    let p2 = activeCandidates[step * 2];
+    let p3 = activeCandidates[step * 3];
+    
+    addProbeToAtom(p1.id);
+    addProbeToAtom(p2.id);
+    addProbeToAtom(p3.id);
+  }
+  
+  function addProbeToAtom(idx) {
+    if (activeProbes.length >= 4) {
+      // Remove oldest probe
+      let oldIdx = activeProbes.shift();
+      atoms[oldIdx].isProbe = false;
+      atoms[oldIdx].probeId = -1;
+    }
+    
+    if (activeProbes.includes(idx)) return;
+    
+    atoms[idx].isProbe = true;
+    atoms[idx].probeId = activeProbes.length;
+    activeProbes.push(idx);
+    
+    if (audioInitialized) {
+      rebuildAudioGraph();
+    }
+  }
+
+  // Toggle lattice structures
+  function setLattice(type) {
+    latticeType = type;
+    document.querySelectorAll('#lattice-selector .tab').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    const descriptions = {
+      square: "square lattice with nearest-neighbor elastic spring bonds. supports both longitudinal and transverse wave propagation.",
+      triangular: "triangular lattice with 6-fold symmetry bonds. extremely high shear stability. mimics solid metal sheets.",
+      honeycomb: "honeycomb structure mimicking graphene. highly resonant, flexible, displays unique hexagonal wave scattering.",
+      chain1d: "diatomic linear chain. alternating masses generate an acoustic branch (low f) and an optical branch (high f) with a phonon bandgap."
+    };
+    document.getElementById('lattice-description').innerText = descriptions[type];
+    initLattice();
+  }
+
+  // Set boundary conditions
+  function setBoundary(mode) {
+    boundaryMode = mode;
+    document.querySelectorAll('#boundary-selector .tab').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Refresh fixed positions
+    atoms.forEach(atom => {
+      atom.fixed = false;
+      if (boundaryMode === 'fixed') {
+        if (latticeType === 'square') {
+          let cols = 15; let rows = 15;
+          let r = Math.floor(atom.id / cols);
+          let c = atom.id % cols;
+          if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) atom.fixed = true;
+        } else if (latticeType === 'triangular') {
+          let cols = 16; let rows = 14;
+          let r = Math.floor(atom.id / cols);
+          let c = atom.id % cols;
+          if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1) atom.fixed = true;
+        } else if (latticeType === 'chain1d') {
+          if (atom.id === 0 || atom.id === atoms.length - 1) atom.fixed = true;
+        }
+      }
+    });
+  }
+
+  // Change interactive tools
+  function setTool(tool) {
+    activeTool = tool;
+    document.querySelectorAll('#tool-bar button').forEach(el => el.classList.remove('active'));
+    document.getElementById('tool-' + tool).classList.add('active');
+  }
+  
+  function updatePhysicsParam(param, val) {
+    if (param === 'k') {
+      paramK = parseFloat(val);
+      document.getElementById('val-k').innerText = paramK.toFixed(2);
+    } else if (param === 'damping') {
+      paramDamping = parseFloat(val);
+      document.getElementById('val-damping').innerText = paramDamping.toFixed(3);
+    } else if (param === 'temp') {
+      paramTemp = parseFloat(val);
+      document.getElementById('val-temp').innerText = paramTemp.toFixed(1);
+    } else if (param === 'massratio') {
+      paramMassRatio = parseFloat(val);
+      document.getElementById('val-massratio').innerText = paramMassRatio.toFixed(2);
+      // apply mass to odd nodes of 1D chain
+      atoms.forEach(atom => {
+        if (atom.id % 2 === 1 && latticeType === 'chain1d') {
+          atom.mass = paramMassRatio;
+        }
+      });
+    } else if (param === 'driveFreq') {
+      driveFreq = parseFloat(val);
+      document.getElementById('val-drive-freq').innerText = driveFreq.toFixed(2) + " Hz";
+    } else if (param === 'driveAmp') {
+      driveAmp = parseInt(val);
+      document.getElementById('val-drive-amp').innerText = driveAmp + " px";
+    }
+  }
+
+  function toggleDriverType() {
+    if (driveDir === 'transverse') {
+      driveDir = 'longitudinal';
+      document.getElementById('driver-dir-btn').innerText = "drive: longitudinal";
+    } else {
+      driveDir = 'transverse';
+      document.getElementById('driver-dir-btn').innerText = "drive: transverse";
+    }
+  }
+  
+  function triggerImpulse() {
+    // Launch a displacement wave from the center / driven area
+    atoms.forEach(atom => {
+      if (!atom.fixed) {
+        let dist = Math.hypot(atom.x - CANVAS_SIZE/2, atom.y - CANVAS_SIZE/2);
+        if (dist < 100) {
+          // Push outward radially
+          let angle = Math.atan2(atom.y - CANVAS_SIZE/2, atom.x - CANVAS_SIZE/2);
+          atom.vx += Math.cos(angle) * 15;
+          atom.vy += Math.sin(angle) * 15;
+        }
+      }
+    });
+  }
+
+  function clearLattice() {
+    atoms.forEach(atom => {
+      atom.x = atom.eqX;
+      atom.y = atom.eqY;
+      atom.vx = 0;
+      atom.vy = 0;
+      atom.fx = 0;
+      atom.fy = 0;
+    });
+  }
+
+  // --- AUDIO SYNTH ENGINE ---
+  
+  function toggleAudio() {
+    if (!audioInitialized) {
+      initAudio();
+    } else {
+      if (audioCtx.state === 'running') {
+        audioCtx.suspend();
+        setAudioUIState(false);
+      } else {
+        audioCtx.resume();
+        setAudioUIState(true);
+      }
+    }
+  }
+
+  function setAudioUIState(active) {
+    let btn = document.getElementById('audio-switch');
+    let statusIcon = document.getElementById('audio-status-icon');
+    let statusText = document.getElementById('audio-status-text');
+    
+    if (active) {
+      btn.classList.add('active');
+      statusIcon.innerText = "●";
+      statusText.innerText = "synthesizer online";
+    } else {
+      btn.classList.remove('active');
+      statusIcon.innerText = "○";
+      statusText.innerText = "synthesizer suspended";
+    }
+  }
+
+  function initAudio() {
+    try {
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+      
+      // Master volume node
+      masterVolumeNode = audioCtx.createGain();
+      let volVal = parseInt(document.getElementById('param-volume').value) / 100;
+      masterVolumeNode.gain.setValueAtTime(volVal * 0.15, audioCtx.currentTime); // keep max output comfortable
+      
+      // Delay feedback chain for ambient space
+      let delayL = audioCtx.createDelay(1.0);
+      let delayR = audioCtx.createDelay(1.0);
+      delayL.delayTime.setValueAtTime(0.35, audioCtx.currentTime);
+      delayR.delayTime.setValueAtTime(0.52, audioCtx.currentTime);
+      
+      let delayFeedbackL = audioCtx.createGain();
+      let delayFeedbackR = audioCtx.createGain();
+      delayFeedbackL.gain.setValueAtTime(0.55, audioCtx.currentTime);
+      delayFeedbackR.gain.setValueAtTime(0.55, audioCtx.currentTime);
+      
+      let delayFilter = audioCtx.createBiquadFilter();
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+      
+      // Delay connections
+      masterVolumeNode.connect(delayL);
+      masterVolumeNode.connect(delayR);
+      
+      delayL.connect(delayFeedbackL);
+      delayFeedbackL.connect(delayFilter);
+      delayFilter.connect(delayR); // cross feed
+      
+      delayR.connect(delayFeedbackR);
+      delayFeedbackR.connect(delayFilter);
+      delayFilter.connect(delayL);
+      
+      // Connect delay to output
+      delayL.connect(audioCtx.destination);
+      delayR.connect(audioCtx.destination);
+      masterVolumeNode.connect(audioCtx.destination);
+      
+      // Build noise source for drone mode
+      buildNoiseSource();
+      
+      audioInitialized = true;
+      setAudioUIState(true);
+      
+      rebuildAudioGraph();
+      
+    } catch (e) {
+      console.error("failed web audio initialization", e);
+    }
+  }
+  
+  function buildNoiseSource() {
+    // Generate pinkish/white noise buffer for resonant filter excitation
+    let bufferSize = 2 * audioCtx.sampleRate;
+    let noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    let output = noiseBuffer.getChannelData(0);
+    
+    // Pink noise approximation
+    let b0, b1, b2, b3, b4, b5, b6;
+    b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+    
+    for (let i = 0; i < bufferSize; i++) {
+      let white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+      output[i] *= 0.11; // normalization
+      b6 = white * 0.115926;
+    }
+    
+    noiseSourceNode = audioCtx.createBufferSource();
+    noiseSourceNode.buffer = noiseBuffer;
+    noiseSourceNode.loop = true;
+    noiseSourceNode.start();
+  }
+  
+  function updateSynthParam(param, val) {
+    if (param === 'volume') {
+      let pct = parseInt(val);
+      document.getElementById('val-volume').innerText = pct + "%";
+      if (masterVolumeNode) {
+        masterVolumeNode.gain.setTargetAtTime((pct/100) * 0.15, audioCtx.currentTime, 0.1);
+      }
+    }
+  }
+  
+  function setSynthMode(mode) {
+    synthMode = mode;
+    document.querySelectorAll('#synth-selector .tab').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (audioInitialized) {
+      rebuildAudioGraph();
+    }
+  }
+  
+  function setSynthScale(scale) {
+    synthScale = scale;
+    document.querySelectorAll('#scale-selector .tab').forEach(el => el.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (audioInitialized) {
+      rebuildAudioGraph();
+    }
+  }
+
+  function rebuildAudioGraph() {
+    // Clear old active synths
+    probeSynths.forEach(s => {
+      try { s.disconnect(); } catch(e){}
+    });
+    probeSynths = [];
+    
+    if (!audioInitialized || activeProbes.length === 0) return;
+    
+    let selectedScale = scales[synthScale];
+    
+    activeProbes.forEach((atomIdx, index) => {
+      let baseFreq = selectedScale[index % selectedScale.length];
+      
+      if (synthMode === 'drone') {
+        // Continuous singing crystal model (resonant noise filter)
+        let resonantFilter = audioCtx.createBiquadFilter();
+        resonantFilter.type = 'bandpass';
+        resonantFilter.Q.setValueAtTime(140.0, audioCtx.currentTime);
+        resonantFilter.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+        
+        let localGain = audioCtx.createGain();
+        localGain.gain.setValueAtTime(0.001, audioCtx.currentTime); // start silent
+        
+        // Connect noise generator to filter
+        try {
+          noiseSourceNode.connect(resonantFilter);
+        } catch(e) {
+          // If noise source died, rebuild it
+          buildNoiseSource();
+          noiseSourceNode.connect(resonantFilter);
+        }
+        
+        resonantFilter.connect(localGain);
+        localGain.connect(masterVolumeNode);
+        
+        probeSynths.push({
+          type: 'drone',
+          filter: resonantFilter,
+          gain: localGain,
+          baseFreq: baseFreq
+        });
+        
+      } else {
+        // Quantum Chimes Mode (triggered chimes dynamically created on collisions)
+        // Keep placeholder for peak-detector references
+        probeSynths.push({
+          type: 'chimes',
+          baseFreq: baseFreq,
+          index: index
+        });
+      }
+    });
+  }
+
+  function triggerChimeSound(freq, intensity) {
+    if (!audioInitialized || audioCtx.state !== 'running') return;
+    
+    // Create dual-frequency bell chime (2 sine wave partials)
+    let osc1 = audioCtx.createOscillator();
+    let osc2 = audioCtx.createOscillator();
+    
+    let chimeGain = audioCtx.createGain();
+    
+    osc1.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    osc2.frequency.setValueAtTime(freq * 2.02, audioCtx.currentTime); // harmonic offset
+    
+    // Envelope
+    let attack = 0.005;
+    let decay = 0.4 + intensity * 0.8;
+    chimeGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+    chimeGain.gain.linearRampToValueAtTime(intensity * 0.25, audioCtx.currentTime + attack);
+    chimeGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + decay);
+    
+    osc1.connect(chimeGain);
+    osc2.connect(chimeGain);
+    
+    // spatial panning based on frequency / probe order
+    let panner = audioCtx.createStereoPanner();
+    let panVal = Math.sin(freq / 200) * 0.7; // shift across stereo field
+    panner.pan.setValueAtTime(panVal, audioCtx.currentTime);
+    
+    chimeGain.connect(panner);
+    panner.connect(masterVolumeNode);
+    
+    osc1.start();
+    osc2.start();
+    
+    osc1.stop(audioCtx.currentTime + decay);
+    osc2.stop(audioCtx.currentTime + decay);
+  }
+
+  // --- PHYSICS ENGINE TICK & LOOP ---
+  
+  function updatePhysics() {
+    let dt = 0.15;
+    
+    // 1. Reset forces and apply damping / anchor restoring forces
+    atoms.forEach(atom => {
+      if (atom.fixed) {
+        atom.vx = 0;
+        atom.vy = 0;
+        atom.fx = 0;
+        atom.fy = 0;
+        return;
+      }
+      
+      // Damping
+      atom.fx = -paramDamping * atom.vx;
+      atom.fy = -paramDamping * atom.vy;
+      
+      // Weak localized anchor springs to keep boundaries stable
+      let kAnchor = 0.02 * paramK;
+      atom.fx += -kAnchor * (atom.x - atom.eqX);
+      atom.fy += -kAnchor * (atom.y - atom.eqY);
+      
+      // Thermal jitter
+      if (paramTemp > 0) {
+        // Gaussian approximation
+        let randX = (Math.random() + Math.random() + Math.random() - 1.5) * paramTemp * 1.5;
+        let randY = (Math.random() + Math.random() + Math.random() - 1.5) * paramTemp * 1.5;
+        atom.fx += randX;
+        atom.fy += randY;
+      }
+    });
+    
+    // 2. Continuous Wave Driver
+    if (driverNode && driveAmp > 0) {
+      driveTime += driveFreq * 0.15;
+      let disp = driveAmp * Math.sin(2 * Math.PI * driveTime);
+      
+      if (driveDir === 'transverse') {
+        if (latticeType === 'chain1d') {
+          driverNode.y = driverNode.eqY + disp;
+          driverNode.vy = 0;
+        } else {
+          // move Y for transverse
+          driverNode.y = driverNode.eqY + disp;
+          driverNode.vy = 0;
+        }
+      } else {
+        // move X for longitudinal
+        driverNode.x = driverNode.eqX + disp;
+        driverNode.vx = 0;
+      }
+    }
+    
+    // 3. Compute Spring Forces
+    springs.forEach(spring => {
+      let atomA = atoms[spring.a];
+      let atomB = atoms[spring.b];
+      
+      let dx = atomA.x - atomB.x;
+      let dy = atomA.y - atomB.y;
+      let dist = Math.hypot(dx, dy);
+      
+      if (dist === 0) return;
+      
+      let forceMag = -paramK * (dist - spring.restLength);
+      // Diagonals have slightly reduced spring constants
+      if (spring.type === 'diagonal') {
+        forceMag *= 0.45;
+      }
+      
+      let fx = (dx / dist) * forceMag;
+      let fy = (dy / dist) * forceMag;
+      
+      if (!atomA.fixed) {
+        atomA.fx += fx;
+        atomA.fy += fy;
+      }
+      if (!atomB.fixed) {
+        atomB.fx -= fx;
+        atomB.fy -= fy;
+      }
+    });
+    
+    // 4. Update Velocities & Positions (Verlet-Cromer)
+    atoms.forEach(atom => {
+      if (atom.fixed) return;
+      
+      atom.vx += (atom.fx / atom.mass) * dt;
+      atom.vy += (atom.fy / atom.mass) * dt;
+      
+      atom.x += atom.vx * dt;
+      atom.y += atom.vy * dt;
+      
+      // Debounce trigger counter
+      if (atom.triggerDebounce > 0) {
+        atom.triggerDebounce--;
+      }
+    });
+    
+    // 5. Connect Physics states directly to Sound Synthesis
+    if (audioInitialized) {
+      activeProbes.forEach((atomIdx, index) => {
+        let atom = atoms[atomIdx];
+        let synth = probeSynths[index];
+        if (!synth) return;
+        
+        let dx = atom.x - atom.eqX;
+        let dy = atom.y - atom.eqY;
+        let speed = Math.hypot(atom.vx, atom.vy);
+        let displacement = Math.hypot(dx, dy);
+        
+        // Write primary probe displacement to spectrum buffer
+        if (index === 0) {
+          displacementBuffer[bufferWritePtr] = dy; // grab y-displacement
+          bufferWritePtr = (bufferWritePtr + 1) % 256;
+        }
+        
+        if (synth.type === 'drone') {
+          // Modulate Resonant filter frequency & gain
+          let modFreq = synth.baseFreq + dy * 2.2;
+          synth.filter.frequency.setTargetAtTime(Math.max(40, modFreq), audioCtx.currentTime, 0.05);
+          
+          // Excitation gain corresponds to particle speed
+          let volScale = Math.min(0.8, speed * 0.12);
+          synth.gain.gain.setTargetAtTime(volScale * 0.05 + 0.002, audioCtx.currentTime, 0.1);
+          
+        } else if (synth.type === 'chimes') {
+          // Trigger chimes based on velocity peaks
+          if (speed > 1.2 && atom.triggerDebounce === 0) {
+            // Peak detection: speed is starting to drop (local maximum)
+            if (speed < atom.lastVelocity) {
+              let intensity = Math.min(1.0, speed / 12);
+              triggerChimeSound(synth.baseFreq, intensity);
+              atom.triggerDebounce = 15; // ignore triggers for next ~15 frames (debounce)
+            }
+          }
+          atom.lastVelocity = speed;
+        }
+      });
+    }
+  }
+
+  // --- RENDER SCREEN ---
+  
+  function draw() {
+    // Clear simulation canvas
+    simCtx.fillStyle = '#010105';
+    simCtx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    
+    // Draw grid mesh lines under nodes
+    springs.forEach(spring => {
+      let atomA = atoms[spring.a];
+      let atomB = atoms[spring.b];
+      
+      // Calculate visual displacement amplification
+      let x1 = atomA.eqX + (atomA.x - atomA.eqX) * VISUAL_AMP;
+      let y1 = atomA.eqY + (atomA.y - atomA.eqY) * VISUAL_AMP;
+      let x2 = atomB.eqX + (atomB.x - atomB.eqX) * VISUAL_AMP;
+      let y2 = atomB.eqY + (atomB.y - atomB.eqY) * VISUAL_AMP;
+      
+      let dist = Math.hypot(atomA.x - atomB.x, atomA.y - atomB.y);
+      let stretch = dist - spring.restLength;
+      
+      // Color coding bonds by tension
+      let r, g, b, alpha;
+      if (spring.type === 'diagonal') {
+        alpha = 0.08;
+        r = 112; g = 128; b = 144;
+      } else {
+        alpha = 0.32;
+        if (stretch > 0.5) {
+          // tension -> bright magenta
+          let factor = Math.min(1.0, stretch / 6.0);
+          r = Math.floor(40 + factor * 215);
+          g = Math.floor(64 * (1 - factor));
+          b = Math.floor(120 + factor * 135);
+        } else if (stretch < -0.5) {
+          // compression -> bright cyan
+          let factor = Math.min(1.0, -stretch / 6.0);
+          r = Math.floor(40 * (1 - factor));
+          g = Math.floor(100 + factor * 143);
+          b = Math.floor(150 + factor * 105);
+        } else {
+          // neutral -> slate grey
+          r = 70; g = 100; b = 130;
+        }
+      }
+      
+      simCtx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      simCtx.lineWidth = (spring.type === 'diagonal') ? 1 : 2.5;
+      simCtx.beginPath();
+      simCtx.moveTo(x1, y1);
+      simCtx.lineTo(x2, y2);
+      simCtx.stroke();
+    });
+    
+    // Draw atoms
+    atoms.forEach(atom => {
+      let x = atom.eqX + (atom.x - atom.eqX) * VISUAL_AMP;
+      let y = atom.eqY + (atom.y - atom.eqY) * VISUAL_AMP;
+      
+      let radius = atom.fixed ? 4.5 : 6;
+      if (atom.isDefect) radius = 8;
+      
+      // glow filter
+      simCtx.shadowBlur = 0;
+      
+      if (atom.fixed) {
+        simCtx.fillStyle = '#475569';
+      } else if (atom.isDriver) {
+        simCtx.fillStyle = '#ff007f';
+        simCtx.shadowBlur = 10;
+        simCtx.shadowColor = '#ff007f';
+        // Pulsate driver visually
+        radius += 2 * Math.sin(driveTime * 2 * Math.PI);
+      } else if (atom.isProbe) {
+        simCtx.fillStyle = probeColors[atom.probeId];
+        simCtx.shadowBlur = 12;
+        simCtx.shadowColor = probeColors[atom.probeId];
+        
+        // draw outer targeting circle
+        simCtx.strokeStyle = probeColors[atom.probeId];
+        simCtx.lineWidth = 1.5;
+        simCtx.beginPath();
+        simCtx.arc(x, y, radius + 8, 0, 2 * Math.PI);
+        simCtx.stroke();
+      } else if (atom.isDefect) {
+        simCtx.fillStyle = '#ffdd00';
+        simCtx.shadowBlur = 8;
+        simCtx.shadowColor = '#ffdd00';
+      } else {
+        // default atom -> subtle cyan glow
+        simCtx.fillStyle = '#00f3ff';
+      }
+      
+      simCtx.beginPath();
+      simCtx.arc(x, y, Math.max(2, radius), 0, 2 * Math.PI);
+      simCtx.fill();
+    });
+    simCtx.shadowBlur = 0; // reset
+    
+    // Draw Spectrogram Spectrum
+    drawSpectrogram();
+  }
+  
+  // Real-time FFT computation on canvas
+  function drawSpectrogram() {
+    specCtx.fillStyle = '#020205';
+    specCtx.fillRect(0, 0, 300, 120);
+    
+    // Reorder data buffer linearly
+    let re = new Float32Array(256);
+    let im = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let rIdx = (bufferWritePtr + i) % 256;
+      // Hann Windowing to reduce leakage
+      let multiplier = 0.5 * (1 - Math.cos(2 * Math.PI * i / 255));
+      re[i] = displacementBuffer[rIdx] * multiplier;
+    }
+    
+    // FFT
+    fft(re, im);
+    
+    // Draw magnitudes
+    specCtx.beginPath();
+    specCtx.strokeStyle = '#00f3ff';
+    specCtx.lineWidth = 2;
+    
+    let barWidth = 300 / 128; // only draw positive half
+    for (let i = 0; i < 128; i++) {
+      let mag = Math.hypot(re[i], im[i]);
+      let height = Math.min(115, mag * 2.8);
+      let x = i * barWidth;
+      let y = 120 - height;
+      
+      if (i === 0) specCtx.moveTo(x, y);
+      else specCtx.lineTo(x, y);
+    }
+    specCtx.stroke();
+    
+    // Overlay a grid line
+    specCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+    specCtx.lineWidth = 1;
+    specCtx.beginPath();
+    specCtx.moveTo(0, 60); specCtx.lineTo(300, 60);
+    specCtx.stroke();
+  }
+
+  // Bit reversal + Cooley-Tukey Radix-2 FFT
+  function fft(re, im) {
+    const n = re.length;
+    let j = 0;
+    for (let i = 0; i < n; i++) {
+      if (i < j) {
+        let temp = re[i]; re[i] = re[j]; re[j] = temp;
+        temp = im[i]; im[i] = im[j]; im[j] = temp;
+      }
+      let m = n >> 1;
+      while (m >= 2 && j >= m) {
+        j -= m;
+        m >>= 1;
+      }
+      j += m;
+    }
+    
+    for (let size = 2; size <= n; size *= 2) {
+      let halfsize = size / 2;
+      for (let i = 0; i < n; i += size) {
+        for (let k = 0; k < halfsize; k++) {
+          let angle = -2 * Math.PI * k / size;
+          let wr = Math.cos(angle);
+          let wi = Math.sin(angle);
+          let s = i + k + halfsize;
+          let tr = re[s] * wr - im[s] * wi;
+          let ti = re[s] * wi + im[s] * wr;
+          re[s] = re[i + k] - tr;
+          im[s] = im[i + k] - ti;
+          re[i + k] += tr;
+          im[i + k] += ti;
+        }
+      }
+    }
+  }
+
+  // --- MOUSE/TOUCH INTERACTION ---
+  
+  function getMousePos(canvas, evt) {
+    let rect = canvas.getBoundingClientRect();
+    return {
+      x: (evt.clientX - rect.left) / rect.width * CANVAS_SIZE,
+      y: (evt.clientY - rect.top) / rect.height * CANVAS_SIZE
+    };
+  }
+
+  simCanvas.addEventListener('mousedown', function(evt) {
+    let pos = getMousePos(simCanvas, evt);
+    
+    // Find closest atom
+    let closest = null;
+    let minDist = 40; // click threshold radius
+    
+    atoms.forEach(atom => {
+      // account for visual displacement amplification in hit test
+      let ax = atom.eqX + (atom.x - atom.eqX) * VISUAL_AMP;
+      let ay = atom.eqY + (atom.y - atom.eqY) * VISUAL_AMP;
+      let dist = Math.hypot(pos.x - ax, pos.y - ay);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = atom;
+      }
+    });
+    
+    if (closest) {
+      if (activeTool === 'pluck') {
+        if (!closest.fixed) {
+          isDragging = true;
+          draggedAtom = closest;
+        }
+      } else if (activeTool === 'defect') {
+        closest.isDefect = !closest.isDefect;
+        closest.mass = closest.isDefect ? 5.0 : 1.0;
+        if (latticeType === 'chain1d' && closest.id % 2 === 1 && !closest.isDefect) {
+          closest.mass = paramMassRatio; // restore diatomic
+        }
+      } else if (activeTool === 'probe') {
+        addProbeToAtom(closest.id);
+      }
+    }
+  });
+
+  simCanvas.addEventListener('mousemove', function(evt) {
+    if (isDragging && draggedAtom) {
+      let pos = getMousePos(simCanvas, evt);
+      // reverse visual displacement amplification formula to set actual coords
+      draggedAtom.x = draggedAtom.eqX + (pos.x - draggedAtom.eqX) / VISUAL_AMP;
+      draggedAtom.y = draggedAtom.eqY + (pos.y - draggedAtom.eqY) / VISUAL_AMP;
+      draggedAtom.vx = 0;
+      draggedAtom.vy = 0;
+    }
+  });
+
+  simCanvas.addEventListener('mouseup', function() {
+    isDragging = false;
+    draggedAtom = null;
+  });
+  
+  window.addEventListener('mouseup', function() {
+    isDragging = false;
+    draggedAtom = null;
+  });
+
+  // --- CORE GAME LOOP ---
+  
+  function loop() {
+    updatePhysics();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // Startup
+  initLattice();
+  requestAnimationFrame(loop);
+
+</script>
+
+</body>
+</html>
