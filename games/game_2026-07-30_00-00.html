@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>magneto-plasma: solar flare & magnetic reconnection sandbox</title>
+  <meta name="description" content="an interactive magnetohydrodynamics (MHD) simulation of solar corona physics, magnetic reconnection, particle acceleration, and audio synthesis.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #03030c;
+      --panel-bg: rgba(6, 6, 20, 0.85);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #00ffaa;
+      --neon-orange: #ffaa00;
+      --neon-yellow: #ffdd00;
+      --text: #e2e8f0;
+      --text-muted: #708090;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #0a0a28 0%, #020205 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(85vw, 85vh);
+      height: min(85vw, 85vh);
+      box-shadow: 0 0 60px rgba(0, 243, 255, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      z-index: 10;
+      transition: border-color 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 340px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #left-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #left-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 320px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #right-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.65rem;
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    p.intro {
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    h2 {
+      font-size: 0.78rem;
+      color: var(--neon-magenta);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+
+    /* Control Groups */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .label-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    /* Buttons & Selectors */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.08);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.15);
+    }
+
+    button.active {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+    }
+
+    #audio-switch {
+      background: rgba(255, 0, 127, 0.05);
+      border: 1px solid rgba(255, 0, 127, 0.2);
+      color: var(--neon-magenta);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 10px;
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 5px;
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.05);
+    }
+
+    #audio-switch:hover {
+      background: rgba(255, 0, 127, 0.1);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+    }
+
+    #audio-switch.active {
+      background: var(--neon-magenta);
+      color: #fff;
+      box-shadow: 0 0 20px var(--neon-magenta);
+    }
+
+    .selector {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .select-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      font-size: 0.72rem;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-right: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    .tab:last-child {
+      border-right: none;
+    }
+
+    .tab.active {
+      background: rgba(0, 243, 255, 0.12);
+      color: var(--neon-cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+    }
+
+    /* Floating Toolbar */
+    #toolbar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      padding: 10px 15px;
+      background: rgba(6, 6, 20, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      z-index: 10;
+    }
+
+    #toolbar button {
+      border-radius: 20px;
+      padding: 8px 16px;
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    #toolbar button.active {
+      border-color: var(--neon-cyan);
+    }
+
+    /* Diagnostics UI */
+    .diagnostic-panel {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 243, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .diag-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .diag-label {
+      color: var(--text-muted);
+    }
+
+    .diag-value {
+      color: #fff;
+    }
+
+    .diag-value.cyan { color: var(--neon-cyan); }
+    .diag-value.magenta { color: var(--neon-magenta); }
+    .diag-value.green { color: var(--neon-green); }
+
+    canvas#energy-chart {
+      width: 100%;
+      height: 80px;
+      background: #000;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-top: 5px;
+    }
+
+    /* Overlay Message */
+    #instructions-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 5;
+      font-family: 'Share Tech Mono', monospace;
+      color: rgba(0, 243, 255, 0.35);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
+      transition: opacity 1s;
+    }
+
+    /* Satellites */
+    .satellite-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      color: #fff;
+      pointer-events: none;
+      white-space: nowrap;
+      text-shadow: 0 0 4px #000, 0 0 8px rgba(0, 243, 255, 0.6);
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .satellite-label::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 5px var(--neon-cyan);
+    }
+    .satellite-label.sat-b::before {
+      background: var(--neon-magenta);
+      box-shadow: 0 0 5px var(--neon-magenta);
+    }
+    .satellite-label.sat-b {
+      border-color: rgba(255, 0, 127, 0.3);
+      text-shadow: 0 0 4px #000, 0 0 8px rgba(255, 0, 127, 0.6);
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- Left panel (physics parameters & tools) -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>magneto-plasma</h1>
+        <div class="tagline">coronal flare & reconnection sandbox</div>
+        <p class="intro">simulate the turbulent, magnetized plasma of the solar atmosphere. observe how opposing field lines tear, merge, and accelerate flare particles.</p>
+      </div>
+
+      <button id="audio-switch">activate audio feed</button>
+
+      <div class="selector">
+        <h2>:: presets</h2>
+        <div class="btn-grid">
+          <button id="preset-loops" class="active">coronal loops</button>
+          <button id="preset-sheet">current sheet</button>
+          <button id="preset-islands">coalescing islands</button>
+          <button id="preset-turbulent">turbulent dynamo</button>
+        </div>
+      </div>
+
+      <div>
+        <h2>:: mhd settings</h2>
+        
+        <div class="control-group">
+          <div class="label-row">
+            <span>resistivity (&eta;)</span>
+            <span id="val-resistivity" class="label-val">0.005</span>
+          </div>
+          <input type="range" id="param-resistivity" min="0.0001" max="0.03" step="0.0001" value="0.005">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>viscosity (&nu;)</span>
+            <span id="val-viscosity" class="label-val">0.02</span>
+          </div>
+          <input type="range" id="param-viscosity" min="0.001" max="0.1" step="0.001" value="0.02">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>guide field (B_z)</span>
+            <span id="val-guide-field" class="label-val">0.25</span>
+          </div>
+          <input type="range" id="param-guide-field" min="0.0" max="2.0" step="0.05" value="0.25">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>lorentz coupling</span>
+            <span id="val-coupling" class="label-val">1.0</span>
+          </div>
+          <input type="range" id="param-coupling" min="0.0" max="3.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>particle count</span>
+            <span id="val-particles" class="label-val">3000</span>
+          </div>
+          <input type="range" id="param-particles" min="0" max="5000" step="100" value="3000">
+        </div>
+      </div>
+
+      <div class="selector">
+        <h2>:: visual mode</h2>
+        <div class="select-tabs" id="visual-mode-select">
+          <div class="tab active" data-val="vorticity">vorticity</div>
+          <div class="tab" data-val="current">current sheet</div>
+          <div class="tab" data-val="field">magnetic strength</div>
+        </div>
+      </div>
+
+      <div class="btn-grid">
+        <button id="btn-reset">reset simulation</button>
+        <button id="btn-clear-fields">clear magnetic flux</button>
+      </div>
+    </div>
+
+    <!-- Center Canvas Arena -->
+    <div id="canvas-container">
+      <div id="instructions-overlay">drag mouse to stir plasma / click tools to emerge loops</div>
+      
+      <canvas id="simulation-canvas" width="600" height="600"></canvas>
+      
+      <!-- Positioned labels for Satellites -->
+      <div id="sat-a-label" class="satellite-label sat-a" style="display:none">sat a</div>
+      <div id="sat-b-label" class="satellite-label sat-b" style="display:none">sat b</div>
+    </div>
+
+    <!-- Right panel (audio parameters & diagnostics) -->
+    <div id="right-panel" class="glass-panel">
+      <div>
+        <h2>:: satellite telemetry</h2>
+        <div class="diagnostic-panel">
+          <div class="diag-row">
+            <span class="diag-label">satellite a position:</span>
+            <span id="sat-a-pos" class="diag-value">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">magnetic field (B):</span>
+            <span id="sat-a-bfield" class="diag-value cyan">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">current density (J):</span>
+            <span id="sat-a-current" class="diag-value">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">local density (&rho;):</span>
+            <span id="sat-a-density" class="diag-value">N/A</span>
+          </div>
+        </div>
+        <div class="diagnostic-panel" style="margin-top: 8px;">
+          <div class="diag-row">
+            <span class="diag-label">satellite b position:</span>
+            <span id="sat-b-pos" class="diag-value">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">magnetic field (B):</span>
+            <span id="sat-b-bfield" class="diag-value magenta">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">current density (J):</span>
+            <span id="sat-b-current" class="diag-value">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">local density (&rho;):</span>
+            <span id="sat-b-density" class="diag-value">N/A</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2>:: audio synthesis</h2>
+        
+        <div class="control-group">
+          <div class="label-row">
+            <span>chorus hum drone</span>
+            <span id="val-vol-hum" class="label-val">60%</span>
+          </div>
+          <input type="range" id="vol-hum" min="0" max="1" step="0.05" value="0.6">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>whistler frequency synth</span>
+            <span id="val-vol-whistler" class="label-val">50%</span>
+          </div>
+          <input type="range" id="vol-whistler" min="0" max="1" step="0.05" value="0.5">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>flare discharge clicks</span>
+            <span id="val-vol-clicks" class="label-val">40%</span>
+          </div>
+          <input type="range" id="vol-clicks" min="0" max="1" step="0.05" value="0.4">
+        </div>
+      </div>
+
+      <div>
+        <h2>:: plasma energy budget</h2>
+        <div class="diagnostic-panel">
+          <div class="diag-row">
+            <span class="diag-label">total magnetic energy:</span>
+            <span id="stat-mag-energy" class="diag-value cyan">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">total kinetic energy:</span>
+            <span id="stat-kin-energy" class="diag-value green">N/A</span>
+          </div>
+          <div class="diag-row">
+            <span class="diag-label">ohmic dissipation (heating):</span>
+            <span id="stat-dissipation" class="diag-value magenta">N/A</span>
+          </div>
+          <canvas id="energy-chart" width="280" height="80"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Interactive Tools -->
+    <div id="toolbar">
+      <button id="tool-stir" class="active">stir plasma</button>
+      <button id="tool-loop">inject flux loop</button>
+      <button id="tool-flare">trigger local flare</button>
+      <button id="tool-probe">place satellite</button>
+    </div>
+
+  </div>
+
+  <script>
+    // --- Physics Simulation Grid Settings ---
+    const N = 64;
+    const SIZE = N * N;
+    
+    // Grid Arrays
+    let A = new Float32Array(SIZE);         // Magnetic potential grid
+    let A_prev = new Float32Array(SIZE);
+    let u = new Float32Array(SIZE);         // Fluid velocity x
+    let u_prev = new Float32Array(SIZE);
+    let v = new Float32Array(SIZE);         // Fluid velocity y
+    let v_prev = new Float32Array(SIZE);
+    let p = new Float32Array(SIZE);         // Pressure
+    let div = new Float32Array(SIZE);       // Divergence
+    let rho = new Float32Array(SIZE);       // Passive density grid (visual)
+    let rho_prev = new Float32Array(SIZE);
+
+    // Derived Diagnostics Grids
+    let J_grid = new Float32Array(SIZE);     // Current density out-of-plane
+    let B_x_grid = new Float32Array(SIZE);   // B field x
+    let B_y_grid = new Float32Array(SIZE);   // B field y
+    let eta_local = new Float32Array(SIZE);  // Locally induced resistivity spots
+
+    // Boundary Line-Tied Arcade Array
+    let bottom_A = new Float32Array(N);
+
+    // Particle System
+    let particles = [];
+    
+    // Interactive tools & settings
+    let currentTool = 'stir';
+    let visualMode = 'vorticity';
+    let isRunning = true;
+    let isMouseDown = false;
+    let prevMouseX = 0;
+    let prevMouseY = 0;
+
+    // Simulation Parameters
+    let eta = 0.005;          // Background resistivity
+    let nu = 0.02;            // Fluid viscosity
+    let Bz_guide = 0.25;      // Out of plane guide field
+    let forceScale = 1.0;     // Lorentz coupling
+    let targetParticleCount = 3000;
+    
+    // Physics constants
+    const dt = 0.08;
+    const maxSpeed = 15.0;     // Max fluid speed clamping
+    const particleDrag = 0.05; // Coupling of particles to fluid velocity
+
+    // Satellites Probes
+    let satA = { x: 0.35, y: 0.45, active: true };
+    let satB = { x: 0.65, y: 0.55, active: true };
+    let draggingSat = null; // 'A' or 'B'
+
+    // Diagnostics history
+    let energyHistory = [];
+    const maxHistLen = 140;
+
+    // --- Web Audio Synthesizer Setup ---
+    let audioCtx = null;
+    let audioEnabled = false;
+    let masterGain = null;
+    let delayNode = null;
+    
+    // Synthesizer Nodes
+    let synthHum = { oscillators: [], gainNodes: [], filter: null };
+    let synthWhistler = { carryA: null, modA: null, carryB: null, modB: null, gainA: null, gainB: null };
+    let synthClicks = { filter: null, gain: null, delay: null };
+
+    // --- DOM Elements ---
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+    const chartCanvas = document.getElementById('energy-chart');
+    const chartCtx = chartCanvas.getContext('2d');
+
+    // UI Sliders
+    const sliderResistivity = document.getElementById('param-resistivity');
+    const sliderViscosity = document.getElementById('param-viscosity');
+    const sliderGuideField = document.getElementById('param-guide-field');
+    const sliderCoupling = document.getElementById('param-coupling');
+    const sliderParticles = document.getElementById('param-particles');
+
+    const labelResistivity = document.getElementById('val-resistivity');
+    const labelViscosity = document.getElementById('val-viscosity');
+    const labelGuideField = document.getElementById('val-guide-field');
+    const labelCoupling = document.getElementById('val-coupling');
+    const labelParticles = document.getElementById('val-particles');
+
+    // UI Volume Controls
+    const sliderVolHum = document.getElementById('vol-hum');
+    const sliderVolWhistler = document.getElementById('vol-whistler');
+    const sliderVolClicks = document.getElementById('vol-clicks');
+    
+    const labelVolHum = document.getElementById('val-vol-hum');
+    const labelVolWhistler = document.getElementById('val-vol-whistler');
+    const labelVolClicks = document.getElementById('val-vol-clicks');
+
+    // Satellite Telemetry display
+    const labelSatAPos = document.getElementById('sat-a-pos');
+    const labelSatABField = document.getElementById('sat-a-bfield');
+    const labelSatACurrent = document.getElementById('sat-a-current');
+    const labelSatADensity = document.getElementById('sat-a-density');
+    
+    const labelSatBPos = document.getElementById('sat-b-pos');
+    const labelSatBBField = document.getElementById('sat-b-bfield');
+    const labelSatBCurrent = document.getElementById('sat-b-current');
+    const labelSatBDensity = document.getElementById('sat-b-density');
+
+    // Global Energy stats
+    const labelMagEnergy = document.getElementById('stat-mag-energy');
+    const labelKinEnergy = document.getElementById('stat-kin-energy');
+    const labelDissipation = document.getElementById('stat-dissipation');
+
+    // Sat floating labels
+    const satALabel = document.getElementById('sat-a-label');
+    const satBLabel = document.getElementById('sat-b-label');
+
+    // --- Particle Class ---
+    class Particle {
+      constructor(x, y, q = 1, m = 20) {
+        this.x = x; // 0..1 coordinates
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.vz = (Math.random() - 0.5) * 0.5;
+        this.q = q; // charge: +1 (ion), -1 (electron)
+        this.m = m; // mass: ions are heavy, electrons are light
+        this.energy = 0;
+        this.age = Math.random() * 200;
+      }
+    }
+
+    function initParticles() {
+      particles = [];
+      const num = parseInt(sliderParticles.value);
+      for (let i = 0; i < num; i++) {
+        // Half ions, half electrons
+        const charge = i % 2 === 0 ? 1 : -1;
+        const mass = charge === 1 ? 30.0 : 3.0; // Electron is lighter but kept stable
+        particles.push(new Particle(
+          Math.random(),
+          Math.random() * 0.95 + 0.02,
+          charge,
+          mass
+        ));
+      }
+    }
+
+    function recycleParticle(p) {
+      p.x = Math.random();
+      // Inject mostly from boundary loops at the bottom or randomly
+      if (Math.random() < 0.6) {
+        p.y = 0.02 + Math.random() * 0.05;
+        // give some thermal upward speed
+        p.vy = Math.random() * 1.5;
+      } else {
+        p.y = Math.random() * 0.95 + 0.02;
+        p.vy = (Math.random() - 0.5) * 0.5;
+      }
+      p.vx = (Math.random() - 0.5) * 0.5;
+      p.vz = (Math.random() - 0.5) * 0.5;
+      p.age = Math.random() * 50;
+      p.energy = 0;
+    }
+
+    // --- Preset Initializers ---
+
+    function setupPreset(name) {
+      // Clear arrays
+      A.fill(0);
+      u.fill(0);
+      v.fill(0);
+      rho.fill(0.1);
+      eta_local.fill(0);
+      
+      // Default bottom boundary is line-tied coronal loops
+      bottom_A.fill(0);
+
+      if (name === 'loops') {
+        sliderResistivity.value = 0.005;
+        sliderViscosity.value = 0.02;
+        sliderGuideField.value = 0.25;
+        sliderCoupling.value = 1.2;
+        
+        // Define bottom magnetic boundary: alternating poles (loops)
+        // A is the potential, so dA/dx gives vertical B fields.
+        for (let i = 0; i < N; i++) {
+          const x = i / (N - 1);
+          // 3 loop systems (sine wave)
+          bottom_A[i] = 1.4 * Math.sin(Math.PI * 3 * x);
+        }
+        
+        // Propagate potential upward to initialize some coronal arcade loops
+        for (let j = 0; j < N; j++) {
+          const height = j / N;
+          const decay = Math.exp(-height * 3.5);
+          for (let i = 0; i < N; i++) {
+            A[i + j * N] = bottom_A[i] * decay;
+            rho[i + j * N] = 0.2 + 0.6 * decay; // denser at bottom
+          }
+        }
+      } 
+      else if (name === 'sheet') {
+        sliderResistivity.value = 0.002;
+        sliderViscosity.value = 0.03;
+        sliderGuideField.value = 0.1;
+        sliderCoupling.value = 1.5;
+
+        // B_x = +B_0 at top, -B_0 at bottom, creating a neutral current sheet in middle
+        // B_x = dA/dy, so potential A should peak in the center.
+        for (let j = 0; j < N; j++) {
+          const y = j / (N - 1);
+          // Potential is double-sided gradient: peaking in the middle
+          const val = 1.8 * (0.5 - Math.abs(y - 0.5));
+          for (let i = 0; i < N; i++) {
+            A[i + j * N] = val;
+            // Density higher in the sheet to conserve pressure balance
+            rho[i + j * N] = Math.abs(y - 0.5) < 0.08 ? 1.0 : 0.2;
+          }
+        }
+        
+        // Trigger a tiny transverse perturbation in the center to initiate reconnection
+        for (let j = N / 2 - 4; j < N / 2 + 4; j++) {
+          for (let i = N / 2 - 4; i < N / 2 + 4; i++) {
+            const idx = Math.floor(i + j * N);
+            A[idx] += 0.1 * Math.sin(2 * Math.PI * (i / N));
+            u[idx] = (Math.random() - 0.5) * 1.5;
+            v[idx] = (Math.random() - 0.5) * 1.5;
+          }
+        }
+      } 
+      else if (name === 'islands') {
+        sliderResistivity.value = 0.003;
+        sliderViscosity.value = 0.015;
+        sliderGuideField.value = 0.4;
+        sliderCoupling.value = 1.0;
+
+        // Multi-island configuration: chain of magnetic bubbles
+        for (let j = 0; j < N; j++) {
+          const y = j / (N - 1);
+          for (let i = 0; i < N; i++) {
+            const x = i / (N - 1);
+            // 2D magnetic potential creating circular loops (islands)
+            A[i + j * N] = 1.0 * Math.cos(2 * Math.PI * 2 * x) * Math.sin(Math.PI * y);
+            rho[i + j * N] = 0.3;
+          }
+        }
+        
+        // Push islands together slightly
+        for (let idx = 0; idx < SIZE; idx++) {
+          const x = (idx % N) / N;
+          u[idx] = 1.5 * Math.sin(2 * Math.PI * 2 * x);
+        }
+      } 
+      else if (name === 'turbulent') {
+        sliderResistivity.value = 0.001;
+        sliderViscosity.value = 0.01;
+        sliderGuideField.value = 0.8;
+        sliderCoupling.value = 1.4;
+
+        // Random seeds of weak magnetic flux & high velocity chaos
+        for (let idx = 0; idx < SIZE; idx++) {
+          A[idx] = (Math.random() - 0.5) * 0.4;
+          u[idx] = (Math.random() - 0.5) * 8.0;
+          v[idx] = (Math.random() - 0.5) * 8.0;
+          rho[idx] = 0.2 + Math.random() * 0.5;
+        }
+      }
+
+      // Sync slider labels
+      labelResistivity.innerText = sliderResistivity.value;
+      labelViscosity.innerText = sliderViscosity.value;
+      labelGuideField.innerText = sliderGuideField.value;
+      labelCoupling.innerText = sliderCoupling.value;
+
+      eta = parseFloat(sliderResistivity.value);
+      nu = parseFloat(sliderViscosity.value);
+      Bz_guide = parseFloat(sliderGuideField.value);
+      forceScale = parseFloat(sliderCoupling.value);
+
+      initParticles();
+      energyHistory = [];
+    }
+
+    // --- Boundary Helpers (Stam Style) ---
+    function set_bnd(b, x) {
+      for (let i = 1; i < N - 1; i++) {
+        // Top and bottom boundaries
+        x[i + 0 * N] = b === 2 ? -x[i + 1 * N] : x[i + 1 * N];
+        x[i + (N - 1) * N] = b === 2 ? -x[i + (N - 2) * N] : x[i + (N - 2) * N];
+      }
+      for (let j = 1; j < N - 1; j++) {
+        // Left and right boundaries
+        x[0 + j * N] = b === 1 ? -x[1 + j * N] : x[1 + j * N];
+        x[(N - 1) + j * N] = b === 1 ? -x[(N - 2) + j * N] : x[(N - 2) + j * N];
+      }
+      // Corner cells average
+      x[0 + 0 * N] = 0.5 * (x[1 + 0 * N] + x[0 + 1 * N]);
+      x[0 + (N - 1) * N] = 0.5 * (x[1 + (N - 1) * N] + x[0 + (N - 2) * N]);
+      x[(N - 1) + 0 * N] = 0.5 * (x[(N - 2) + 0 * N] + x[(N - 1) + 1 * N]);
+      x[(N - 1) + (N - 1) * N] = 0.5 * (x[(N - 2) + (N - 1) * N] + x[(N - 1) + (N - 2) * N]);
+    }
+
+    // --- Semi-Lagrangian Advection ---
+    function advect(b, d, d0, velocityX, velocityY, dt) {
+      const dt0 = dt * N;
+      for (let j = 1; j < N - 1; j++) {
+        for (let i = 1; i < N - 1; i++) {
+          let x = i - dt0 * velocityX[i + j * N];
+          let y = j - dt0 * velocityY[i + j * N];
+          
+          if (x < 0.5) x = 0.5;
+          if (x > N - 1.5) x = N - 1.5;
+          let i0 = Math.floor(x);
+          let i1 = i0 + 1;
+          
+          if (y < 0.5) y = 0.5;
+          if (y > N - 1.5) y = N - 1.5;
+          let j0 = Math.floor(y);
+          let j1 = j0 + 1;
+          
+          let s1 = x - i0;
+          let s0 = 1 - s1;
+          let t1 = y - j0;
+          let t0 = 1 - t1;
+          
+          d[i + j * N] = 
+            s0 * (t0 * d0[i0 + j0 * N] + t1 * d0[i0 + j1 * N]) +
+            s1 * (t0 * d0[i1 + j0 * N] + t1 * d0[i1 + j1 * N]);
+        }
+      }
+      set_bnd(b, d);
+    }
+
+    // --- Jacobi Pressure Projection for Incompressibility ---
+    function project(u, v, p, div) {
+      for (let j = 1; j < N - 1; j++) {
+        for (let i = 1; i < N - 1; i++) {
+          div[i + j * N] = -0.5 * (
+            u[(i + 1) + j * N] - u[(i - 1) + j * N] +
+            v[i + (j + 1) * N] - v[i + (j - 1) * N]
+          ) / N;
+          p[i + j * N] = 0;
+        }
+      }
+      set_bnd(0, div);
+      set_bnd(0, p);
+      
+      for (let k = 0; k < 16; k++) {
+        for (let j = 1; j < N - 1; j++) {
+          for (let i = 1; i < N - 1; i++) {
+            p[i + j * N] = (
+              div[i + j * N] +
+              p[(i - 1) + j * N] + p[(i + 1) + j * N] +
+              p[i + (j - 1) * N] + p[i + (j + 1) * N]
+            ) / 4;
+          }
+        }
+        set_bnd(0, p);
+      }
+      
+      for (let j = 1; j < N - 1; j++) {
+        for (let i = 1; i < N - 1; i++) {
+          u[i + j * N] -= 0.5 * N * (p[(i + 1) + j * N] - p[(i - 1) + j * N]);
+          v[i + j * N] -= 0.5 * N * (p[i + (j + 1) * N] - p[i + (j - 1) * N]);
+        }
+      }
+      set_bnd(1, u);
+      set_bnd(2, v);
+    }
+
+    // --- Physics Core Update Step ---
+    function stepSimulation() {
+      // 1. Swap velocity grids for advection
+      [u_prev, u] = [u, u_prev];
+      [v_prev, v] = [v, v_prev];
+      [A_prev, A] = [A, A_prev];
+      [rho_prev, rho] = [rho, rho_prev];
+
+      // Advect fluid velocity, magnetic potential, density
+      advect(1, u, u_prev, u_prev, v_prev, dt);
+      advect(2, v, v_prev, u_prev, v_prev, dt);
+      advect(0, A, A_prev, u_prev, v_prev, dt);
+      advect(0, rho, rho_prev, u_prev, v_prev, dt);
+
+      // Compute Lorentz forces, induction, currents
+      for (let j = 1; j < N - 1; j++) {
+        for (let i = 1; i < N - 1; i++) {
+          const idx = i + j * N;
+          
+          // Jz = -Laplacian(A)
+          // 5-point stencil (centered difference) scaled by grid resolution
+          const lapA = (
+            A[(i + 1) + j * N] + A[(i - 1) + j * N] +
+            A[i + (j + 1) * N] + A[i + (j - 1) * N] -
+            4 * A[idx]
+          ) * (N * N);
+          
+          const Jz = -lapA;
+          J_grid[idx] = Jz;
+
+          // B = curl(A z) = (dA/dy, -dA/dx)
+          const Bx = 0.5 * N * (A[i + (j + 1) * N] - A[i + (j - 1) * N]);
+          const By = -0.5 * N * (A[(i + 1) + j * N] - A[(i - 1) + j * N]);
+          
+          B_x_grid[idx] = Bx;
+          B_y_grid[idx] = By;
+
+          // Lorentz Force: F_L = J x B
+          // F_Lx = -Jz * By
+          // F_Ly = Jz * Bx
+          const FLx = -Jz * By;
+          const FLy = Jz * Bx;
+
+          // Couple force to fluid velocity
+          u[idx] += dt * FLx * forceScale;
+          v[idx] += dt * FLy * forceScale;
+
+          // Induction equation: dA/dt = eta_total * Laplacian(A)
+          // Combines global background resistivity and local interactive flare spots
+          const current_eta = eta + eta_local[idx];
+          A[idx] += dt * current_eta * lapA;
+
+          // Apply slow velocity damping to prevent kinetic energy runaway
+          u[idx] *= 0.992;
+          v[idx] *= 0.992;
+
+          // Slowly decay local custom resistivity spots
+          if (eta_local[idx] > 0) {
+            eta_local[idx] *= 0.96;
+            if (eta_local[idx] < 1e-4) eta_local[idx] = 0;
+          }
+        }
+      }
+
+      // Bound velocity & magnetic potential
+      set_bnd(0, A);
+      
+      // Pin/tie the bottom boundary magnetic potential
+      for (let i = 0; i < N; i++) {
+        A[i + 0 * N] = bottom_A[i];
+      }
+
+      set_bnd(1, u);
+      set_bnd(2, v);
+
+      // 3. Pressure projection to maintain fluid divergence = 0
+      project(u, v, p, div);
+
+      // 4. Update particles (Ions & Electrons under relativistic Lorentz force)
+      updateParticles();
+    }
+
+    // --- Relativistic/Hybrid particle integration ---
+    function updateParticles() {
+      const activeCount = parseInt(sliderParticles.value);
+      
+      // Adjust particle count dynamically
+      if (particles.length < activeCount) {
+        for (let i = particles.length; i < activeCount; i++) {
+          const charge = i % 2 === 0 ? 1 : -1;
+          const mass = charge === 1 ? 30.0 : 3.0;
+          particles.push(new Particle(Math.random(), Math.random() * 0.95 + 0.02, charge, mass));
+        }
+      } else if (particles.length > activeCount) {
+        particles.length = activeCount;
+      }
+
+      for (let k = particles.length - 1; k >= 0; k--) {
+        let p = particles[k];
+        
+        let px = p.x * N;
+        let py = p.y * N;
+
+        if (px < 0 || px >= N - 1 || py < 0 || py >= N - 1) {
+          recycleParticle(p);
+          continue;
+        }
+
+        // Interpolate fields at particle site
+        let i0 = Math.floor(px);
+        let j0 = Math.floor(py);
+        let tx = px - i0;
+        let ty = py - j0;
+
+        function interp(grid) {
+          return (1 - tx) * ((1 - ty) * grid[i0 + j0 * N] + ty * grid[i0 + (j0 + 1) * N]) + 
+                 tx * ((1 - ty) * grid[(i0 + 1) + j0 * N] + ty * grid[(i0 + 1) + (j0 + 1) * N]);
+        }
+
+        let Bx = interp(B_x_grid);
+        let By = interp(B_y_grid);
+        let Jz = interp(J_grid);
+        let u_f = interp(u);
+        let v_f = interp(v);
+
+        // Electro-magnetic forces
+        // Ideal E field: E = -v_f x B (creates drift along lines)
+        // Non-ideal E field along z due to reconnection resistivity: E_z = eta * J_z
+        let Ex = -v_f * Bz_guide;
+        let Ey = u_f * Bz_guide;
+        
+        const local_res = eta + eta_local[i0 + j0 * N];
+        let Ez = -u_f * By + v_f * Bx + local_res * Jz;
+
+        // Lorentz force acceleration: a = (q/m)*(E + v x B) - gamma*(v - v_fluid)
+        let q_over_m = p.q / p.m;
+        let ax = q_over_m * (Ex + p.vy * Bz_guide - p.vz * By) - particleDrag * (p.vx - u_f);
+        let ay = q_over_m * (Ey + p.vz * Bx - p.vx * Bz_guide) - particleDrag * (p.vy - v_f);
+        let az = q_over_m * (Ez + p.vx * By - p.vy * Bx) - particleDrag * p.vz;
+
+        p.vx += ax * dt;
+        p.vy += ay * dt;
+        p.vz += az * dt;
+
+        // speed limit to prevent grid ejection
+        let speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+        const maxPSpeed = 2.5;
+        if (speed > maxPSpeed) {
+          p.vx *= maxPSpeed / speed;
+          p.vy *= maxPSpeed / speed;
+          p.vz *= maxPSpeed / speed;
+        }
+
+        // update position
+        p.x += p.vx * (dt / N);
+        p.y += p.vy * (dt / N);
+
+        // kinetic energy calculation
+        p.energy = 0.5 * p.m * (p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+
+        p.age += dt;
+
+        // Recycle old or out-of-bounds particles
+        if (p.x < 0.01 || p.x > 0.99 || p.y < 0.01 || p.y > 0.99 || p.age > 400) {
+          recycleParticle(p);
+        }
+      }
+    }
+
+    // --- Streamline Field Tracer for Magnetic lines ---
+    function traceFieldLine(startX, startY, maxSteps = 120) {
+      let line = [{ x: startX, y: startY }];
+      let cx = startX;
+      let cy = startY;
+      const ds = 0.009; // tracing step size
+
+      // Trace Forward
+      for (let s = 0; s < maxSteps; s++) {
+        let px = cx * N;
+        let py = cy * N;
+        if (px < 0 || px >= N - 1 || py < 0 || py >= N - 1) break;
+
+        let i0 = Math.floor(px);
+        let j0 = Math.floor(py);
+        let tx = px - i0;
+        let ty = py - j0;
+
+        function interp(grid) {
+          return (1 - tx) * ((1 - ty) * grid[i0 + j0 * N] + ty * grid[i0 + (j0 + 1) * N]) + 
+                 tx * ((1 - ty) * grid[(i0 + 1) + j0 * N] + ty * grid[(i0 + 1) + (j0 + 1) * N]);
+        }
+
+        let Bx = interp(B_x_grid);
+        let By = interp(B_y_grid);
+        let B_mag = Math.sqrt(Bx * Bx + By * By);
+        if (B_mag < 1e-4) break;
+
+        cx += (Bx / B_mag) * ds;
+        cy += (By / B_mag) * ds;
+
+        if (cx < 0 || cx > 1 || cy < 0 || cy > 1) break;
+        line.push({ x: cx, y: cy });
+      }
+
+      // Trace Backward
+      let backwardLine = [];
+      cx = startX;
+      cy = startY;
+      for (let s = 0; s < maxSteps; s++) {
+        let px = cx * N;
+        let py = cy * N;
+        if (px < 0 || px >= N - 1 || py < 0 || py >= N - 1) break;
+
+        let i0 = Math.floor(px);
+        let j0 = Math.floor(py);
+        let tx = px - i0;
+        let ty = py - j0;
+
+        function interp(grid) {
+          return (1 - tx) * ((1 - ty) * grid[i0 + j0 * N] + ty * grid[i0 + (j0 + 1) * N]) + 
+                 tx * ((1 - ty) * grid[(i0 + 1) + j0 * N] + ty * grid[(i0 + 1) + (j0 + 1) * N]);
+        }
+
+        let Bx = interp(B_x_grid);
+        let By = interp(B_y_grid);
+        let B_mag = Math.sqrt(Bx * Bx + By * By);
+        if (B_mag < 1e-4) break;
+
+        cx -= (Bx / B_mag) * ds;
+        cy -= (By / B_mag) * ds;
+
+        if (cx < 0 || cx > 1 || cy < 0 || cy > 1) break;
+        backwardLine.push({ x: cx, y: cy });
+      }
+
+      return backwardLine.reverse().concat(line);
+    }
+
+    // --- Web Audio API Implementation ---
+
+    function initAudio() {
+      if (audioCtx) return;
+      
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+
+      // Master configuration
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      delayNode = audioCtx.createDelay(1.0);
+      delayNode.delayTime.setValueAtTime(0.35, audioCtx.currentTime);
+
+      const delayFeedback = audioCtx.createGain();
+      delayFeedback.gain.setValueAtTime(0.4, audioCtx.currentTime);
+
+      // Route delay feedback
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+
+      masterGain.connect(audioCtx.destination);
+      masterGain.connect(delayNode);
+      delayNode.connect(masterGain);
+
+      // 1. Build Ambient Coronal Hum (Resonant Drone Chord)
+      const droneFreqs = [55.0, 110.0, 164.81, 220.0, 329.63]; // A Minor Pentatonic / Open harmonics
+      synthHum.oscillators = [];
+      synthHum.gainNodes = [];
+
+      synthHum.filter = audioCtx.createBiquadFilter();
+      synthHum.filter.type = 'lowpass';
+      synthHum.filter.frequency.setValueAtTime(250, audioCtx.currentTime);
+      synthHum.filter.Q.setValueAtTime(4.0, audioCtx.currentTime);
+
+      droneFreqs.forEach((freq, idx) => {
+        let osc = audioCtx.createOscillator();
+        osc.type = idx === 0 ? 'sawtooth' : 'triangle';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        
+        let gain = audioCtx.createGain();
+        // quiet sub bass, louder mid-tones
+        gain.gain.setValueAtTime(idx === 0 ? 0.15 : 0.08, audioCtx.currentTime);
+
+        osc.connect(gain);
+        gain.connect(synthHum.filter);
+        osc.start();
+
+        synthHum.oscillators.push(osc);
+        synthHum.gainNodes.push(gain);
+      });
+
+      synthHum.filter.connect(masterGain);
+
+      // 2. Build Whistler Frequency Synths (FM Oscillators for Satellites)
+      // Sat A
+      synthWhistler.carryA = audioCtx.createOscillator();
+      synthWhistler.carryA.type = 'sine';
+      synthWhistler.modA = audioCtx.createOscillator();
+      synthWhistler.modA.type = 'sine';
+      let modGainA = audioCtx.createGain();
+      modGainA.gain.setValueAtTime(120, audioCtx.currentTime);
+      synthWhistler.gainA = audioCtx.createGain();
+      synthWhistler.gainA.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      synthWhistler.modA.connect(modGainA);
+      modGainA.connect(synthWhistler.carryA.frequency);
+      synthWhistler.carryA.connect(synthWhistler.gainA);
+      synthWhistler.gainA.connect(masterGain);
+
+      // Sat B
+      synthWhistler.carryB = audioCtx.createOscillator();
+      synthWhistler.carryB.type = 'sine';
+      synthWhistler.modB = audioCtx.createOscillator();
+      synthWhistler.modB.type = 'sine';
+      let modGainB = audioCtx.createGain();
+      modGainB.gain.setValueAtTime(80, audioCtx.currentTime);
+      synthWhistler.gainB = audioCtx.createGain();
+      synthWhistler.gainB.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      synthWhistler.modB.connect(modGainB);
+      modGainB.connect(synthWhistler.carryB.frequency);
+      synthWhistler.carryB.connect(synthWhistler.gainB);
+      synthWhistler.gainB.connect(masterGain);
+
+      // Start FM carriers & modulators
+      synthWhistler.carryA.start();
+      synthWhistler.modA.start();
+      synthWhistler.carryB.start();
+      synthWhistler.modB.start();
+
+      // 3. Build Flare Crackle Click Synthesizer (Resonant noise bursts)
+      synthClicks.filter = audioCtx.createBiquadFilter();
+      synthClicks.filter.type = 'bandpass';
+      synthClicks.filter.Q.setValueAtTime(15, audioCtx.currentTime);
+      synthClicks.filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+
+      synthClicks.gain = audioCtx.createGain();
+      synthClicks.gain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      synthClicks.filter.connect(synthClicks.gain);
+      synthClicks.gain.connect(masterGain);
+
+      audioCtx.resume();
+    }
+
+    // Trigger a click sound when reconnection events occurs
+    function playReconnectionClick(intensity) {
+      if (!audioEnabled || !audioCtx) return;
+
+      // Create a short buffer of noise
+      const bufferSize = audioCtx.sampleRate * 0.05; // 50ms click
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noiseNode = audioCtx.createBufferSource();
+      noiseNode.buffer = buffer;
+
+      const noiseGain = audioCtx.createGain();
+      
+      // Calculate envelope: sharp attack, exponential decay
+      const now = audioCtx.currentTime;
+      const vol = Math.min(intensity * parseFloat(sliderVolClicks.value) * 0.8, 0.9);
+      
+      noiseGain.gain.setValueAtTime(vol, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03 + Math.random() * 0.03);
+
+      // Sweep click filter pitch based on flare energy
+      const freq = 600 + Math.random() * 3000 * intensity;
+      synthClicks.filter.frequency.setValueAtTime(freq, now);
+
+      noiseNode.connect(synthClicks.filter);
+      noiseGain.connect(masterGain);
+      
+      // route also to delay node for echoing crackles
+      if (Math.random() < 0.5) {
+        noiseGain.connect(delayNode);
+      }
+
+      noiseNode.start();
+    }
+
+    function updateAudioSynth(telemetryA, telemetryB, globalDissipation) {
+      if (!audioEnabled || !audioCtx) return;
+
+      const now = audioCtx.currentTime;
+
+      // 1. Modulate Coronal Hum Filter & Volume
+      // Dissipation modulates lowpass filter cutoff (creates dynamic brightness)
+      const humVolume = parseFloat(sliderVolHum.value) * 0.35;
+      const filterFreq = 150 + Math.min(globalDissipation * 5000, 1800);
+      
+      synthHum.filter.frequency.setTargetAtTime(filterFreq, now, 0.1);
+      
+      // Modify individual oscillator volumes to shift harmonic balance
+      synthHum.gainNodes.forEach((gNode, idx) => {
+        const factor = idx === 0 ? 1.0 : (1.0 + Math.sin(now * 0.5 + idx));
+        gNode.gain.setTargetAtTime(humVolume * factor * 0.12, now, 0.2);
+      });
+
+      // 2. Modulate Satellite Whistler Synths (FM frequency sweeps)
+      const volWhistler = parseFloat(sliderVolWhistler.value) * 0.25;
+
+      // Sat A (Cyan)
+      if (telemetryA.active) {
+        // Gyro frequency proportional to local B
+        const carrierF = 80 + Math.min(telemetryA.B * 350, 800);
+        const modF = 4 + Math.min(Math.abs(telemetryA.J) * 15, 60);
+        
+        synthWhistler.carryA.frequency.setTargetAtTime(carrierF, now, 0.15);
+        synthWhistler.modA.frequency.setTargetAtTime(modF, now, 0.25);
+        
+        // fade out if field is weak, otherwise scale volume
+        const targetVol = volWhistler * Math.min(telemetryA.B * 0.8, 1.0);
+        synthWhistler.gainA.gain.setTargetAtTime(targetVol, now, 0.1);
+      } else {
+        synthWhistler.gainA.gain.setTargetAtTime(0, now, 0.2);
+      }
+
+      // Sat B (Magenta)
+      if (telemetryB.active) {
+        const carrierF = 120 + Math.min(telemetryB.B * 250, 700);
+        const modF = 2 + Math.min(Math.abs(telemetryB.J) * 10, 40);
+        
+        synthWhistler.carryB.frequency.setTargetAtTime(carrierF, now, 0.2);
+        synthWhistler.modB.frequency.setTargetAtTime(modF, now, 0.2);
+        
+        const targetVol = volWhistler * Math.min(telemetryB.B * 0.6, 1.0);
+        synthWhistler.gainB.gain.setTargetAtTime(targetVol, now, 0.15);
+      } else {
+        synthWhistler.gainB.gain.setTargetAtTime(0, now, 0.2);
+      }
+
+      // 3. Spontaneous crackling based on global dissipation spikes
+      if (globalDissipation > 0.005) {
+        const clickProbability = Math.min(globalDissipation * 10, 0.65);
+        if (Math.random() < clickProbability) {
+          playReconnectionClick(globalDissipation * 30);
+        }
+      }
+    }
+
+    // Toggle Audio on/off
+    document.getElementById('audio-switch').addEventListener('click', function(e) {
+      if (!audioCtx) {
+        initAudio();
+      }
+      
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        audioCtx.resume();
+        masterGain.gain.setTargetAtTime(0.8, audioCtx.currentTime, 0.2);
+        this.classList.add('active');
+        this.innerText = "mute audio feed";
+      } else {
+        masterGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.15);
+        this.classList.remove('active');
+        this.innerText = "activate audio feed";
+      }
+    });
+
+    // --- Interactive Mouse Handlers ---
+
+    function getMouseCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const x = (clientX - rect.left) / rect.width;
+      const y = 1.0 - (clientY - rect.top) / rect.height; // invert y so 0 is bottom
+      return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
+    }
+
+    function handleMouseDown(e) {
+      isMouseDown = true;
+      const pos = getMouseCoords(e);
+      prevMouseX = pos.x;
+      prevMouseY = pos.y;
+
+      document.getElementById('instructions-overlay').style.opacity = 0;
+
+      // 1. Check if clicking near a satellite to drag it
+      const clickDistA = Math.hypot(pos.x - satA.x, pos.y - satA.y);
+      const clickDistB = Math.hypot(pos.x - satB.x, pos.y - satB.y);
+      const grabRadius = 0.04;
+
+      if (currentTool === 'probe' || clickDistA < grabRadius || clickDistB < grabRadius) {
+        if (clickDistA < clickDistB && clickDistA < grabRadius) {
+          draggingSat = 'A';
+        } else if (clickDistB < grabRadius) {
+          draggingSat = 'B';
+        } else if (currentTool === 'probe') {
+          // Move closest satellite to touch point
+          if (clickDistA < clickDistB) {
+            satA.x = pos.x;
+            satA.y = pos.y;
+            draggingSat = 'A';
+          } else {
+            satB.x = pos.x;
+            satB.y = pos.y;
+            draggingSat = 'B';
+          }
+        }
+        return;
+      }
+
+      // 2. Perform one-time tools on click
+      if (currentTool === 'loop') {
+        injectMagneticLoop(pos.x, pos.y);
+      } else if (currentTool === 'flare') {
+        triggerResistiveFlare(pos.x, pos.y);
+      }
+    }
+
+    function handleMouseMove(e) {
+      if (!isMouseDown) return;
+      const pos = getMouseCoords(e);
+
+      // Drag satellite
+      if (draggingSat) {
+        if (draggingSat === 'A') {
+          satA.x = pos.x;
+          satA.y = pos.y;
+        } else {
+          satB.x = pos.x;
+          satB.y = pos.y;
+        }
+        return;
+      }
+
+      // Continuous tool drawing
+      if (currentTool === 'stir') {
+        // Apply forces to fluid velocity grid
+        const gridX = Math.floor(pos.x * N);
+        const gridY = Math.floor(pos.y * N);
+        const forceX = (pos.x - prevMouseX) * 120;
+        const forceY = (pos.y - prevMouseY) * 120;
+
+        const radius = 3;
+        for (let j = -radius; j <= radius; j++) {
+          for (let i = -radius; i <= radius; i++) {
+            const cx = gridX + i;
+            const cy = gridY + j;
+            if (cx > 0 && cx < N - 1 && cy > 0 && cy < N - 1) {
+              const idx = cx + cy * N;
+              const w = 1.0 - (Math.hypot(i, j) / (radius + 1));
+              if (w > 0) {
+                u[idx] += forceX * w;
+                v[idx] += forceY * w;
+                // Add some local density injection
+                rho[idx] = Math.min(rho[idx] + 0.15 * w, 2.0);
+              }
+            }
+          }
+        }
+      }
+
+      prevMouseX = pos.x;
+      prevMouseY = pos.y;
+    }
+
+    function handleMouseUp() {
+      isMouseDown = false;
+      draggingSat = null;
+    }
+
+    canvas.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    // Touch support for mobiles/tablets
+    canvas.addEventListener('touchstart', function(e) { e.preventDefault(); handleMouseDown(e); });
+    window.addEventListener('touchmove', function(e) { handleMouseMove(e); });
+    window.addEventListener('touchend', handleMouseUp);
+
+    // --- Interactive Physics Actions ---
+
+    // Emerge a bipolar magnetic flux loop (like a coronal loop emergence)
+    function injectMagneticLoop(cx, cy) {
+      const gridX = Math.floor(cx * N);
+      const gridY = Math.floor(cy * N);
+      const radius = Math.floor(N * 0.12);
+      const magnitude = 1.8;
+
+      for (let j = -radius; j <= radius; j++) {
+        for (let i = -radius; i <= radius; i++) {
+          const x = gridX + i;
+          const y = gridY + j;
+          if (x > 0 && x < N - 1 && y > 0 && y < N - 1) {
+            const idx = x + y * N;
+            const dist = Math.hypot(i, j);
+            const w = Math.exp(-(dist * dist) / (radius * radius * 0.5));
+            // Multi-polar loop: creates pairs of B regions
+            const loopVal = magnitude * w * Math.sin(Math.PI * i / radius);
+            A[idx] += loopVal;
+            
+            // Add some hot up-welling velocity
+            v[idx] += w * 1.5;
+            rho[idx] = Math.min(rho[idx] + 0.3 * w, 2.0);
+          }
+        }
+      }
+      playReconnectionClick(1.0);
+    }
+
+    // Instantly ignite a hot, resistive spot (triggers rapid local reconnection)
+    function triggerResistiveFlare(cx, cy) {
+      const gridX = Math.floor(cx * N);
+      const gridY = Math.floor(cy * N);
+      const radius = 4;
+      
+      // Add local resistivity spike
+      for (let j = -radius; j <= radius; j++) {
+        for (let i = -radius; i <= radius; i++) {
+          const x = gridX + i;
+          const y = gridY + j;
+          if (x > 0 && x < N - 1 && y > 0 && y < N - 1) {
+            const idx = x + y * N;
+            const dist = Math.hypot(i, j);
+            const w = Math.exp(-(dist * dist) / (radius * radius));
+            // Raise local resistivity by 10x-50x background
+            eta_local[idx] += 0.08 * w;
+            
+            // Give thermal explosion blow (radial outward speed)
+            if (dist > 0.1) {
+              u[idx] += (i / dist) * 2.0 * w;
+              v[idx] += (j / dist) * 2.0 * w;
+            }
+          }
+        }
+      }
+      playReconnectionClick(2.0);
+    }
+
+    // --- UI Controls Listeners ---
+
+    sliderResistivity.addEventListener('input', function() {
+      labelResistivity.innerText = this.value;
+      eta = parseFloat(this.value);
+    });
+
+    sliderViscosity.addEventListener('input', function() {
+      labelViscosity.innerText = this.value;
+      nu = parseFloat(this.value);
+    });
+
+    sliderGuideField.addEventListener('input', function() {
+      labelGuideField.innerText = this.value;
+      Bz_guide = parseFloat(this.value);
+    });
+
+    sliderCoupling.addEventListener('input', function() {
+      labelCoupling.innerText = this.value;
+      forceScale = parseFloat(this.value);
+    });
+
+    sliderParticles.addEventListener('input', function() {
+      labelParticles.innerText = this.value;
+    });
+
+    // Volume labels
+    sliderVolHum.addEventListener('input', function() { labelVolHum.innerText = Math.round(this.value*100) + "%"; });
+    sliderVolWhistler.addEventListener('input', function() { labelVolWhistler.innerText = Math.round(this.value*100) + "%"; });
+    sliderVolClicks.addEventListener('input', function() { labelVolClicks.innerText = Math.round(this.value*100) + "%"; });
+
+    // Preset Buttons
+    document.getElementById('preset-loops').addEventListener('click', function() {
+      setActivePreset(this); setupPreset('loops');
+    });
+    document.getElementById('preset-sheet').addEventListener('click', function() {
+      setActivePreset(this); setupPreset('sheet');
+    });
+    document.getElementById('preset-islands').addEventListener('click', function() {
+      setActivePreset(this); setupPreset('islands');
+    });
+    document.getElementById('preset-turbulent').addEventListener('click', function() {
+      setActivePreset(this); setupPreset('turbulent');
+    });
+
+    function setActivePreset(elem) {
+      document.querySelectorAll('.selector button').forEach(b => b.classList.remove('active'));
+      elem.classList.add('active');
+    }
+
+    // Visual Mode Tabs
+    document.querySelectorAll('#visual-mode-select .tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('#visual-mode-select .tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        visualMode = this.dataset.val;
+      });
+    });
+
+    // Toolbar Tool Selection
+    document.querySelectorAll('#toolbar button').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('#toolbar button').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentTool = this.id.replace('tool-', '');
+      });
+    });
+
+    // General Reset / Clear
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      const activePreset = document.querySelector('.selector button.active');
+      if (activePreset) {
+        setupPreset(activePreset.id.replace('preset-', ''));
+      } else {
+        setupPreset('loops');
+      }
+    });
+
+    document.getElementById('btn-clear-fields').addEventListener('click', () => {
+      A.fill(0);
+      J_grid.fill(0);
+      B_x_grid.fill(0);
+      B_y_grid.fill(0);
+      bottom_A.fill(0);
+      energyHistory = [];
+    });
+
+    // --- Rendering Functions ---
+
+    function drawSimulation() {
+      // 1. Draw background grid field mode
+      const imgData = ctx.createImageData(canvas.width, canvas.height);
+      const w = canvas.width;
+      const h = canvas.height;
+
+      for (let y = 0; y < h; y++) {
+        // Map canvas coordinates to grid index
+        // Invert y so grid index 0 is at bottom boundary
+        const gy = (1.0 - (y / h)) * (N - 1);
+        const j0 = Math.floor(gy);
+        const j1 = Math.min(j0 + 1, N - 1);
+        const ty = gy - j0;
+
+        for (let x = 0; x < w; x++) {
+          const gx = (x / w) * (N - 1);
+          const i0 = Math.floor(gx);
+          const i1 = Math.min(i0 + 1, N - 1);
+          const tx = gx - i0;
+
+          // Bilinear grid interpolation
+          function interp(grid) {
+            const v00 = grid[i0 + j0 * N];
+            const v10 = grid[i1 + j0 * N];
+            const v01 = grid[i0 + j1 * N];
+            const v11 = grid[i1 + j1 * N];
+            return (1 - tx) * ((1 - ty) * v00 + ty * v01) + tx * ((1 - ty) * v10 + ty * v11);
+          }
+
+          let r = 0, g = 0, b = 0;
+
+          if (visualMode === 'vorticity') {
+            // Fluid vorticity = dv/dx - du/dy
+            const du_dy = 0.5 * N * (interp(u_prev) - interp(u)); // approximate locally
+            const dv_dx = 0.5 * N * (interp(v) - interp(v_prev));
+            const vorticity = Math.max(-10, Math.min(10, (dv_dx - du_dy) * 0.15));
+
+            // Denser regions are brighter background
+            const density = interp(rho);
+            
+            // Cyan-blue vortices, glowing space-background
+            if (vorticity > 0) {
+              r = vorticity * 80;
+              g = vorticity * 150 + density * 12;
+              b = vorticity * 255 + density * 30;
+            } else {
+              r = -vorticity * 200;
+              g = -vorticity * 50 + density * 12;
+              b = -vorticity * 80 + density * 35;
+            }
+          } 
+          else if (visualMode === 'current') {
+            // Out-of-plane current density J_z
+            const Jz = Math.abs(interp(J_grid));
+            const density = interp(rho);
+
+            // Glowing magenta/red current sheets
+            r = Math.min(255, Jz * 40 + density * 15);
+            g = Math.min(255, Jz * 5 + density * 10);
+            b = Math.min(255, Jz * 30 + density * 20);
+          } 
+          else if (visualMode === 'field') {
+            // Total in-plane magnetic field strength |B|
+            const Bx = interp(B_x_grid);
+            const By = interp(B_y_grid);
+            const B_mag = Math.sqrt(Bx * Bx + By * By);
+
+            // Neon cyan magnetic pressure fields
+            r = Math.min(255, B_mag * 10);
+            g = Math.min(255, B_mag * 70 + 8);
+            b = Math.min(255, B_mag * 120 + 20);
+          }
+
+          // Add a subtle boundary indicator at the bottom (photosphere layer)
+          if (y > h - 8) {
+            r += 30; g += 15; b += 0; // warm orange baseline
+          }
+
+          const pixelIdx = (x + y * w) * 4;
+          imgData.data[pixelIdx] = r;
+          imgData.data[pixelIdx + 1] = g;
+          imgData.data[pixelIdx + 2] = b;
+          imgData.data[pixelIdx + 3] = 255;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      // 2. Draw Magnetic Field Lines using Streamline tracing
+      ctx.lineWidth = 1.2;
+      
+      // Trace from bottom surface loops (arcade lines)
+      const numArcades = 16;
+      for (let i = 0; i < numArcades; i++) {
+        const sx = (i + 0.5) / numArcades;
+        // start tracing slightly above boundary
+        const line = traceFieldLine(sx, 0.02);
+        drawFieldLine(line, 0.25);
+      }
+
+      // Trace from random interior seeds to capture magnetic reconnection bubbles
+      const numInterior = 8;
+      for (let i = 0; i < numInterior; i++) {
+        // seed near center sheet where reconnection occurs
+        const sx = 0.2 + 0.6 * (i / numInterior);
+        const sy = 0.4 + 0.2 * Math.sin(i * 1.7);
+        const line = traceFieldLine(sx, sy);
+        drawFieldLine(line, 0.18);
+      }
+
+      // 3. Draw particles (glowing ions & electrons)
+      particles.forEach(p => {
+        const cx = p.x * canvas.width;
+        const cy = (1.0 - p.y) * canvas.height; // invert y for canvas drawing
+
+        // Color based on species and energy
+        // High energy particles glow white/neon-pink
+        let size = 1.0;
+        let color = '#fff';
+
+        const isElectron = p.q === -1;
+        if (p.energy > 450.0) {
+          // Accelerated flare particle!
+          size = 2.4;
+          color = varColor('--neon-magenta');
+          
+          // Draw tiny speed trail
+          ctx.beginPath();
+          ctx.strokeStyle = varColor('--neon-magenta');
+          ctx.lineWidth = 1.5;
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx - p.vx * 3.5, cy + p.vy * 3.5);
+          ctx.stroke();
+        } else if (p.energy > 120.0) {
+          size = 1.8;
+          color = isElectron ? '#fff' : varColor('--neon-yellow');
+        } else {
+          size = isElectron ? 1.0 : 1.2;
+          color = isElectron ? varColor('--neon-cyan') : varColor('--neon-orange');
+        }
+
+        ctx.fillStyle = color;
+        ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
+      });
+
+      // 4. Draw Satellites (Probes) on Canvas
+      drawSatelliteNode(satA, 'A', varColor('--neon-cyan'));
+      drawSatelliteNode(satB, 'B', varColor('--neon-magenta'));
+    }
+
+    // Helper to get CSS variable values
+    function varColor(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function drawFieldLine(line, baseAlpha) {
+      if (line.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(line[0].x * canvas.width, (1.0 - line[0].y) * canvas.height);
+      for (let i = 1; i < line.length; i++) {
+        ctx.lineTo(line[i].x * canvas.width, (1.0 - line[i].y) * canvas.height);
+      }
+      
+      // Glow brighter where magnetic field is strong
+      ctx.strokeStyle = `rgba(0, 243, 255, ${baseAlpha})`;
+      ctx.stroke();
+    }
+
+    function drawSatelliteNode(sat, label, color) {
+      const cx = sat.x * canvas.width;
+      const cy = (1.0 - sat.y) * canvas.height;
+
+      // Draw orbit circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Outer targeting bracket
+      ctx.beginPath();
+      ctx.arc(cx, cy, 14, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]); // clear dash
+
+      // Inner blinking beacon
+      const blink = 0.5 + 0.5 * Math.sin(Date.now() * 0.008);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = blink;
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+    }
+
+    // --- Diagnostic calculations & plots ---
+
+    function getGridInterpTelemetry(sat) {
+      const px = sat.x * N;
+      const py = sat.y * N;
+      
+      if (px < 0 || px >= N - 1 || py < 0 || py >= N - 1) {
+        return { active: false, B: 0, J: 0, rho: 0 };
+      }
+
+      const i0 = Math.floor(px);
+      const j0 = Math.floor(py);
+      const tx = px - i0;
+      const ty = py - j0;
+
+      function interp(grid) {
+        return (1 - tx) * ((1 - ty) * grid[i0 + j0 * N] + ty * grid[i0 + (j0 + 1) * N]) + 
+               tx * ((1 - ty) * grid[(i0 + 1) + j0 * N] + ty * grid[(i0 + 1) + (j0 + 1) * N]);
+      }
+
+      const Bx = interp(B_x_grid);
+      const By = interp(B_y_grid);
+      const B_mag = Math.sqrt(Bx * Bx + By * By + Bz_guide * Bz_guide);
+      const J = interp(J_grid);
+      const density = interp(rho);
+
+      return {
+        active: true,
+        B: B_mag,
+        J: J,
+        rho: density
+      };
+    }
+
+    function calculateGlobalEnergyBudget() {
+      let totalB2 = 0;
+      let totalV2 = 0;
+      let totalDiss = 0;
+
+      for (let idx = 0; idx < SIZE; idx++) {
+        const Bx = B_x_grid[idx];
+        const By = B_y_grid[idx];
+        const B2 = Bx * Bx + By * By + Bz_guide * Bz_guide;
+        totalB2 += B2;
+
+        const u_val = u[idx];
+        const v_val = v[idx];
+        const V2 = u_val * u_val + v_val * v_val;
+        totalV2 += V2;
+
+        const J = J_grid[idx];
+        const dissipation = (eta + eta_local[idx]) * J * J;
+        totalDiss += dissipation;
+      }
+
+      // scale down to human-readable indices
+      const magEnergy = totalB2 * (1.0 / SIZE);
+      const kinEnergy = totalV2 * (1.0 / SIZE);
+      const ohmicDiss = totalDiss * (1.0 / SIZE);
+
+      return {
+        mag: magEnergy,
+        kin: kinEnergy,
+        diss: ohmicDiss
+      };
+    }
+
+    function updateDiagnostics(telemetryA, telemetryB, energyBudget) {
+      // Sat A
+      labelSatAPos.innerText = `x:${satA.x.toFixed(2)} y:${satA.y.toFixed(2)}`;
+      labelSatABField.innerText = `${telemetryA.B.toFixed(3)} T`;
+      labelSatACurrent.innerText = telemetryA.J.toFixed(2);
+      labelSatADensity.innerText = telemetryA.rho.toFixed(3);
+
+      // Position label relative to parent canvas container
+      const rect = canvas.getBoundingClientRect();
+      satALabel.style.display = 'block';
+      satALabel.style.left = `${rect.left + satA.x * rect.width}px`;
+      satALabel.style.top = `${rect.top + (1.0 - satA.y) * rect.height - 20}px`;
+
+      // Sat B
+      labelSatBPos.innerText = `x:${satB.x.toFixed(2)} y:${satB.y.toFixed(2)}`;
+      labelSatBBField.innerText = `${telemetryB.B.toFixed(3)} T`;
+      labelSatBCurrent.innerText = telemetryB.J.toFixed(2);
+      labelSatBDensity.innerText = telemetryB.rho.toFixed(3);
+
+      satBLabel.style.display = 'block';
+      satBLabel.style.left = `${rect.left + satB.x * rect.width}px`;
+      satBLabel.style.top = `${rect.top + (1.0 - satB.y) * rect.height - 20}px`;
+
+      // Energy text
+      labelMagEnergy.innerText = `${energyBudget.mag.toFixed(4)} J_m`;
+      labelKinEnergy.innerText = `${energyBudget.kin.toFixed(4)} J_k`;
+      labelDissipation.innerText = `${energyBudget.diss.toFixed(6)} W/m³`;
+
+      // Store history for chart
+      energyHistory.push({ mag: energyBudget.mag, kin: energyBudget.kin, diss: energyBudget.diss });
+      if (energyHistory.length > maxHistLen) {
+        energyHistory.shift();
+      }
+
+      drawEnergyChart();
+    }
+
+    function drawEnergyChart() {
+      const w = chartCanvas.width;
+      const h = chartCanvas.height;
+      chartCtx.fillStyle = '#020205';
+      chartCtx.fillRect(0, 0, w, h);
+
+      if (energyHistory.length < 2) return;
+
+      // Find max scale factor
+      let maxVal = 0.1;
+      energyHistory.forEach(d => {
+        if (d.mag > maxVal) maxVal = d.mag;
+        if (d.kin > maxVal) maxVal = d.kin;
+      });
+
+      function getY(val) {
+        return h - (val / maxVal) * (h - 8) - 4;
+      }
+
+      chartCtx.lineWidth = 1.5;
+
+      // Draw Magnetic Energy (Cyan)
+      chartCtx.beginPath();
+      chartCtx.strokeStyle = varColor('--neon-cyan');
+      chartCtx.moveTo(0, getY(energyHistory[0].mag));
+      for (let i = 1; i < energyHistory.length; i++) {
+        const x = (i / (maxHistLen - 1)) * w;
+        chartCtx.lineTo(x, getY(energyHistory[i].mag));
+      }
+      chartCtx.stroke();
+
+      // Draw Kinetic Energy (Green)
+      chartCtx.beginPath();
+      chartCtx.strokeStyle = varColor('--neon-green');
+      chartCtx.moveTo(0, getY(energyHistory[0].kin));
+      for (let i = 1; i < energyHistory.length; i++) {
+        const x = (i / (maxHistLen - 1)) * w;
+        chartCtx.lineTo(x, getY(energyHistory[i].kin));
+      }
+      chartCtx.stroke();
+
+      // Draw Dissipation peaks as background red bars
+      chartCtx.fillStyle = 'rgba(255, 0, 127, 0.25)';
+      for (let i = 0; i < energyHistory.length; i++) {
+        const x = (i / (maxHistLen - 1)) * w;
+        const barH = (energyHistory[i].diss / (maxVal * 0.05)) * h; // amplified visually
+        chartCtx.fillRect(x - 1, h - barH, 2, barH);
+      }
+    }
+
+    // --- Main Game Loop ---
+    let lastTime = 0;
+    
+    function mainLoop(time) {
+      if (isRunning) {
+        // Step MHD fluid grid physics
+        stepSimulation();
+
+        // Perform diagnostics telemetry
+        const telemetryA = getGridInterpTelemetry(satA);
+        const telemetryB = getGridInterpTelemetry(satB);
+        const energyBudget = calculateGlobalEnergyBudget();
+        
+        updateDiagnostics(telemetryA, telemetryB, energyBudget);
+
+        // Update sound synthesizer parameters
+        updateAudioSynth(telemetryA, telemetryB, energyBudget.diss);
+      }
+
+      // Draw all layers on screen
+      drawSimulation();
+
+      requestAnimationFrame(mainLoop);
+    }
+
+    // Initialize preset on boot
+    setupPreset('loops');
+    requestAnimationFrame(mainLoop);
+
+    // Hide telemetry labels when resizing window to avoid coordinate jumps
+    window.addEventListener('resize', () => {
+      satALabel.style.display = 'none';
+      satBLabel.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
