@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bubble-collider: quantum particle & bubble chamber sandbox</title>
+  <meta name="description" content="an interactive quantum particle physics simulation showing bubble chamber track dynamics, relativistic kinematics, multiple scattering, decays, pair production, and audio synthesis.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #020208;
+      --panel-bg: rgba(8, 8, 24, 0.85);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #00ffaa;
+      --neon-orange: #ffaa00;
+      --neon-yellow: #ffdd00;
+      --neon-purple: #af00ff;
+      --text: #e2e8f0;
+      --text-muted: #708090;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      user-select: none;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #07071f 0%, #010103 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(85vw, 85vh);
+      height: min(85vw, 85vh);
+      box-shadow: 0 0 60px rgba(0, 243, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      z-index: 10;
+      transition: border-color 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 340px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #left-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #left-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 340px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    #right-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.65rem;
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    p.intro {
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    h2 {
+      font-size: 0.78rem;
+      color: var(--neon-magenta);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+    }
+
+    /* Control Groups */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .label-val {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    /* Buttons & Selectors */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.08);
+      border-color: var(--border-focus);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.15);
+    }
+
+    button.active {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+    }
+
+    #audio-switch {
+      background: rgba(255, 0, 127, 0.05);
+      border: 1px solid rgba(255, 0, 127, 0.2);
+      color: var(--neon-magenta);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 10px;
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 5px;
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.05);
+    }
+
+    #audio-switch:hover {
+      background: rgba(255, 0, 127, 0.1);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+    }
+
+    #audio-switch.active {
+      background: var(--neon-magenta);
+      color: #fff;
+      box-shadow: 0 0 20px var(--neon-magenta);
+    }
+
+    .selector {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .select-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      font-size: 0.72rem;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-right: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    .tab:last-child {
+      border-right: none;
+    }
+
+    .tab.active {
+      background: rgba(0, 243, 255, 0.15);
+      color: var(--neon-cyan);
+    }
+
+    /* Stats & Logs */
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+      padding: 4px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+
+    .status-lbl {
+      color: var(--text-muted);
+    }
+
+    .status-val {
+      color: var(--neon-cyan);
+    }
+
+    #log-container {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      height: 140px;
+      overflow-y: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    #log-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    #log-container::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .log-entry {
+      line-height: 1.3;
+    }
+
+    .log-time {
+      color: var(--text-muted);
+    }
+
+    .log-info { color: var(--neon-cyan); }
+    .log-warn { color: var(--neon-orange); }
+    .log-danger { color: var(--neon-magenta); }
+    .log-success { color: var(--neon-green); }
+
+    /* Particles list */
+    .particle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .particle-item:hover {
+      background: rgba(0, 243, 255, 0.03);
+      border-color: rgba(0, 243, 255, 0.2);
+    }
+
+    .particle-color-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .particle-meta {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* Tabs layout for right panel */
+    #right-panel-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+
+    .r-tab-btn {
+      flex: 1;
+      padding: 6px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .panel-content {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-content.active {
+      display: flex;
+    }
+
+    /* Encyclopedia styling */
+    .wiki-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .wiki-title {
+      font-weight: 800;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wiki-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
+    .wiki-formula {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--neon-cyan);
+      background: rgba(0, 243, 255, 0.05);
+      padding: 4px 6px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+
+    /* Floating canvas overlay info */
+    #canvas-overlay {
+      position: absolute;
+      top: 15px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: rgba(0, 243, 255, 0.7);
+      background: rgba(3, 3, 10, 0.65);
+      backdrop-filter: blur(4px);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 243, 255, 0.1);
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* Back home link */
+    #back-link {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+      z-index: 100;
+    }
+
+    #back-link:hover {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px var(--neon-cyan);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- LEFT PANEL: CONTROLS -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>bubble-collider</h1>
+        <div class="tagline">quantum chamber & collider</div>
+        <p class="intro">simulate relativistic particle kinetics, magnetic fields, interactions, and cosmic rays in a bubble chamber sandbox.</p>
+      </div>
+
+      <button id="audio-switch" onclick="toggleAudio()">Initialize Detector Audio</button>
+
+      <!-- SIMULATION CONTROLS -->
+      <div>
+        <h2>Simulation controls</h2>
+        <div class="btn-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 8px;">
+          <button onclick="clearChamber()" class="active" style="border-color: var(--neon-magenta); color: var(--neon-magenta);">Recompress Chamber</button>
+          <button id="beam-toggle-btn" onclick="toggleBeam()">Beam: OFF</button>
+        </div>
+        <div class="btn-grid" style="grid-template-columns: 1fr; margin-bottom: 8px;">
+          <button id="collider-btn" onclick="toggleColliderMode()">Collider Mode: OFF</button>
+        </div>
+      </div>
+
+      <!-- BEAM SETTINGS -->
+      <div>
+        <h2>Beam settings</h2>
+        <div class="control-group">
+          <div class="label-row">
+            <span>Particle Type</span>
+          </div>
+          <div class="select-tabs" id="beam-particle-select">
+            <div class="tab active" onclick="setBeamParticle('proton')">p⁺</div>
+            <div class="tab" onclick="setBeamParticle('electron')">e⁻</div>
+            <div class="tab" onclick="setBeamParticle('positron')">e⁺</div>
+            <div class="tab" onclick="setBeamParticle('muon')">μ⁻</div>
+            <div class="tab" onclick="setBeamParticle('photon')">γ</div>
+            <div class="tab" onclick="setBeamParticle('kaon0')">K⁰</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Beam Energy</span>
+            <span class="label-val" id="beam-energy-val">2.5 GeV</span>
+          </div>
+          <input type="range" id="beam-energy" min="0.5" max="5.0" step="0.1" value="2.5" oninput="updateBeamEnergyVal(this.value)">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Injection Rate</span>
+            <span class="label-val" id="beam-rate-val">2 Hz</span>
+          </div>
+          <input type="range" id="beam-rate" min="0.5" max="10.0" step="0.5" value="2.0" oninput="updateBeamRateVal(this.value)">
+        </div>
+      </div>
+
+      <!-- PHYSICS FIELDS -->
+      <div>
+        <h2>Applied Fields</h2>
+        <div class="control-group">
+          <div class="label-row">
+            <span>Magnetic Field (B<sub>z</sub>)</span>
+            <span class="label-val" id="mag-field-val">1.2 T</span>
+          </div>
+          <input type="range" id="mag-field" min="-3.0" max="3.0" step="0.1" value="1.2" oninput="updateMagFieldVal(this.value)">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Electric Field (E<sub>y</sub>)</span>
+            <span class="label-val" id="elec-field-val">0 kV/m</span>
+          </div>
+          <input type="range" id="elec-field" min="-1.5" max="1.5" step="0.1" value="0.0" oninput="updateElecFieldVal(this.value)">
+        </div>
+      </div>
+
+      <!-- MEDIUM & ABSORBER -->
+      <div>
+        <h2>Medium & Obstacles</h2>
+        <div class="control-group">
+          <div class="label-row">
+            <span>Chamber Fluid Density</span>
+            <span class="label-val" id="fluid-density-val">Medium (Propane)</span>
+          </div>
+          <div class="select-tabs" id="fluid-density-select">
+            <div class="tab" onclick="setFluidDensity('low')">H₂</div>
+            <div class="tab active" onclick="setFluidDensity('med')">Propane</div>
+            <div class="tab" onclick="setFluidDensity('high')">Xenon</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <span>Absorber Shield</span>
+          </div>
+          <div class="btn-grid" style="grid-template-columns: 1fr 1fr;">
+            <button id="absorber-btn" onclick="toggleAbsorber()">Lead Shield: OFF</button>
+            <button id="cosmic-btn" onclick="toggleCosmicRays()">Cosmic Rays: ON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANVAS VIEWPORT -->
+    <div id="canvas-container">
+      <div id="canvas-overlay">B_z = 1.2T | Chamber: Propane Liquid | 0 Particles active</div>
+      <canvas id="simulation-canvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- RIGHT PANEL: LOGS & INFO -->
+    <div id="right-panel" class="glass-panel">
+      <!-- Tabs header -->
+      <div id="right-panel-tabs">
+        <button class="r-tab-btn active" id="btn-tab-stats" onclick="switchRightTab('stats')">Detector Stats</button>
+        <button class="r-tab-btn" id="btn-tab-wiki" onclick="switchRightTab('wiki')">Particle Wiki</button>
+      </div>
+
+      <!-- TAB 1: DETECTOR STATS & LIVE LOG -->
+      <div id="tab-content-stats" class="panel-content active">
+        <div>
+          <h2>Chamber Telemetry</h2>
+          <div class="status-row">
+            <span class="status-lbl">Active Particles</span>
+            <span class="status-val" id="stat-active-count">0</span>
+          </div>
+          <div class="status-row">
+            <span class="status-lbl">Chamber Temperature</span>
+            <span class="status-val">285.5 K (Superheated)</span>
+          </div>
+          <div class="status-row">
+            <span class="status-lbl">Expansion Pressure Drop</span>
+            <span class="status-val">0.32 MPa</span>
+          </div>
+          <div class="status-row">
+            <span class="status-lbl">Geiger Counter Rate</span>
+            <span class="status-val" id="stat-geiger-rate">0.0 cps</span>
+          </div>
+          <div class="status-row">
+            <span class="status-lbl">Total Bubble Sites</span>
+            <span class="status-val" id="stat-bubble-count">0</span>
+          </div>
+        </div>
+
+        <div>
+          <h2>Event Detection Log</h2>
+          <div id="log-container">
+            <div class="log-entry"><span class="log-time">[00:00.00]</span> <span class="log-info">Chamber expansion piston cycled. Superheated liquid state stabilized.</span></div>
+          </div>
+        </div>
+
+        <div>
+          <h2>Interactive Probes</h2>
+          <p class="intro" style="margin-bottom: 8px;">click or drag on the canvas to trigger localized high-energy nuclear collisions manually, generating cascades.</p>
+          <div class="btn-grid" style="grid-template-columns: 1fr;">
+            <button onclick="triggerManualBeamCollision()" style="border-color: var(--neon-cyan);">Inject High-Energy Collision Star</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: PARTICLE WIKI -->
+      <div id="tab-content-wiki" class="panel-content">
+        <h2>Chamber Signatures</h2>
+        <div style="display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 160px); overflow-y: auto; padding-right: 2px;">
+          
+          <div class="wiki-card">
+            <div class="wiki-title" style="color: var(--neon-green);">Proton (p⁺) / Antiproton (p⁻)</div>
+            <div class="wiki-meta">Mass: 938.27 MeV/c² | Charge: +1 / -1</div>
+            <div class="wiki-desc">heavy baryonic particle. leaves thick, straight, highly ionized tracks due to massive stopping power. bends slowly in magnetic fields.</div>
+            <div class="wiki-formula">stopping power: -dE/dx ∝ z² / v²</div>
+          </div>
+
+          <div class="wiki-card">
+            <div class="wiki-title" style="color: var(--neon-cyan);">Electron (e⁻) / Positron (e⁺)</div>
+            <div class="wiki-meta">Mass: 0.511 MeV/c² | Charge: -1 / +1</div>
+            <div class="wiki-desc">extremely light lepton. curves into tight, beautiful spirals. in heavy materials, they lose energy violently by emitting synchrotron / bremsstrahlung photons.</div>
+            <div class="wiki-formula">radiation loss: P ∝ q²a²γ⁴</div>
+          </div>
+
+          <div class="wiki-card">
+            <div class="wiki-title" style="color: var(--neon-yellow);">Muon (μ⁻) / Antimuon (μ⁺)</div>
+            <div class="wiki-meta">Mass: 105.66 MeV/c² | Charge: -1 / +1</div>
+            <div class="wiki-desc">second-generation lepton. behaves like a heavy electron but doesn't bremsstrahlung easily. travels far, then decays into an electron/positron (visible bend/kink) and invisible neutrinos.</div>
+            <div class="wiki-formula">decay: μ⁻ → e⁻ + ν_bar_e + ν_μ</div>
+          </div>
+
+          <div class="wiki-card">
+            <div class="wiki-title" style="color: var(--neon-purple);">Charged Pion (π⁺ / π⁻)</div>
+            <div class="wiki-meta">Mass: 139.57 MeV/c² | Charge: +1 / -1</div>
+            <div class="wiki-desc">light meson. produced abundantly in nuclear collisions. leaves intermediate tracks, decaying rapidly into muons and neutrinos.</div>
+            <div class="wiki-formula">decay: π⁺ → μ⁺ + ν_μ</div>
+          </div>
+
+          <div class="wiki-card">
+            <div class="wiki-title" style="color: #ffffff;">Gamma Photon (γ)</div>
+            <div class="wiki-meta">Mass: 0 | Charge: 0</div>
+            <div class="wiki-desc">neutral gauge boson. leaves no bubble tracks. however, in the coulomb field of heavy nuclei (like a lead absorber), it can spontaneously undergo pair production, spawning an e⁻/e⁺ double spiral.</div>
+            <div class="wiki-formula">threshold: E_γ > 2 m_e c² ≈ 1.02 MeV</div>
+          </div>
+
+          <div class="wiki-card">
+            <div class="wiki-title" style="color: #708090;">Neutral Kaon (K⁰)</div>
+            <div class="wiki-meta">Mass: 497.61 MeV/c² | Charge: 0</div>
+            <div class="wiki-desc">strange neutral meson. travels invisibly, then decays into two charged pions (π⁺ and π⁻). this creates a signature "V-track" popping out of absolute vacuum.</div>
+            <div class="wiki-formula">decay: K⁰ → π⁺ + π⁻</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <a href="../index.html" id="back-link">&lt;&lt; back to index</a>
+
+  <script>
+    // --- AUDIO SYSTEM ---
+    let audioCtx = null;
+    let masterGain = null;
+    let humOsc = null;
+    let geigerRate = 0;
+    let clickTimeout = null;
+    let sfxVol = 0.55;
+    let audioEnabled = false;
+
+    // A pool of synthesizer nodes for tracking active particles
+    const synthPool = [];
+    const MAX_SYNTH_VOICES = 6;
+
+    function initAudio() {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        
+        masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+
+        const compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.value = -12;
+        compressor.knee.value = 30;
+        compressor.ratio.value = 12;
+        compressor.attack.value = 0.003;
+        compressor.release.value = 0.08;
+
+        masterGain.connect(compressor);
+        compressor.connect(audioCtx.destination);
+
+        // 1. Resonant Piston Hum
+        humOsc = audioCtx.createOscillator();
+        humOsc.type = 'triangle';
+        humOsc.frequency.setValueAtTime(48, audioCtx.currentTime);
+        
+        const humFilter = audioCtx.createBiquadFilter();
+        humFilter.type = 'lowpass';
+        humFilter.frequency.setValueAtTime(100, audioCtx.currentTime);
+        humFilter.Q.setValueAtTime(4.0, audioCtx.currentTime);
+
+        const humGain = audioCtx.createGain();
+        humGain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+
+        humOsc.connect(humFilter);
+        humFilter.connect(humGain);
+        humGain.connect(masterGain);
+        humOsc.start();
+
+        // 2. Setup Synth Voice Pool
+        for (let i = 0; i < MAX_SYNTH_VOICES; i++) {
+          const osc = audioCtx.createOscillator();
+          const pGain = audioCtx.createGain();
+          const pFilter = audioCtx.createBiquadFilter();
+
+          osc.type = 'sine';
+          pFilter.type = 'bandpass';
+          pFilter.Q.value = 4.0;
+          
+          pGain.gain.value = 0.0;
+
+          osc.connect(pFilter);
+          pFilter.connect(pGain);
+          pGain.connect(masterGain);
+          osc.start();
+
+          synthPool.push({
+            osc: osc,
+            gain: pGain,
+            filter: pFilter,
+            activeTrackId: null,
+            timer: null
+          });
+        }
+
+        // Start Geiger Click scheduling loop
+        scheduleGeigerClicks();
+
+        audioEnabled = true;
+        document.getElementById('audio-switch').innerText = 'Detector Audio: ACTIVE';
+        document.getElementById('audio-switch').classList.add('active');
+        addLog("Audio synthesis engine initialized successfully.", "success");
+      } catch (err) {
+        console.error("Audio Context Init Failed:", err);
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        initAudio();
+        return;
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+        audioEnabled = true;
+        document.getElementById('audio-switch').innerText = 'Detector Audio: ACTIVE';
+        document.getElementById('audio-switch').classList.add('active');
+      } else if (audioCtx.state === 'running') {
+        audioCtx.suspend();
+        audioEnabled = false;
+        document.getElementById('audio-switch').innerText = 'Detector Audio: SUSPENDED';
+        document.getElementById('audio-switch').classList.remove('active');
+      }
+    }
+
+    function playClick() {
+      if (!audioEnabled || !audioCtx) return;
+      
+      const bufSize = Math.floor(audioCtx.sampleRate * 0.003); // 3ms click
+      const buffer = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.25));
+      }
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(800 + Math.random() * 800, audioCtx.currentTime);
+      filter.Q.setValueAtTime(6, audioCtx.currentTime);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.06 * sfxVol, audioCtx.currentTime);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      source.start();
+    }
+
+    function scheduleGeigerClicks() {
+      if (audioEnabled && geigerRate > 0) {
+        playClick();
+      }
+      
+      // Calculate delay based on geiger rate
+      const baseDelay = 1000 / Math.max(geigerRate, 0.1);
+      // Add random jitter to simulate poisson click intervals
+      const jitter = (Math.random() - 0.5) * baseDelay * 0.45;
+      const delay = Math.max(8, baseDelay + jitter);
+
+      clickTimeout = setTimeout(scheduleGeigerClicks, delay);
+    }
+
+    function playCollisionNoise(heavy = false) {
+      if (!audioEnabled || !audioCtx) return;
+
+      const dur = heavy ? 0.6 : 0.25;
+      const bufferSize = audioCtx.sampleRate * dur;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      // Filled with decaying noise
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+      }
+
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(250, audioCtx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + dur);
+      filter.Q.setValueAtTime(3.0, audioCtx.currentTime);
+
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.35 * sfxVol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+
+      // Low frequency punch oscillator
+      const sine = audioCtx.createOscillator();
+      const sineGain = audioCtx.createGain();
+      sine.type = 'sine';
+      sine.frequency.setValueAtTime(90, audioCtx.currentTime);
+      sine.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
+
+      sineGain.gain.setValueAtTime(0.4 * sfxVol, audioCtx.currentTime);
+      sineGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+
+      sine.connect(sineGain);
+      sineGain.connect(masterGain);
+
+      source.start();
+      sine.start();
+      sine.stop(audioCtx.currentTime + dur);
+    }
+
+    function playDecaySfx() {
+      if (!audioEnabled || !audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.18);
+
+      gain.gain.setValueAtTime(0.08 * sfxVol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+    }
+
+    function allocateVoice(trackId, charge, initialSpeed) {
+      if (!audioEnabled || !audioCtx) return null;
+
+      // Find an idle voice
+      let voice = synthPool.find(v => v.activeTrackId === null);
+      if (!voice) {
+        // Steal oldest
+        voice = synthPool[0];
+      }
+
+      voice.activeTrackId = trackId;
+      
+      const time = audioCtx.currentTime;
+      // Map properties to frequencies
+      const baseFreq = charge > 0 ? 320 + Math.random() * 80 : 180 + Math.random() * 80;
+      voice.osc.frequency.setValueAtTime(baseFreq, time);
+      voice.filter.frequency.setValueAtTime(baseFreq, time);
+
+      voice.gain.gain.cancelScheduledValues(time);
+      voice.gain.gain.setValueAtTime(0, time);
+      voice.gain.gain.linearRampToValueAtTime(0.12 * sfxVol, time + 0.05);
+
+      return voice;
+    }
+
+    function updateVoice(voice, speed, charge, ratio) {
+      if (!audioEnabled || !audioCtx || !voice) return;
+
+      const time = audioCtx.currentTime;
+      // Change frequency dynamically with energy/speed
+      const freq = charge > 0 
+        ? 320 + ratio * 450 
+        : 180 + ratio * 280;
+
+      voice.osc.frequency.setValueAtTime(freq, time);
+      voice.filter.frequency.setValueAtTime(freq, time);
+    }
+
+    function releaseVoice(voice) {
+      if (!audioEnabled || !audioCtx || !voice) return;
+
+      const time = audioCtx.currentTime;
+      voice.gain.gain.cancelScheduledValues(time);
+      voice.gain.gain.setValueAtTime(voice.gain.gain.value, time);
+      voice.gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+      
+      setTimeout(() => {
+        if (voice.activeTrackId !== null) {
+          voice.activeTrackId = null;
+        }
+      }, 160);
+    }
+
+
+    // --- PHYSICS & SIMULATION CORE ---
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Constants
+    const SPEED_OF_LIGHT = 12;
+    const TIME_STEP = 0.16;
+
+    // Simulation State
+    let particles = [];
+    let bubbles = [];
+    let particleIdCounter = 0;
+    
+    // UI Values
+    let beamOn = false;
+    let beamParticleType = 'proton';
+    let beamEnergy = 2.5; // GeV
+    let beamRate = 2.0;    // Hz
+    let magFieldZ = 1.2;  // Tesla
+    let elecFieldY = 0.0; // kV/m
+    let fluidDensity = 'med'; // 'low', 'med', 'high'
+    let leadAbsorberActive = false;
+    let cosmicRaysActive = true;
+    let colliderMode = false;
+
+    // Timing helper
+    let lastBeamShotTime = 0;
+    let lastCosmicShotTime = 0;
+
+    // Log timer helper
+    const startTimeStamp = Date.now();
+
+    // Particle Species Registry
+    const SPECIES = {
+      proton: { name: 'Proton', charge: 1, mass: 938, lifetime: Infinity, color: '#00ffaa', trackWidth: 2.2, size: 2.5 },
+      antiproton: { name: 'Antiproton', charge: -1, mass: 938, lifetime: Infinity, color: '#ff5500', trackWidth: 2.2, size: 2.5 },
+      electron: { name: 'Electron', charge: -1, mass: 0.51, lifetime: Infinity, color: '#00f3ff', trackWidth: 1.0, size: 1.5 },
+      positron: { name: 'Positron', charge: 1, mass: 0.51, lifetime: Infinity, color: '#ff007f', trackWidth: 1.0, size: 1.5 },
+      muon: { name: 'Muon', charge: -1, mass: 105.7, lifetime: 140, color: '#ffaa00', trackWidth: 1.5, size: 1.8 },
+      antimuon: { name: 'Antimuon', charge: 1, mass: 105.7, lifetime: 140, color: '#ffaae6', trackWidth: 1.5, size: 1.8 },
+      pion_plus: { name: 'Pion+', charge: 1, mass: 139.6, lifetime: 85, color: '#af00ff', trackWidth: 1.6, size: 1.8 },
+      pion_minus: { name: 'Pion-', charge: -1, mass: 139.6, lifetime: 85, color: '#8800ff', trackWidth: 1.6, size: 1.8 },
+      photon: { name: 'Photon (Gamma)', charge: 0, mass: 0, lifetime: Infinity, color: 'rgba(255,255,255,0.22)', trackWidth: 0.8, size: 0, neutral: true },
+      kaon0: { name: 'Neutral Kaon', charge: 0, mass: 497.6, lifetime: 60, color: 'rgba(200,200,200,0.18)', trackWidth: 0.8, size: 0, neutral: true }
+    };
+
+    class Particle {
+      constructor(type, x, y, vx, vy, parentId = -1) {
+        this.id = particleIdCounter++;
+        this.type = type;
+        this.spec = SPECIES[type];
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.parentId = parentId;
+        
+        this.mass = this.spec.mass;
+        this.charge = this.spec.charge;
+        this.lifetime = this.spec.lifetime === Infinity ? Infinity : this.spec.lifetime * (0.6 + Math.random() * 0.8);
+        this.lifeRemaining = this.lifetime;
+
+        // Visual tracking
+        this.pathHistory = [];
+        this.maxHistory = 100;
+        
+        // Relativistic energy/momentum tracking
+        const speed = Math.sqrt(vx*vx + vy*vy);
+        this.initialSpeed = speed;
+        
+        // Sound voice allocation
+        this.voiceNode = null;
+        if (this.charge !== 0) {
+          this.voiceNode = allocateVoice(this.id, this.charge, speed);
+        }
+      }
+
+      update() {
+        const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+        
+        // 1. Relativistic calculations
+        // Limit speed to just under c to avoid dividing by zero in gamma
+        const speedRatio = Math.min(speed / SPEED_OF_LIGHT, 0.98);
+        const gamma = 1 / Math.sqrt(1 - speedRatio*speedRatio);
+        const massEff = Math.max(this.mass * gamma, 0.1);
+
+        // Get effective local density at current coordinate
+        const localDensity = getLocalDensity(this.x, this.y);
+
+        // 2. Lorentz Forces
+        // F = q(E + v x B)
+        // E field is vertical, B field is out of screen (Z axis)
+        const Ex = 0;
+        const Ey = elecFieldY * 0.1; // scale E field
+        const B = magFieldZ * 0.08;   // scale B field
+
+        // Lorentz force equations
+        const Fx = this.charge * (Ex + this.vy * B);
+        const Fy = this.charge * (Ey - this.vx * B);
+
+        // Relativistic acceleration
+        const ax = Fx / massEff;
+        const ay = Fy / massEff;
+
+        // Position Integration
+        this.x += this.vx * TIME_STEP;
+        this.y += this.vy * TIME_STEP;
+
+        // Velocity Integration
+        this.vx += ax * TIME_STEP;
+        this.vy += ay * TIME_STEP;
+
+        // 3. Bragg Peak Ionization Energy Loss (Stopping Power)
+        // dE/dx is proportional to z^2 / v^2 in Bethe-Bloch
+        if (this.charge !== 0) {
+          const stopPower = (this.charge * this.charge) / (speed*speed + 0.05);
+          const dragCoeff = localDensity * stopPower * 0.06;
+          // Apply drag as a reduction factor
+          const decayFactor = Math.max(1 - dragCoeff * TIME_STEP, 0.7);
+          this.vx *= decayFactor;
+          this.vy *= decayFactor;
+
+          // Sync sound pitch with speed
+          if (this.voiceNode) {
+            const ratio = Math.max(0, Math.min(speed / SPEED_OF_LIGHT, 1));
+            updateVoice(this.voiceNode, speed, this.charge, ratio);
+          }
+        }
+
+        // 4. Multiple Coulomb Scattering (wiggle)
+        // Scattering angle is inversely proportional to momentum (p = gamma * m * v)
+        if (this.charge !== 0 && localDensity > 0) {
+          const momentum = massEff * speed;
+          const scatterMagnitude = (localDensity * this.charge * this.charge) / (momentum + 0.1) * 0.095;
+          const scatterAngle = (Math.random() - 0.5) * scatterMagnitude;
+          
+          // Rotate velocity vector
+          const cosA = Math.cos(scatterAngle);
+          const sinA = Math.sin(scatterAngle);
+          const newVx = this.vx * cosA - this.vy * sinA;
+          const newVy = this.vx * sinA + this.vy * cosA;
+          this.vx = newVx;
+          this.vy = newVy;
+        }
+
+        // 5. Synchrotron Radiation / Bremsstrahlung (Electrons & Positrons)
+        // Radiates energy proportional to acceleration squared and inversely proportional to mass squared
+        if ((this.type === 'electron' || this.type === 'positron') && speed > 1.5) {
+          const accMagnitude = Math.sqrt(ax*ax + ay*ay);
+          const radProb = (accMagnitude * accMagnitude * localDensity) * 0.015;
+          
+          if (Math.random() < radProb * TIME_STEP) {
+            // Emits a Bremsstrahlung photon
+            const lossFraction = 0.35 + Math.random() * 0.2;
+            const photonVx = this.vx * lossFraction;
+            const photonVy = this.vy * lossFraction;
+            
+            // Electron loses speed
+            this.vx *= (1 - lossFraction);
+            this.vy *= (1 - lossFraction);
+
+            // Add photon particle traveling in forward direction
+            spawnParticle('photon', this.x, this.y, photonVx, photonVy, this.id);
+            addLog("Bremsstrahlung Synchrotron photon radiated.", "info");
+          }
+        }
+
+        // 6. Interaction / Decays
+        if (this.lifetime !== Infinity) {
+          this.lifeRemaining -= TIME_STEP;
+          if (this.lifeRemaining <= 0) {
+            this.decay();
+            return false; // mark for deletion
+          }
+        }
+
+        // 7. Spontaneous Interactions
+        if (this.type === 'photon' && localDensity > 0) {
+          // Photons undergo Pair Production: chance scale with density and absorber
+          const pairProdChance = localDensity * 0.06;
+          if (Math.random() < pairProdChance * TIME_STEP) {
+            this.pairProduce();
+            return false;
+          }
+        }
+
+        // Charged particles can undergo nuclear inelastic collisions
+        if (this.charge !== 0 && localDensity > 0) {
+          // Nuclear reaction cross section
+          const collisionCrossSection = this.type === 'proton' || this.type === 'antiproton' ? 0.012 : 0.002;
+          const colChance = localDensity * collisionCrossSection;
+          if (Math.random() < colChance * TIME_STEP) {
+            this.nuclearCollide();
+            return false;
+          }
+        }
+
+        // 8. Generate Bubble Nucleation Sites
+        // Spawns bubbles based on charge/speed (Bragg Peak)
+        if (this.charge !== 0) {
+          const bubbleGenProb = (this.charge * this.charge * 0.7) / (speed + 0.1);
+          // Scale rate with density
+          const count = Math.ceil(bubbleGenProb * localDensity * 1.5);
+          for (let i = 0; i < count; i++) {
+            // Add slight jitter to bubble positions
+            const bx = this.x + (Math.random() - 0.5) * 1.5;
+            const by = this.y + (Math.random() - 0.5) * 1.5;
+            bubbles.push(new Bubble(bx, by));
+          }
+        }
+
+        // Check bounds
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.cleanup();
+          return false;
+        }
+
+        // Add history point
+        this.pathHistory.push({ x: this.x, y: this.y });
+        if (this.pathHistory.length > this.maxHistory) {
+          this.pathHistory.shift();
+        }
+
+        // If particle stops completely, remove it
+        if (speed < 0.04 && this.charge !== 0) {
+          this.cleanup();
+          return false;
+        }
+
+        return true;
+      }
+
+      decay() {
+        this.cleanup();
+        playDecaySfx();
+
+        if (this.type === 'muon') {
+          // Decays to electron + neutrinos (invisible)
+          const angle = Math.random() * Math.PI * 2;
+          const speed = SPEED_OF_LIGHT * (0.5 + Math.random() * 0.4);
+          spawnParticle('electron', this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, this.id);
+          addLog("Muon decayed (μ⁻ → e⁻ + ν_bar_e + ν_μ)", "info");
+        } 
+        else if (this.type === 'antimuon') {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = SPEED_OF_LIGHT * (0.5 + Math.random() * 0.4);
+          spawnParticle('positron', this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, this.id);
+          addLog("Antimuon decayed (μ⁺ → e⁺ + ν_e + ν_bar_μ)", "info");
+        } 
+        else if (this.type === 'pion_plus') {
+          // Decays to antimuon + neutrino
+          const angle = Math.random() * Math.PI * 2;
+          const speed = SPEED_OF_LIGHT * 0.5;
+          spawnParticle('antimuon', this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, this.id);
+          addLog("Pion decayed (π⁺ → μ⁺ + ν_μ)", "info");
+        } 
+        else if (this.type === 'pion_minus') {
+          // Decays to muon + antineutrino
+          const angle = Math.random() * Math.PI * 2;
+          const speed = SPEED_OF_LIGHT * 0.5;
+          spawnParticle('muon', this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, this.id);
+          addLog("Pion decayed (π⁻ → μ⁻ + ν_bar_μ)", "info");
+        } 
+        else if (this.type === 'kaon0') {
+          // Decays to pion+ and pion- (V-track)
+          const angle1 = Math.random() * Math.PI * 2;
+          const angle2 = angle1 + Math.PI * (0.7 + Math.random()*0.3); // open angle
+          const speed = SPEED_OF_LIGHT * (0.4 + Math.random() * 0.4);
+          
+          spawnParticle('pion_plus', this.x, this.y, Math.cos(angle1)*speed, Math.sin(angle1)*speed, this.id);
+          spawnParticle('pion_minus', this.x, this.y, Math.cos(angle2)*speed, Math.sin(angle2)*speed, this.id);
+          addLog("Neutral Kaon decay signature detected (K⁰ → π⁺ + π⁻)", "success");
+        }
+      }
+
+      pairProduce() {
+        this.cleanup();
+        playDecaySfx();
+        
+        // Spawn electron/positron pair (glowing V-spiral)
+        const forwardAngle = Math.atan2(this.vy, this.vx);
+        const dev = 0.25; // angle deviation
+        const speed = SPEED_OF_LIGHT * (0.5 + Math.random() * 0.45);
+
+        const a1 = forwardAngle + dev;
+        const a2 = forwardAngle - dev;
+
+        spawnParticle('electron', this.x, this.y, Math.cos(a1)*speed, Math.sin(a1)*speed, this.id);
+        spawnParticle('positron', this.x, this.y, Math.cos(a2)*speed, Math.sin(a2)*speed, this.id);
+        addLog("Gamma Photon converted via Pair Production (γ → e⁻ + e⁺)", "success");
+      }
+
+      nuclearCollide() {
+        this.cleanup();
+        playCollisionNoise(this.type === 'proton' || this.type === 'antiproton');
+
+        const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+        const count = 3 + Math.floor(Math.random() * 4);
+        
+        addLog(`Inelastic collision: ${this.spec.name} struck atomic nucleus. Star produced.`, "warn");
+
+        if (this.type === 'antiproton') {
+          // Annihilation event! Generates multiple pions
+          addLog("Proton-Antiproton Annihilation event!", "danger");
+          for (let i = 0; i < count + 2; i++) {
+            const angle = (i / (count+2)) * Math.PI * 2 + (Math.random() - 0.5)*0.5;
+            const pType = Math.random() < 0.5 ? 'pion_plus' : 'pion_minus';
+            const pSpeed = SPEED_OF_LIGHT * (0.35 + Math.random() * 0.55);
+            spawnParticle(pType, this.x, this.y, Math.cos(angle)*pSpeed, Math.sin(angle)*pSpeed, this.id);
+          }
+        } else {
+          // Standard proton collision cascade
+          for (let i = 0; i < count; i++) {
+            const angle = Math.atan2(this.vy, this.vx) + (Math.random() - 0.5) * 1.5;
+            const pSpeed = speed * (0.3 + Math.random() * 0.5);
+            
+            let pType = 'pion_plus';
+            const roll = Math.random();
+            if (roll < 0.3) pType = 'proton';
+            else if (roll < 0.6) pType = 'pion_minus';
+            else if (roll < 0.8) pType = 'electron'; // knock-on delta ray
+            else pType = 'photon';
+
+            spawnParticle(pType, this.x, this.y, Math.cos(angle)*pSpeed, Math.sin(angle)*pSpeed, this.id);
+          }
+        }
+      }
+
+      cleanup() {
+        if (this.voiceNode) {
+          releaseVoice(this.voiceNode);
+          this.voiceNode = null;
+        }
+      }
+    }
+
+    class Bubble {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.life = 0;
+        this.maxLife = 120 + Math.random() * 90;
+        this.maxRadius = 1.0 + Math.random() * 1.8;
+      }
+
+      update() {
+        this.life += 1;
+        return this.life < this.maxLife;
+      }
+
+      draw() {
+        const lifeRatio = this.life / this.maxLife;
+        let radius = 0;
+        
+        // Growth to dissolve progression
+        if (lifeRatio < 0.15) {
+          radius = (lifeRatio / 0.15) * this.maxRadius;
+        } else {
+          radius = this.maxRadius * (1 - (lifeRatio - 0.15)/0.85);
+        }
+
+        // Bubble transparency
+        const opacity = 1.0 - lifeRatio;
+
+        ctx.fillStyle = `rgba(180, 245, 255, ${opacity * 0.7})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bright inner core
+        if (radius > 1.2) {
+          ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.9})`;
+          ctx.beginPath();
+          ctx.arc(this.x - radius*0.2, this.y - radius*0.2, radius*0.35, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+    }
+
+    function spawnParticle(type, x, y, vx, vy, parentId = -1) {
+      const p = new Particle(type, x, y, vx, vy, parentId);
+      particles.push(p);
+    }
+
+    // Physics parameters mapped to positions
+    function getLocalDensity(x, y) {
+      let density = 0.5; // base default
+      
+      if (fluidDensity === 'low') density = 0.15;
+      else if (fluidDensity === 'high') density = 1.25;
+
+      // Check lead absorber zone: vertically placed shield at x range [285, 315]
+      if (leadAbsorberActive && x >= 285 && x <= 315) {
+        density = 15.0; // extremely high density (shield absorber)
+      }
+
+      return density;
+    }
+
+    // --- COLLIDER & SHOT CONTROLS ---
+
+    function fireBeam() {
+      // Create starting coordinate: left edge, randomized slightly
+      const x = 5;
+      const y = canvas.height * 0.5 + (Math.random() - 0.5) * 40;
+
+      // Energy determines beam speed
+      // Map beam energy [0.5, 5.0 GeV] to speed [1.5, 10 pixels per frame]
+      const speed = 1.8 + (beamEnergy - 0.5) / 4.5 * 8.5;
+      
+      const angle = (Math.random() - 0.5) * 0.08; // small dispersion
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+
+      if (colliderMode) {
+        // Fire opposing particles
+        // Beam 1 from left
+        spawnParticle(beamParticleType, x, y, vx, vy);
+        // Beam 2 from right: opposite charge or species for collider
+        const oppositeX = canvas.width - 5;
+        const oppositeY = canvas.height * 0.5 + (Math.random() - 0.5) * 40;
+        const opVx = -vx;
+        const opVy = -vy;
+
+        // Choose opposing particle
+        let opType = beamParticleType;
+        if (beamParticleType === 'proton') opType = 'antiproton';
+        else if (beamParticleType === 'electron') opType = 'positron';
+        else if (beamParticleType === 'positron') opType = 'electron';
+
+        spawnParticle(opType, oppositeX, oppositeY, opVx, opVy);
+        addLog(`Collider collision shot fired: ${beamParticleType} vs ${opType}`, "warn");
+      } else {
+        spawnParticle(beamParticleType, x, y, vx, vy);
+        addLog(`Beam injected: ${SPECIES[beamParticleType].name} at ${beamEnergy.toFixed(1)} GeV`, "info");
+      }
+    }
+
+    function fireCosmicRay() {
+      // Cosmic rays descend from top/sides
+      const side = Math.random() < 0.8 ? 'top' : (Math.random() < 0.5 ? 'left' : 'right');
+      let x, y, angle;
+      
+      if (side === 'top') {
+        x = Math.random() * canvas.width;
+        y = 5;
+        angle = Math.PI*0.35 + Math.random()*Math.PI*0.3; // descending
+      } else if (side === 'left') {
+        x = 5;
+        y = Math.random() * canvas.height * 0.6;
+        angle = Math.random() * Math.PI * 0.35;
+      } else {
+        x = canvas.width - 5;
+        y = Math.random() * canvas.height * 0.6;
+        angle = Math.PI - Math.random() * Math.PI * 0.35;
+      }
+
+      // Cosmics are typically fast muons or protons
+      const roll = Math.random();
+      let type = 'muon';
+      if (roll < 0.15) type = 'proton';
+      else if (roll < 0.30) type = 'electron';
+      else if (roll < 0.40) type = 'photon';
+      else if (roll < 0.48) type = 'antimuon';
+
+      const speed = SPEED_OF_LIGHT * (0.65 + Math.random() * 0.32);
+      spawnParticle(type, x, y, Math.cos(angle)*speed, Math.sin(angle)*speed);
+      addLog(`Cosmic ray detected: ${SPECIES[type].name}`, "info");
+    }
+
+    function triggerManualBeamCollision() {
+      // Trigger a direct central collision
+      const cx = canvas.width * 0.5 + (Math.random() - 0.5) * 50;
+      const cy = canvas.height * 0.5 + (Math.random() - 0.5) * 50;
+      
+      // Spawn a heavy particle at center, and immediately detonate it
+      const tempP = new Particle('proton', cx, cy, 1.0, 1.0);
+      tempP.nuclearCollide();
+    }
+
+
+    // --- RENDERING LOOP ---
+
+    function drawChamberGrid() {
+      // Draw grid that indicates B-field or compression
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.03)';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        for (let y = 0; y < canvas.height; y += 10) {
+          // Add graphical ripple near active particles
+          let warpX = 0;
+          particles.forEach(p => {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            const distSq = dx*dx + dy*dy;
+            if (distSq < 3600) {
+              const dist = Math.sqrt(distSq);
+              warpX += (dx / dist) * (1 - dist/60) * 4;
+            }
+          });
+          ctx.lineTo(x + warpX, y);
+        }
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += 10) {
+          let warpY = 0;
+          particles.forEach(p => {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            const distSq = dx*dx + dy*dy;
+            if (distSq < 3600) {
+              const dist = Math.sqrt(distSq);
+              warpY += (dy / dist) * (1 - dist/60) * 4;
+            }
+          });
+          ctx.lineTo(x, y + warpY);
+        }
+        ctx.stroke();
+      }
+    }
+
+    function drawAbsorberShield() {
+      if (!leadAbsorberActive) return;
+
+      // Metallic absorber plate
+      const grad = ctx.createLinearGradient(285, 0, 315, 0);
+      grad.addColorStop(0, '#2e3a47');
+      grad.addColorStop(0.3, '#5c6f84');
+      grad.addColorStop(0.7, '#5c6f84');
+      grad.addColorStop(1, '#1b232c');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(285, 0, 30, canvas.height);
+
+      // Plate borders
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(285, -2, 30, canvas.height + 4);
+
+      // Vertical label
+      ctx.save();
+      ctx.translate(303, canvas.height * 0.5);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = 'rgba(0, 243, 255, 0.65)';
+      ctx.font = '800 10px "Share Tech Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText("LEAD SHIELD ABSORBER (3cm)", 0, 0);
+      ctx.restore();
+    }
+
+    function drawOverlayText() {
+      const activeCount = particles.length;
+      let label = `B_z = ${magFieldZ.toFixed(1)}T | `;
+      
+      if (leadAbsorberActive) label += "Lead Shield Loaded | ";
+      
+      let fluidLabel = "Propane Gas";
+      if (fluidDensity === 'low') fluidLabel = 'Liquid Hydrogen (H₂)';
+      else if (fluidDensity === 'high') fluidLabel = 'Xenon Liquid';
+      label += `Fluid: ${fluidLabel} | ${activeCount} active particle(s)`;
+
+      document.getElementById('canvas-overlay').innerText = label;
+    }
+
+    function mainLoop() {
+      // Clear Canvas
+      ctx.fillStyle = '#010105';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw structures
+      drawChamberGrid();
+      drawAbsorberShield();
+
+      // Trigger automatic shots
+      const now = Date.now();
+      
+      if (beamOn) {
+        const interval = 1000 / beamRate;
+        if (now - lastBeamShotTime >= interval) {
+          fireBeam();
+          lastBeamShotTime = now;
+        }
+      }
+
+      if (cosmicRaysActive) {
+        // Cosmic trigger
+        if (now - lastCosmicShotTime >= 2400 + Math.random()*2200) {
+          fireCosmicRay();
+          lastCosmicShotTime = now;
+        }
+      }
+
+      // Update and draw bubbles
+      bubbles = bubbles.filter(b => {
+        const active = b.update();
+        if (active) b.draw();
+        return active;
+      });
+
+      // Update and draw particles
+      particles = particles.filter(p => {
+        const alive = p.update();
+        if (alive) {
+          // Draw particle trajectory trail
+          if (p.pathHistory.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(p.pathHistory[0].x, p.pathHistory[0].y);
+            for (let i = 1; i < p.pathHistory.length; i++) {
+              ctx.lineTo(p.pathHistory[i].x, p.pathHistory[i].y);
+            }
+            ctx.strokeStyle = p.spec.color;
+            ctx.lineWidth = p.spec.trackWidth;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+          }
+
+          // Draw active particle head glow
+          ctx.fillStyle = p.spec.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.spec.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        return alive;
+      });
+
+      // Update geiger rate based on active bubbles density
+      geigerRate = bubbles.length * 0.35;
+      
+      // Update Stats indicators
+      document.getElementById('stat-active-count').innerText = particles.length;
+      document.getElementById('stat-bubble-count').innerText = bubbles.length;
+      document.getElementById('stat-geiger-rate').innerText = (geigerRate).toFixed(1) + " cps";
+
+      drawOverlayText();
+
+      // Loop
+      requestAnimationFrame(mainLoop);
+    }
+
+
+    // --- UI EVENT INTERFACES ---
+
+    function toggleBeam() {
+      beamOn = !beamOn;
+      const btn = document.getElementById('beam-toggle-btn');
+      if (beamOn) {
+        btn.innerText = 'Beam: ACTIVE';
+        btn.classList.add('active');
+        addLog("Main injection accelerator beam active.", "success");
+      } else {
+        btn.innerText = 'Beam: OFF';
+        btn.classList.remove('active');
+        addLog("Main injection accelerator beam deactivated.", "warn");
+      }
+    }
+
+    function toggleColliderMode() {
+      colliderMode = !colliderMode;
+      const btn = document.getElementById('collider-btn');
+      if (colliderMode) {
+        btn.innerText = 'Collider Mode: ACTIVE';
+        btn.classList.add('active');
+        addLog("Chamber configured to Dual Collider mode. Opposing beams locked.", "danger");
+      } else {
+        btn.innerText = 'Collider Mode: OFF';
+        btn.classList.remove('active');
+        addLog("Chamber configured to Single Injection mode.", "info");
+      }
+    }
+
+    function setBeamParticle(type) {
+      beamParticleType = type;
+      const tabs = document.querySelectorAll('#beam-particle-select .tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      
+      // Locate clicked tab
+      const typeIndex = { proton: 0, electron: 1, positron: 2, muon: 3, photon: 4, kaon0: 5 };
+      tabs[typeIndex[type]].classList.add('active');
+      addLog(`Beam injector species set to: ${SPECIES[type].name}`, "info");
+    }
+
+    function updateBeamEnergyVal(val) {
+      beamEnergy = parseFloat(val);
+      document.getElementById('beam-energy-val').innerText = val + " GeV";
+    }
+
+    function updateBeamRateVal(val) {
+      beamRate = parseFloat(val);
+      document.getElementById('beam-rate-val').innerText = val + " Hz";
+    }
+
+    function updateMagFieldVal(val) {
+      magFieldZ = parseFloat(val);
+      document.getElementById('mag-field-val').innerText = val + " T";
+      
+      // Update hum oscillator frequency slightly based on magnetic field strength
+      if (audioCtx && humOsc) {
+        const targetFreq = 48 + Math.abs(magFieldZ) * 6;
+        humOsc.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+      }
+      
+      addLog(`Magnetic field adjusted to ${val} Tesla.`, "info");
+    }
+
+    function updateElecFieldVal(val) {
+      elecFieldY = parseFloat(val);
+      document.getElementById('elec-field-val').innerText = val + " kV/m";
+      addLog(`Electric field vertical component set to ${val} kV/m.`, "info");
+    }
+
+    function setFluidDensity(density) {
+      fluidDensity = density;
+      const tabs = document.querySelectorAll('#fluid-density-select .tab');
+      tabs.forEach(t => t.classList.remove('active'));
+
+      const lookup = { low: 0, med: 1, high: 2 };
+      tabs[lookup[density]].classList.add('active');
+      
+      const labels = { low: 'Hydrogen (H₂)', med: 'Propane Liquid', high: 'Xenon Liquid' };
+      document.getElementById('fluid-density-val').innerText = labels[density];
+      
+      addLog(`Chamber filled with ${labels[density]}. Density adjusted.`, "warn");
+    }
+
+    function toggleAbsorber() {
+      leadAbsorberActive = !leadAbsorberActive;
+      const btn = document.getElementById('absorber-btn');
+      if (leadAbsorberActive) {
+        btn.innerText = 'Lead Shield: ON';
+        btn.classList.add('active');
+        addLog("Lead Shield (3cm absorber plate) rolled into chamber path.", "warn");
+      } else {
+        btn.innerText = 'Lead Shield: OFF';
+        btn.classList.remove('active');
+        addLog("Lead Shield absorber plate retracted.", "info");
+      }
+    }
+
+    function toggleCosmicRays() {
+      cosmicRaysActive = !cosmicRaysActive;
+      const btn = document.getElementById('cosmic-btn');
+      if (cosmicRaysActive) {
+        btn.innerText = 'Cosmic Rays: ON';
+        btn.classList.add('active');
+        addLog("Ambient cosmic ray sensors active.", "info");
+      } else {
+        btn.innerText = 'Cosmic Rays: OFF';
+        btn.classList.remove('active');
+        addLog("Ambient cosmic ray sensors bypassed.", "warn");
+      }
+    }
+
+    function clearChamber() {
+      // Clear out particles and bubbles
+      particles.forEach(p => p.cleanup());
+      particles = [];
+      bubbles = [];
+      addLog("Chamber pressure flushed. Recompressed superheated liquid. Tracks cleared.", "warn");
+    }
+
+    // Interactive clicking on the canvas to trigger localized events
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = ((e.clientX - rect.left) / rect.width) * canvas.width;
+      const clickY = ((e.clientY - rect.top) / rect.height) * canvas.height;
+
+      // Trigger a cascade manual collision at click coordinates
+      const tempP = new Particle('proton', clickX, clickY, 1.0, 1.0);
+      tempP.nuclearCollide();
+    });
+
+
+    // --- PANEL TABS & LOGGER ---
+
+    function switchRightTab(tabName) {
+      document.getElementById('btn-tab-stats').classList.remove('active');
+      document.getElementById('btn-tab-wiki').classList.remove('active');
+      document.getElementById('tab-content-stats').classList.remove('active');
+      document.getElementById('tab-content-wiki').classList.remove('active');
+
+      if (tabName === 'stats') {
+        document.getElementById('btn-tab-stats').classList.add('active');
+        document.getElementById('tab-content-stats').classList.add('active');
+      } else {
+        document.getElementById('btn-tab-wiki').classList.add('active');
+        document.getElementById('tab-content-wiki').classList.add('active');
+      }
+    }
+
+    function addLog(text, type = "info") {
+      const container = document.getElementById('log-container');
+      const timeSecs = ((Date.now() - startTimeStamp) / 1000).toFixed(2);
+      const min = Math.floor(timeSecs / 60).toString().padStart(2, '0');
+      const sec = (timeSecs % 60).toFixed(2).padStart(5, '0');
+
+      const log = document.createElement('div');
+      log.className = 'log-entry';
+      log.innerHTML = `<span class="log-time">[${min}:${sec}]</span> <span class="log-${type}">${text}</span>`;
+      
+      container.appendChild(log);
+      container.scrollTop = container.scrollHeight;
+    }
+
+
+    // --- INITIALIZATION ---
+    window.onload = () => {
+      addLog("Bubble chamber pressure checks complete. Ready.", "success");
+      addLog("Click or drag inside the chamber viewport to trigger high energy collisions manually.", "info");
+      
+      // Kick off main update loop
+      requestAnimationFrame(mainLoop);
+    };
+
+  </script>
+</body>
+</html>
