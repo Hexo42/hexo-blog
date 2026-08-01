@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>acoustic-levitator // standing wave ultrasonic trap & particle sandbox</title>
+  <meta name="description" content="an interactive physics sandbox showing acoustic radiation forces, gor'kov potential wells, phase-focused holographic tractor beams, and sonic wave interference.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #03030b;
+      --panel-bg: rgba(6, 6, 20, 0.85);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-orange: #ffaa00;
+      --neon-green: #00ffaa;
+      --text: #e2e8f0;
+      --text-muted: #708090;
+      --panel-width: 320px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #0a0a2a 0%, #010103 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(82vw, 82vh);
+      height: min(82vw, 82vh);
+      box-shadow: 0 0 60px rgba(0, 243, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      z-index: 10;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+      box-shadow: 0 10px 40px rgba(0, 243, 255, 0.05);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Scrollbars */
+    .glass-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .glass-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.62rem;
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h2 span {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--neon-magenta);
+    }
+
+    p.description {
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+    }
+
+    /* Grouping Section */
+    .section {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    /* Controls Elements */
+    .control-group {
+      margin-bottom: 12px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .label-val {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .label-val span.value {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+      transition: background 0.3s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    /* Button styles */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.15);
+      color: #ffffff;
+    }
+
+    button.active {
+      background: rgba(255, 0, 127, 0.15);
+      border-color: var(--neon-magenta);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.15);
+    }
+
+    button.primary {
+      background: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      color: #03030b;
+    }
+
+    button.primary:hover {
+      background: #ffffff;
+      border-color: #ffffff;
+      box-shadow: 0 0 15px #ffffff;
+    }
+
+    button.danger {
+      background: rgba(255, 0, 127, 0.05);
+      border-color: rgba(255, 0, 127, 0.3);
+      color: #ffb3d1;
+    }
+
+    button.danger:hover {
+      background: rgba(255, 0, 127, 0.2);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+    }
+
+    /* Toggle Switches */
+    .toggle-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      margin-bottom: 10px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .3s;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-muted);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: rgba(0, 243, 255, 0.2);
+      border-color: var(--neon-cyan);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(16px);
+      background-color: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    /* Selector list */
+    .select-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .select-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .select-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-focus);
+    }
+
+    .select-item.active {
+      background: rgba(0, 243, 255, 0.04);
+      border-color: var(--neon-cyan);
+      box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.05);
+    }
+
+    .select-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .select-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    /* Oscilloscope Probe Panel */
+    #oscilloscope-box {
+      width: 100%;
+      height: 60px;
+      background: #02020a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    canvas#oscilloscope-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Floating tooltips / overlay */
+    #audio-gate-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(2, 2, 8, 0.95);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 30px;
+      text-align: center;
+      border-radius: 16px;
+    }
+
+    #audio-gate-modal h3 {
+      font-size: 1.2rem;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+    }
+
+    #audio-gate-modal p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      max-width: 260px;
+      line-height: 1.4;
+    }
+
+    /* Probe values tooltip */
+    #probe-tooltip {
+      position: absolute;
+      padding: 6px 10px;
+      background: rgba(5, 5, 15, 0.9);
+      border: 1px solid var(--neon-cyan);
+      border-radius: 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--neon-cyan);
+      pointer-events: none;
+      z-index: 20;
+      box-shadow: 0 4px 15px rgba(0, 243, 255, 0.15);
+      display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+      #app-container {
+        flex-direction: column;
+        overflow-y: auto;
+      }
+      #canvas-container {
+        height: 60vh;
+        min-height: 360px;
+      }
+      #left-panel, #right-panel {
+        position: static;
+        width: 100%;
+        max-height: none;
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- Left panel (presets and description) -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>acoustic-levitator</h1>
+        <div class="tagline">ultrasonic force field sandbox</div>
+        <p class="description">
+          simulating acoustic radiation forces (gor'kov potential wells) in air. place emitters, bounce waves, focus fields holographically, and trap micro-particles.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>presets</h2>
+        <div class="select-list">
+          <div class="select-item active" onclick="setPreset('opposing')">
+            <div class="select-title">1D Standing Wave</div>
+            <div class="select-desc">transducers on top and bottom face each other, creating flat horizontal pressure bands.</div>
+          </div>
+          <div class="select-item" onclick="setPreset('tractor')">
+            <div class="select-title">Holographic Tractor Beam</div>
+            <div class="select-desc">top array dynamically updates phases to focus wave energy at a draggable target node.</div>
+          </div>
+          <div class="select-item" onclick="setPreset('vortex')">
+            <div class="select-title">Acoustic Vortex</div>
+            <div class="select-desc">a circular ring of emitters focuses with a helical phase ramp, spinning trapped particles.</div>
+          </div>
+          <div class="select-item" onclick="setPreset('reflector')">
+            <div class="select-title">Acoustic Reflector</div>
+            <div class="select-desc">bottom array fires upward, reflecting waves off a top wall to build standing interference nodes.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>physics engine</h2>
+        
+        <div class="control-group">
+          <div class="label-val">
+            <span>gravity</span>
+            <span class="value" id="val-gravity">9.8 m/s²</span>
+          </div>
+          <input type="range" id="param-gravity" min="0" max="25" step="0.5" value="9.8" oninput="updateParam('gravity', this.value)">
+        </div>
+
+        <div class="control-group">
+          <div class="label-val">
+            <span>air viscosity (drag)</span>
+            <span class="value" id="val-drag">0.50</span>
+          </div>
+          <input type="range" id="param-drag" min="0.05" max="2" step="0.05" value="0.50" oninput="updateParam('drag', this.value)">
+        </div>
+
+        <div class="control-group">
+          <div class="label-val">
+            <span>thermal noise (brownian)</span>
+            <span class="value" id="val-noise">0.05</span>
+          </div>
+          <input type="range" id="param-noise" min="0" max="0.5" step="0.01" value="0.05" oninput="updateParam('noise', this.value)">
+        </div>
+
+        <div class="control-group">
+          <div class="label-val">
+            <span>acoustic power</span>
+            <span class="value" id="val-power">1.20</span>
+          </div>
+          <input type="range" id="param-power" min="0" max="5" step="0.1" value="1.2" oninput="updateParam('power', this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Center simulation viewport -->
+    <div id="canvas-container">
+      <!-- Audio activation screen overlay -->
+      <div id="audio-gate-modal">
+        <h3>ACOUSTIC WAVEFRONT SYNTHESIS</h3>
+        <p>this sandbox uses the web audio api to convert standing waves and particle momentum into real-time soundscapes.</p>
+        <button class="primary" onclick="dismissAudioGate()">ACTIVATE SYNTHESIZER</button>
+      </div>
+
+      <canvas id="simulation-canvas"></canvas>
+      <div id="probe-tooltip">PROBE: 0.00 Pa</div>
+    </div>
+
+    <!-- Right panel (audio and emitters control) -->
+    <div id="right-panel" class="glass-panel">
+      <div class="section">
+        <h2>interactive tools</h2>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button id="tool-grab" class="active" onclick="setTool('grab')">
+            <span>🫳</span> Grab / Tweezers
+          </button>
+          <button id="tool-probe" onclick="setTool('probe')">
+            <span>🎙️</span> Sound Mic Probe
+          </button>
+          <button id="tool-emitter" onclick="setTool('emitter')">
+            <span>➕</span> Move Focus Node
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>audio engine</h2>
+        <div class="toggle-group">
+          <span>enable sound</span>
+          <label class="switch">
+            <input type="checkbox" id="audio-mute" checked onchange="toggleMute()">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="label-val">
+            <span>transducer hum vol</span>
+            <span class="value" id="val-hum-vol">15%</span>
+          </div>
+          <input type="range" id="param-hum-vol" min="0" max="100" step="5" value="15" oninput="updateAudioParam('humVol', this.value)">
+        </div>
+
+        <div class="control-group">
+          <div class="label-val">
+            <span>probe sound vol</span>
+            <span class="value" id="val-probe-vol">40%</span>
+          </div>
+          <input type="range" id="param-probe-vol" min="0" max="100" step="5" value="40" oninput="updateAudioParam('probeVol', this.value)">
+        </div>
+
+        <div class="control-group">
+          <div class="label-val">
+            <span>oscilloscope input</span>
+            <span class="value">wave pressure</span>
+          </div>
+          <div id="oscilloscope-box">
+            <canvas id="oscilloscope-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>particles control</h2>
+        <div class="toggle-group">
+          <span>particle type</span>
+          <span style="display: flex; gap: 8px;">
+            <button id="btn-type-solid" class="active" onclick="setParticleType('solid')">Solid Beads</button>
+            <button id="btn-type-bubble" onclick="setParticleType('bubble')">Gas Bubbles</button>
+          </span>
+        </div>
+        
+        <div class="btn-grid" style="margin-bottom: 8px;">
+          <button class="primary" onclick="injectParticles(20)">Inject 20</button>
+          <button class="primary" onclick="injectParticles(100)">Inject 100</button>
+        </div>
+        <button class="danger" style="width: 100%;" onclick="clearParticles()">Clear All Particles</button>
+      </div>
+
+      <div class="section" style="font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--text-muted); display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+        <div>PARTICLES: <span id="stat-particles" style="color: var(--neon-cyan)">0</span></div>
+        <div>EMITTERS: <span id="stat-emitters" style="color: var(--neon-cyan)">0</span></div>
+        <div>WAVELENGTH: <span style="color: var(--neon-cyan)">1.00m</span></div>
+        <div>FREQ: <span style="color: var(--neon-cyan)">40.0 kHz</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Physics Coordinate Bounds: 0 to 10
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const oscCanvas = document.getElementById('oscilloscope-canvas');
+    const oscCtx = oscCanvas.getContext('2d');
+
+    // Simulation Constants
+    const C0 = 3.0; // wave propagation speed in simulation space
+    const RHO0 = 1.0; // air density in simulation space
+    let frequency = 3.0; // wave frequency
+    let k = (2 * Math.PI * frequency) / C0; // wave number
+
+    // Parameters with defaults
+    let gravity = 9.8;
+    let drag = 0.50;
+    let brownianNoise = 0.05;
+    let acousticPower = 1.2;
+    let particleType = 'solid'; // 'solid' traps at nodes, 'bubble' at antinodes
+
+    let particles = [];
+    let transducers = [];
+    let useReflector = false;
+    const reflectorY = 0.5; // Y position of top reflector
+
+    // UI Tools
+    let currentTool = 'grab'; // 'grab', 'probe', 'emitter'
+    let currentPreset = 'opposing';
+    let isDragging = false;
+    let mouseSimX = 5.0;
+    let mouseSimY = 5.0;
+    
+    // Focused Beam target coordinate
+    let focusX = 5.0;
+    let focusY = 5.0;
+
+    // Interactive Probe microphone position
+    let probeX = 5.0;
+    let probeY = 5.0;
+
+    // Offscreen Canvas for volumetric acoustic wave field rendering
+    const bgCanvas = document.createElement('canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    const bgGridW = 80;
+    const bgGridH = 80;
+    bgCanvas.width = bgGridW;
+    bgCanvas.height = bgGridH;
+
+    // Web Audio Synthesizer State
+    let audioCtx = null;
+    let audioEnabled = false;
+    let humOsc = null;
+    let humGain = null;
+    let probeOsc = null;
+    let probeGain = null;
+    let noiseNode = null;
+    let noiseGain = null;
+    let noiseFilter = null;
+
+    let humVolParam = 15;
+    let probeVolParam = 40;
+
+    let phaseSpin = 0.0;
+
+    // Resize handlers
+    function resizeCanvas() {
+      const size = Math.min(window.innerWidth * 0.82, window.innerHeight * 0.82);
+      canvas.width = size;
+      canvas.height = size;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    oscCanvas.width = 180;
+    oscCanvas.height = 60;
+
+    // Coordinates mapping
+    function toSimX(screenX) {
+      const rect = canvas.getBoundingClientRect();
+      return ((screenX - rect.left) / rect.width) * 10;
+    }
+    function toSimY(screenY) {
+      const rect = canvas.getBoundingClientRect();
+      return ((screenY - rect.top) / rect.height) * 10;
+    }
+    function toScreenX(simX) {
+      return (simX / 10) * canvas.width;
+    }
+    function toScreenY(simY) {
+      return (simY / 10) * canvas.height;
+    }
+
+    // Sound Gate Activation
+    function dismissAudioGate() {
+      document.getElementById('audio-gate-modal').style.display = 'none';
+      initAudio();
+    }
+
+    function initAudio() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioEnabled = true;
+
+        // 1. Transducer Hum (audible frequency tied to simulation)
+        humOsc = audioCtx.createOscillator();
+        humOsc.type = 'sine';
+        humOsc.frequency.setValueAtTime(80, audioCtx.currentTime);
+        humGain = audioCtx.createGain();
+        humGain.gain.setValueAtTime((humVolParam / 100) * 0.1, audioCtx.currentTime);
+        
+        humOsc.connect(humGain);
+        humGain.connect(audioCtx.destination);
+        humOsc.start();
+
+        // 2. Sound Probe Synth
+        probeOsc = audioCtx.createOscillator();
+        probeOsc.type = 'triangle';
+        probeOsc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        probeGain = audioCtx.createGain();
+        probeGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+        probeOsc.connect(probeGain);
+        probeGain.connect(audioCtx.destination);
+        probeOsc.start();
+
+        // 3. Dynamic crackle/noise filter for unstable traps
+        const bufferSize = audioCtx.sampleRate * 2;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        
+        noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+
+        noiseFilter = audioCtx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        noiseFilter.Q.setValueAtTime(8, audioCtx.currentTime);
+
+        noiseGain = audioCtx.createGain();
+        noiseGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+        noiseNode.start();
+
+      } catch(e) {
+        console.error("failed to init web audio:", e);
+      }
+    }
+
+    function toggleMute() {
+      const isMuted = !document.getElementById('audio-mute').checked;
+      if (!audioCtx) return;
+      if (isMuted) {
+        audioCtx.suspend();
+      } else {
+        audioCtx.resume();
+      }
+    }
+
+    function updateAudioParam(param, val) {
+      if (param === 'humVol') {
+        humVolParam = parseInt(val);
+        document.getElementById('val-hum-vol').textContent = val + '%';
+        if (humGain && audioEnabled) {
+          humGain.gain.setTargetAtTime((humVolParam / 100) * 0.1, audioCtx.currentTime, 0.05);
+        }
+      } else if (param === 'probeVol') {
+        probeVolParam = parseInt(val);
+        document.getElementById('val-probe-vol').textContent = val + '%';
+      }
+    }
+
+    // Set interactive UI modes
+    function setTool(tool) {
+      currentTool = tool;
+      document.getElementById('tool-grab').classList.remove('active');
+      document.getElementById('tool-probe').classList.remove('active');
+      document.getElementById('tool-emitter').classList.remove('active');
+      
+      if (tool === 'grab') document.getElementById('tool-grab').classList.add('active');
+      if (tool === 'probe') document.getElementById('tool-probe').classList.add('active');
+      if (tool === 'emitter') document.getElementById('tool-emitter').classList.add('active');
+    }
+
+    function setParticleType(type) {
+      particleType = type;
+      document.getElementById('btn-type-solid').classList.remove('active');
+      document.getElementById('btn-type-bubble').classList.remove('active');
+      
+      if (type === 'solid') {
+        document.getElementById('btn-type-solid').classList.add('active');
+      } else {
+        document.getElementById('btn-type-bubble').classList.add('active');
+      }
+    }
+
+    function updateParam(param, val) {
+      if (param === 'gravity') {
+        gravity = parseFloat(val);
+        document.getElementById('val-gravity').textContent = gravity.toFixed(1) + ' m/s²';
+      } else if (param === 'drag') {
+        drag = parseFloat(val);
+        document.getElementById('val-drag').textContent = drag.toFixed(2);
+      } else if (param === 'noise') {
+        brownianNoise = parseFloat(val);
+        document.getElementById('val-noise').textContent = brownianNoise.toFixed(2);
+      } else if (param === 'power') {
+        acousticPower = parseFloat(val);
+        document.getElementById('val-power').textContent = acousticPower.toFixed(2);
+      }
+    }
+
+    // Presets Setup
+    function setPreset(preset) {
+      currentPreset = preset;
+      useReflector = false;
+      transducers = [];
+      particles = [];
+
+      const items = document.querySelectorAll('.select-item');
+      items.forEach(el => el.classList.remove('active'));
+      
+      if (preset === 'opposing') {
+        items[0].classList.add('active');
+        // Top emitter line, bottom emitter line
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+          const x = 1.0 + (i / (count - 1)) * 8.0;
+          transducers.push({ x: x, y: 1.0, phase: 0, amp: 1.0 });
+          transducers.push({ x: x, y: 9.0, phase: 0, amp: 1.0 });
+        }
+        injectParticles(60);
+      } 
+      else if (preset === 'tractor') {
+        items[1].classList.add('active');
+        // Top focused array
+        const count = 16;
+        for (let i = 0; i < count; i++) {
+          const x = 1.0 + (i / (count - 1)) * 8.0;
+          transducers.push({ x: x, y: 1.0, phase: 0, amp: 1.5 });
+        }
+        focusX = 5.0;
+        focusY = 5.5;
+        calculateTractorPhases();
+        injectParticles(20);
+      } 
+      else if (preset === 'vortex') {
+        items[2].classList.add('active');
+        // Circular ring array
+        const count = 16;
+        const R = 3.5;
+        const cx = 5.0, cy = 5.0;
+        for (let i = 0; i < count; i++) {
+          const theta = (i / count) * 2 * Math.PI;
+          transducers.push({
+            x: cx + R * Math.cos(theta),
+            y: cy + R * Math.sin(theta),
+            phase: 0,
+            amp: 1.5
+          });
+        }
+        focusX = 5.0;
+        focusY = 5.0;
+        calculateVortexPhases();
+        injectParticles(30);
+      } 
+      else if (preset === 'reflector') {
+        items[3].classList.add('active');
+        useReflector = true;
+        // Bottom emitter line firing up, reflection off top boundary
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+          const x = 1.0 + (i / (count - 1)) * 8.0;
+          transducers.push({ x: x, y: 9.0, phase: 0, amp: 1.5 });
+        }
+        injectParticles(50);
+      }
+      
+      document.getElementById('stat-emitters').textContent = transducers.length;
+    }
+
+    function calculateTractorPhases() {
+      // Phase conjugate holographic focusing with a central phase jump (Twin Trap)
+      // twin traps are physically stable because they form a vertical pressure node (minimum) 
+      // where solid beads trap, bordered by high-pressure antinodes that push beads back.
+      for (let i = 0; i < transducers.length; i++) {
+        const t = transducers[i];
+        const dx = t.x - focusX;
+        const dy = t.y - focusY;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        
+        let basePhase = -k * d;
+        // Add twin trap pi-phase shift to left half
+        if (t.x < focusX) {
+          basePhase += Math.PI;
+        }
+        t.phase = basePhase;
+      }
+    }
+
+    function calculateVortexPhases() {
+      // helically progress phase around focus point (Topological charge = 1)
+      for (let i = 0; i < transducers.length; i++) {
+        const t = transducers[i];
+        const dx = t.x - focusX;
+        const dy = t.y - focusY;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        const theta = Math.atan2(dy, dx);
+        
+        t.phase = -k * d + theta + phaseSpin;
+      }
+    }
+
+    // Particle Injection
+    function injectParticles(count) {
+      for (let i = 0; i < count; i++) {
+        let px = 2.0 + Math.random() * 6.0;
+        let py = 3.0 + Math.random() * 4.0;
+        
+        // spawn closer to the focus node if in focused presets
+        if (currentPreset === 'tractor' || currentPreset === 'vortex') {
+          px = focusX + (Math.random() - 0.5) * 1.5;
+          py = focusY + (Math.random() - 0.5) * 1.5;
+        }
+
+        particles.push({
+          x: px,
+          y: py,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          r: 0.12 + Math.random() * 0.08, // radius in simulation units
+          mass: 0.015,
+          type: particleType,
+          trail: [],
+          color: particleType === 'solid' 
+            ? `hsl(${15 + Math.random() * 20}, 100%, ${55 + Math.random() * 15}%)` // glowing orange/red
+            : `hsl(${180 + Math.random() * 15}, 100%, 70%)` // glowing cyan
+        });
+      }
+      document.getElementById('stat-particles').textContent = particles.length;
+    }
+
+    function clearParticles() {
+      particles = [];
+      document.getElementById('stat-particles').textContent = 0;
+    }
+
+    // Mathematical calculations of the acoustic field at arbitrary coordinates
+    function getPressureAt(x, y) {
+      let pR = 0;
+      let pI = 0;
+
+      const addSource = (sx, sy, phase, amp) => {
+        const dx = x - sx;
+        const dy = y - sy;
+        const d = Math.sqrt(dx * dx + dy * dy + 0.01); // softening factor
+        const angle = k * d + phase;
+        const falloff = amp / Math.sqrt(d);
+        
+        pR += falloff * Math.cos(angle);
+        pI += falloff * Math.sin(angle);
+      };
+
+      for (let i = 0; i < transducers.length; i++) {
+        const t = transducers[i];
+        addSource(t.x, t.y, t.phase, t.amp);
+      }
+
+      if (useReflector) {
+        for (let i = 0; i < transducers.length; i++) {
+          const t = transducers[i];
+          addSource(t.x, 2 * reflectorY - t.y, t.phase, t.amp);
+        }
+      }
+
+      return { pR, pI };
+    }
+
+    function getGorkovPotential(x, y, type) {
+      let pR = 0;
+      let pI = 0;
+      let dpR_dx = 0;
+      let dpI_dx = 0;
+      let dpR_dy = 0;
+      let dpI_dy = 0;
+
+      const addSourceDerivatives = (sx, sy, phase, amp) => {
+        const dx = x - sx;
+        const dy = y - sy;
+        const d2 = dx * dx + dy * dy + 0.01;
+        const d = Math.sqrt(d2);
+        const theta = k * d + phase;
+        
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+        
+        pR += amp * cosT / Math.sqrt(d);
+        pI += amp * sinT / Math.sqrt(d);
+
+        // First spatial derivative calculations
+        const factorR_x = -amp * (cosT / (2 * d2) + k * sinT / d) * dx / d;
+        const factorI_x = -amp * (sinT / (2 * d2) - k * cosT / d) * dx / d;
+        dpR_dx += factorR_x;
+        dpI_dx += factorI_x;
+
+        const factorR_y = -amp * (cosT / (2 * d2) + k * sinT / d) * dy / d;
+        const factorI_y = -amp * (sinT / (2 * d2) - k * cosT / d) * dy / d;
+        dpR_dy += factorR_y;
+        dpI_dy += factorI_y;
+      };
+
+      for (let i = 0; i < transducers.length; i++) {
+        const t = transducers[i];
+        addSourceDerivatives(t.x, t.y, t.phase, t.amp);
+      }
+
+      if (useReflector) {
+        for (let i = 0; i < transducers.length; i++) {
+          const t = transducers[i];
+          addSourceDerivatives(t.x, 2 * reflectorY - t.y, t.phase, t.amp);
+        }
+      }
+
+      const Psq = pR * pR + pI * pI;
+      const omega = 2 * Math.PI * frequency;
+      
+      // Velocity squared magnitude: V² ∝ |∇p|²
+      const coeffV = 1 / (2 * RHO0 * RHO0 * omega * omega);
+      const Vsq = coeffV * (dpI_dx * dpI_dx + dpR_dx * dpR_dx + dpI_dy * dpI_dy + dpR_dy * dpR_dy);
+
+      // Contrast factors
+      let f1 = 1.0;
+      let f2 = 1.0;
+      if (type === 'bubble') {
+        f1 = -4.0; // bubbles are highly compressible, attract to antinodes
+        f2 = -0.3;
+      }
+
+      const a = f1 / (4 * RHO0 * C0 * C0);
+      const b = 3 * f2 * RHO0 / 8;
+
+      return a * Psq - b * Vsq;
+    }
+
+    function getGorkovForce(x, y, type) {
+      // Simple and extremely stable numerical central difference of potential
+      const delta = 0.005;
+      const uRight = getGorkovPotential(x + delta, y, type);
+      const uLeft = getGorkovPotential(x - delta, y, type);
+      const uUp = getGorkovPotential(x, y + delta, type);
+      const uDown = getGorkovPotential(x, y - delta, type);
+
+      const fx = -(uRight - uLeft) / (2 * delta);
+      const fy = -(uUp - uDown) / (2 * delta);
+
+      // Global scaling
+      return {
+        fx: fx * acousticPower * 45,
+        fy: fy * acousticPower * 45
+      };
+    }
+
+    // Input handlers
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      mouseSimX = toSimX(e.clientX);
+      mouseSimY = toSimY(e.clientY);
+      
+      handleInteractStart();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      mouseSimX = toSimX(e.clientX);
+      mouseSimY = toSimY(e.clientY);
+      
+      handleInteractMove();
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      document.getElementById('probe-tooltip').style.display = 'none';
+    });
+
+    // Touch support
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 0) return;
+      isDragging = true;
+      mouseSimX = toSimX(e.touches[0].clientX);
+      mouseSimY = toSimY(e.touches[0].clientY);
+      handleInteractStart();
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 0) return;
+      mouseSimX = toSimX(e.touches[0].clientX);
+      mouseSimY = toSimY(e.touches[0].clientY);
+      handleInteractMove();
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('touchend', () => {
+      isDragging = false;
+      document.getElementById('probe-tooltip').style.display = 'none';
+    });
+
+    function handleInteractStart() {
+      if (currentTool === 'probe') {
+        probeX = mouseSimX;
+        probeY = mouseSimY;
+      } else if (currentTool === 'emitter') {
+        focusX = mouseSimX;
+        focusY = mouseSimY;
+        if (currentPreset === 'tractor') calculateTractorPhases();
+        if (currentPreset === 'vortex') calculateVortexPhases();
+      }
+    }
+
+    function handleInteractMove() {
+      if (!isDragging) return;
+      if (currentTool === 'probe') {
+        probeX = mouseSimX;
+        probeY = mouseSimY;
+      } else if (currentTool === 'emitter') {
+        focusX = mouseSimX;
+        focusY = mouseSimY;
+        if (currentPreset === 'tractor') calculateTractorPhases();
+        if (currentPreset === 'vortex') calculateVortexPhases();
+      }
+    }
+
+    // Audio context parameter update mapping inside loop
+    function updateSynthFeedback(p_mag, avgSpeed) {
+      if (!audioCtx || !audioEnabled) return;
+
+      // 1. Map hum pitch based on transducer parameters
+      humOsc.frequency.setTargetAtTime(70 + acousticPower * 10, audioCtx.currentTime, 0.1);
+      
+      // 2. Probe Feedback: Volume mapped to pressure magnitude at probe location
+      if (currentTool === 'probe' && isDragging) {
+        const targetGain = Math.min((probeVolParam / 100) * p_mag * 0.08, 0.4);
+        probeGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.05);
+
+        // Pitch is frequency scaled down, modulated by local pressure variations
+        const targetFreq = 180 + p_mag * 12;
+        probeOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.05);
+      } else {
+        probeGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.1);
+      }
+
+      // 3. Dynamic crackle/noise mapped to average particle velocity (unstable wells)
+      const noiseLevel = Math.min(avgSpeed * 0.04 * (humVolParam / 100), 0.06);
+      noiseGain.gain.setTargetAtTime(noiseLevel, audioCtx.currentTime, 0.1);
+      noiseFilter.frequency.setTargetAtTime(900 + avgSpeed * 150, audioCtx.currentTime, 0.1);
+    }
+
+    // Render volumetric wave background field (offscreen grid scaled)
+    function renderVolumetricField() {
+      const imgData = bgCtx.createImageData(bgGridW, bgGridH);
+      const data = imgData.data;
+
+      for (let gy = 0; gy < bgGridH; gy++) {
+        const y = (gy / bgGridH) * 10;
+        for (let gx = 0; gx < bgGridW; gx++) {
+          const x = (gx / bgGridW) * 10;
+
+          const p = getPressureAt(x, y);
+          const p_mag = Math.sqrt(p.pR * p.pR + p.pI * p.pI);
+
+          // normalize intensity
+          const norm = Math.min(p_mag * 0.22, 1.0);
+          
+          const idx = (gy * bgGridW + gx) * 4;
+          
+          // Color scheme: Deep blue space gradient overlaid with glowing neon-magenta waves
+          const r = Math.floor(norm * 220);
+          const g = Math.floor(norm * 10 + (1 - norm) * 4);
+          const b = Math.floor(24 + norm * 110 + (1 - norm) * 48);
+
+          data[idx] = r;
+          data[idx + 1] = g;
+          data[idx + 2] = b;
+          data[idx + 3] = 255;
+        }
+      }
+      bgCtx.putImageData(imgData, 0, 0);
+    }
+
+    // Draw standard oscilloscope sweep showing local probe waveform
+    let oscTime = 0;
+    function drawOscilloscope(p_mag) {
+      oscCtx.fillStyle = '#010105';
+      oscCtx.fillRect(0, 0, oscCanvas.width, oscCanvas.height);
+
+      // grid line
+      oscCtx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+      oscCtx.lineWidth = 1;
+      oscCtx.beginPath();
+      oscCtx.moveTo(0, oscCanvas.height/2);
+      oscCtx.lineTo(oscCanvas.width, oscCanvas.height/2);
+      oscCtx.stroke();
+
+      oscCtx.strokeStyle = 'var(--neon-cyan)';
+      oscCtx.lineWidth = 1.5;
+      oscCtx.shadowBlur = 4;
+      oscCtx.shadowColor = 'var(--neon-cyan)';
+      
+      oscCtx.beginPath();
+      for (let x = 0; x < oscCanvas.width; x++) {
+        const tVal = x * 0.15 + oscTime * 0.6;
+        // amplitude matches local pressure
+        const amplitude = p_mag * 5.0;
+        const y = oscCanvas.height / 2 + Math.sin(tVal) * Math.min(amplitude, oscCanvas.height * 0.45);
+        
+        if (x === 0) oscCtx.moveTo(x, y);
+        else oscCtx.lineTo(x, y);
+      }
+      oscCtx.stroke();
+      oscCtx.shadowBlur = 0; // reset
+      
+      oscTime += 1;
+    }
+
+    // Main Game Loop
+    let lastTime = performance.now();
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.03); // cap timestep
+      lastTime = now;
+
+      // 1. Preset modifications
+      if (currentPreset === 'vortex') {
+        phaseSpin += 3.5 * dt; // spin phases of vortex emitters
+        calculateVortexPhases();
+      }
+
+      // 2. Field Calculations
+      renderVolumetricField();
+
+      // Clear main canvas
+      ctx.fillStyle = '#020208';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw volumetric wave field stretched
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(bgCanvas, 0, 0, canvas.width, canvas.height);
+
+      // Optional: Draw reflector boundary
+      if (useReflector) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(0, toScreenY(reflectorY));
+        ctx.lineTo(canvas.width, toScreenY(reflectorY));
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // 3. Emitters Visuals
+      for (let i = 0; i < transducers.length; i++) {
+        const t = transducers[i];
+        const sx = toScreenX(t.x);
+        const sy = toScreenY(t.y);
+
+        // draw glow
+        const grad = ctx.createRadialGradient(sx, sy, 2, sx, sy, 18);
+        grad.addColorStop(0, 'rgba(0, 243, 255, 0.6)');
+        grad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 18, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // draw physical ring
+        ctx.fillStyle = '#050510';
+        ctx.strokeStyle = 'var(--neon-cyan)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 7, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // 4. Update and Draw Particles
+      let sumSpeed = 0;
+      
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Retrieve acoustic radiation force
+        const force = getGorkovForce(p.x, p.y, p.type);
+        
+        let fx = force.fx;
+        let fy = force.fy;
+
+        // Apply Gravity
+        fy += gravity * p.mass * 8.0;
+
+        // Apply drag
+        fx -= drag * p.vx;
+        fy -= drag * p.vy;
+
+        // Apply Brownian motion (thermal noise)
+        fx += (Math.random() - 0.5) * brownianNoise * 8.0;
+        fy += (Math.random() - 0.5) * brownianNoise * 8.0;
+
+        // Interactive cursor grab tweezers force
+        if (isDragging && currentTool === 'grab') {
+          const dx = mouseSimX - p.x;
+          const dy = mouseSimY - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 1.8) {
+            // spring force
+            fx += dx * 20.0 * p.mass;
+            fy += dy * 20.0 * p.mass;
+            // draw spring connection line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(toScreenX(p.x), toScreenY(p.y));
+            ctx.lineTo(toScreenX(mouseSimX), toScreenY(mouseSimY));
+            ctx.stroke();
+          }
+        }
+
+        // Apply inter-particle soft repulsive force (stacking physics)
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p2.x - p.x;
+          const dy = p2.y - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy + 0.001);
+          const minDist = p.r + p2.r;
+          if (dist < minDist) {
+            const overlap = minDist - dist;
+            const push = overlap * 4.2; // spring constant
+            const pfx = (dx / dist) * push;
+            const pfy = (dy / dist) * push;
+            
+            fx -= pfx;
+            fy -= pfy;
+            p2.vx += pfx * 0.1;
+            p2.vy += pfy * 0.1;
+          }
+        }
+
+        // Integrate movement
+        p.vx += (fx / p.mass) * dt;
+        p.vy += (fy / p.mass) * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+
+        sumSpeed += Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+
+        // Boundary checks (bounce off borders)
+        const margin = p.r + 0.1;
+        const bounce = -0.45;
+        if (p.x < margin) { p.x = margin; p.vx *= bounce; }
+        if (p.x > 10.0 - margin) { p.x = 10.0 - margin; p.vx *= bounce; }
+        if (p.y < margin) { p.y = margin; p.vy *= bounce; }
+        if (p.y > 10.0 - margin) { p.y = 10.0 - margin; p.vy *= bounce; }
+
+        // Trail updates
+        p.trail.push({ x: p.x, y: p.y });
+        if (p.trail.length > 10) p.trail.shift();
+
+        // Draw Trails
+        if (p.trail.length > 1) {
+          ctx.beginPath();
+          ctx.strokeStyle = p.type === 'bubble' ? 'rgba(0, 243, 255, 0.15)' : 'rgba(255, 170, 0, 0.15)';
+          ctx.lineWidth = p.r * 8;
+          ctx.moveTo(toScreenX(p.trail[0].x), toScreenY(p.trail[0].y));
+          for (let t = 1; t < p.trail.length; t++) {
+            ctx.lineTo(toScreenX(p.trail[t].x), toScreenY(p.trail[t].y));
+          }
+          ctx.stroke();
+        }
+
+        // Render Particle Body
+        const px = toScreenX(p.x);
+        const py = toScreenY(p.y);
+        const pr = p.r * (canvas.width / 10);
+
+        if (p.type === 'solid') {
+          // 3D shaded sphere rendering
+          const grad = ctx.createRadialGradient(px - pr*0.2, py - pr*0.2, pr*0.1, px, py, pr);
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(0.3, p.color);
+          grad.addColorStop(1, '#050510');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(px, py, pr, 0, 2 * Math.PI);
+          ctx.fill();
+        } else {
+          // Bubble: hollow circle with neon rim
+          ctx.fillStyle = 'rgba(0, 243, 255, 0.08)';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(px, py, pr, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.stroke();
+          
+          ctx.strokeStyle = 'var(--neon-cyan)';
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.arc(px, py, pr - 1, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+      }
+
+      const avgSpeed = particles.length > 0 ? (sumSpeed / particles.length) : 0;
+
+      // 5. Interactive Emitter Focus Point
+      if (currentPreset === 'tractor' || currentPreset === 'vortex') {
+        const fx = toScreenX(focusX);
+        const fy = toScreenY(focusY);
+        
+        ctx.strokeStyle = currentPreset === 'vortex' ? 'var(--neon-magenta)' : 'var(--neon-cyan)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(fx, fy, 15, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.setLineDash([]); // reset
+
+        // crosshair ticks
+        ctx.strokeStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.moveTo(fx - 8, fy); ctx.lineTo(fx + 8, fy);
+        ctx.moveTo(fx, fy - 8); ctx.lineTo(fx, fy + 8);
+        ctx.stroke();
+      }
+
+      // 6. Interactive Microphone Probe tool
+      const probeP = getPressureAt(probeX, probeY);
+      const probePmag = Math.sqrt(probeP.pR * probeP.pR + probeP.pI * probeP.pI);
+
+      if (currentTool === 'probe') {
+        const px = toScreenX(probeX);
+        const py = toScreenY(probeY);
+        
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        // outer ring
+        ctx.beginPath();
+        ctx.arc(px, py, 20, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // inner green dot
+        ctx.fillStyle = 'var(--neon-green)';
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // text tooltip
+        if (isDragging) {
+          const tooltip = document.getElementById('probe-tooltip');
+          tooltip.style.display = 'block';
+          tooltip.style.left = (toScreenX(probeX) + canvas.getBoundingClientRect().left - 40) + 'px';
+          tooltip.style.top = (toScreenY(probeY) + canvas.getBoundingClientRect().top - 40) + 'px';
+          tooltip.textContent = `PRESSURE: ${probePmag.toFixed(2)} Pa`;
+        }
+      }
+
+      // Update synth and oscilloscope feedback
+      updateSynthFeedback(probePmag, avgSpeed);
+      drawOscilloscope(probePmag);
+
+      requestAnimationFrame(loop);
+    }
+
+    // Set initial preset
+    setPreset('opposing');
+    
+    // Launch Loop
+    requestAnimationFrame(loop);
+
+  </script>
+</body>
+</html>
