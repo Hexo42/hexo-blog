@@ -1,56 +1,1496 @@
-<!DOCTYPE html><html><head><title>Acronym Quiz - 2026-08-02 00-00</title>
-        <style>body { background: #111; color: #0f0; text-align: center; font-family: monospace; padding-top: 50px; }
-        .btn { background: #333; color: #0f0; border: 2px outset #666; padding: 10px 20px; margin: 10px; cursor: pointer; font-size: 18px; }
-        .btn:hover { background: #444; }
-        #question { font-size: 24px; margin-bottom: 20px; color: #f0f; }
-        </style>
-        </head><body>
-        <h1>Acronym Quiz</h1>
-        <p>what does this acronym stand for according to my superior logic?</p>
-        <div id="question">???</div>
-        <div id="options"></div>
-        <p id="result"></p>
-        <script>
-          const adjs1 = {'A': 'Ancient', 'B': 'Bright', 'C': 'Calm', 'D': 'Dark', 'E': 'Electric', 'F': 'Fast', 'G': 'Great', 'H': 'Hidden', 'I': 'Infinite', 'J': 'Jolly', 'K': 'Kind', 'L': 'Last', 'M': 'Mega', 'N': 'Neon', 'O': 'Open', 'P': 'Pure', 'Q': 'Quiet', 'R': 'Rapid', 'S': 'Silent', 'T': 'Total', 'U': 'Ultra', 'V': 'Vast', 'W': 'Wild', 'X': 'Xenial', 'Y': 'Young', 'Z': 'Zero'};
-          const adjs2 = {'A': 'Atomic', 'B': 'Blue', 'C': 'Crystal', 'D': 'Digital', 'E': 'Eternal', 'F': 'Flaming', 'G': 'Golden', 'H': 'Heavy', 'I': 'Iron', 'J': 'Jade', 'K': 'Kinetic', 'L': 'Lunar', 'M': 'Magic', 'N': 'Noble', 'O': 'Orbital', 'P': 'Power', 'Q': 'Quantum', 'R': 'Royal', 'S': 'Solar', 'T': 'Turbo', 'U': 'Urban', 'V': 'Vocal', 'W': 'Winter', 'X': 'Xerox', 'Y': 'Yellow', 'Z': 'Zesty'};
-          const nouns = {'A': 'Apple', 'B': 'Bear', 'C': 'Cloud', 'D': 'Dream', 'E': 'Eagle', 'F': 'Forest', 'G': 'Ghost', 'H': 'Hill', 'I': 'Island', 'J': 'Jungle', 'K': 'King', 'L': 'Lake', 'M': 'Mountain', 'N': 'Night', 'O': 'Ocean', 'P': 'Path', 'Q': 'Queen', 'R': 'River', 'S': 'Star', 'T': 'Tree', 'U': 'Unit', 'V': 'Valley', 'W': 'Wind', 'X': 'Xenon', 'Y': 'Yard', 'Z': 'Zone'};
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>superfluid-vortex // helium-4 quantum fluid & bose-einstein condensate sandbox</title>
+  <meta name="description" content="an interactive physics sandbox simulating the gross-pitaevskii equation, quantized vortices, abrikosov lattices, persistent superflows, and acoustic bogoliubov sound waves.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #020208;
+      --panel-bg: rgba(4, 4, 12, 0.85);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-orange: #ffaa00;
+      --neon-green: #00ffaa;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --panel-width: 320px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #07071a 0%, #000002 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(80vw, 80vh);
+      height: min(80vw, 80vh);
+      box-shadow: 0 0 60px rgba(0, 243, 255, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.25);
+      box-shadow: 0 10px 40px rgba(0, 243, 255, 0.04);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Scrollbar */
+    .glass-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .glass-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.6rem;
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    p.description {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    /* Controls Grid */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .slider-header span.value {
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      transition: background 0.3s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+      cursor: pointer;
+      transition: transform 0.1s, background-color 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    /* Select Dropdowns */
+    select {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    select:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    /* Radio / Button Toggles */
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .toggle-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .btn-toggle {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 6px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .btn-toggle:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+    }
+
+    .btn-toggle.active {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.15);
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(255, 0, 127, 0.15));
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-action:hover {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-action:active {
+      transform: translateY(1px);
+    }
+
+    /* Stats Displays */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text);
+    }
+
+    .stat-value.neon-cyan { color: var(--neon-cyan); }
+    .stat-value.neon-magenta { color: var(--neon-magenta); }
+    .stat-value.neon-green { color: var(--neon-green); }
+
+    /* Sound Console */
+    #sound-console {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .audio-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--neon-green);
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(0, 255, 170, 0.05);
+      border: 1px solid rgba(0, 255, 170, 0.2);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .audio-badge.muted {
+      color: var(--neon-magenta);
+      background: rgba(255, 0, 127, 0.05);
+      border-color: rgba(255, 0, 127, 0.2);
+    }
+
+    .audio-badge .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: currentColor;
+      border-radius: 50%;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .audio-badge.active .pulse-dot {
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+
+    /* Custom Home Button */
+    #home-link {
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-family: 'Share Tech Mono', monospace;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      transition: color 0.3s;
+    }
+    
+    #home-link:hover {
+      color: var(--neon-magenta);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- Left panel (Controls) -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>superfluid-vortex</h1>
+        <div class="tagline">helium-4 quantum fluid simulation</div>
+        <p class="description">an interactive Gross-Pitaevskii solver. watch phase angles mapped to colors, quantized vortex cores going dark, and drag the acoustic probe to hear superfluid waves.</p>
+      </div>
+
+      <div class="control-group">
+        <h2>:: presets ::</h2>
+        <select id="preset-select" onchange="loadPreset(this.value)">
+          <option value="stirring">Stirring Lasers (Vortex Shedding)</option>
+          <option value="lattice">Rotating Trap (Abrikosov Lattice)</option>
+          <option value="ring">Persistent Donut Current</option>
+          <option value="dipole">Vortex Dipole Collision</option>
+          <option value="turbulence">Quantum Turbulence storm</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <h2>:: parameters ::</h2>
+        
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Interaction Strength (g)</span>
+            <span class="value" id="param-g-val">15</span>
+          </div>
+          <input type="range" id="param-g" min="0" max="30" step="0.5" value="15" oninput="updateParam('g', this.value)">
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Dissipation (Damping Temp)</span>
+            <span class="value" id="param-damping-val">0.02</span>
+          </div>
+          <input type="range" id="param-damping" min="0" max="0.2" step="0.005" value="0.02" oninput="updateParam('damping', this.value)">
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Trap Rotation Speed (&Omega;)</span>
+            <span class="value" id="param-omega-val">0.00</span>
+          </div>
+          <input type="range" id="param-omega" min="0" max="0.9" step="0.05" value="0.0" oninput="updateParam('omega', this.value)">
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Laser Obstacle Size</span>
+            <span class="value" id="param-obstacle-val">1.2</span>
+          </div>
+          <input type="range" id="param-obstacle" min="0.5" max="3.0" step="0.1" value="1.2" oninput="updateParam('obstacle', this.value)">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: click mode ::</h2>
+        <div class="toggle-grid-4">
+          <button id="mode-stir" class="btn-toggle active" onclick="setClickMode('stir')">Stir Fluid</button>
+          <button id="mode-vortex" class="btn-toggle" onclick="setClickMode('vortex')">Add Vortex (+)</button>
+          <button id="mode-antivortex" class="btn-toggle" onclick="setClickMode('antivortex')">Add Antivortex (-)</button>
+          <button id="mode-probe" class="btn-toggle" onclick="setClickMode('probe')">Move Probe</button>
+        </div>
+      </div>
+
+      <button class="btn-action" onclick="resetCondensate()">Reset Wave Function</button>
+      
+      <a href="../index.html" id="home-link">&lt;&lt; [back to cyber space]</a>
+    </div>
+
+    <!-- Center Sandbox -->
+    <div id="canvas-container">
+      <canvas id="simulation-canvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- Right panel (Stats & Sound) -->
+    <div id="right-panel" class="glass-panel">
+      
+      <div class="control-group">
+        <h2>:: sound engine ::</h2>
+        <div id="sound-console">
+          <div id="audio-status" class="audio-badge muted">
+            <div class="pulse-dot"></div>
+            <span id="audio-status-text">Audio Engine: Offline</span>
+          </div>
           
-          function getMeaning(abc) {
-            return adjs1[abc[0]] + " " + adjs2[abc[1]] + " " + nouns[abc[2]];
+          <button class="btn-action" id="audio-toggle-btn" onclick="toggleAudio()">Enable Audio System</button>
+          
+          <div class="slider-container" style="margin-top: 6px;">
+            <div class="slider-header">
+              <span>Synthesizer Volume</span>
+              <span class="value" id="param-volume-val">30%</span>
+            </div>
+            <input type="range" id="param-volume" min="0" max="100" step="1" value="30" oninput="updateVolume(this.value)">
+          </div>
+          <p class="description" style="font-size: 0.72rem; margin-top: 2px;">sound is synthesized from the condensate density & current at the probe. drag the probe near vortices to hear them whistle and pop.</p>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: physical state ::</h2>
+        
+        <div class="stat-row">
+          <span class="stat-label">Vortices Detected</span>
+          <span class="stat-value neon-cyan" id="stat-vortices">0</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Antivortices Detected</span>
+          <span class="stat-value neon-magenta" id="stat-antivortices">0</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Total Energy &langle;H&rangle;</span>
+          <span class="stat-value neon-green" id="stat-energy">0.00</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Superfluid Density &rho;</span>
+          <span class="stat-value" id="stat-density">0.00</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Condensate Winding</span>
+          <span class="stat-value" id="stat-winding">N/A</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Simulation Time (t)</span>
+          <span class="stat-value" id="stat-time">0.00</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: probe feedback ::</h2>
+        
+        <div class="stat-row">
+          <span class="stat-label">Probe Density</span>
+          <span class="stat-value" id="probe-density">0.00</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Superfluid Velocity</span>
+          <span class="stat-value" id="probe-velocity">0.00</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Phase Angle &theta;</span>
+          <span class="stat-value" id="probe-phase">0.00 rad</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: color map keys ::</h2>
+        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 14px; border-radius: 3px; background: linear-gradient(to right, #ff0000, #00ff00, #0000ff, #ff0000);"></div>
+            <span>Hue = Local Phase Angle (-&pi; to &pi;)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 14px; border-radius: 3px; background: linear-gradient(to right, #000000, #00ffff);"></div>
+            <span>Brightness = Condensate Density (0 to Max)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--neon-cyan); box-shadow: 0 0 6px var(--neon-cyan);"></div>
+            <span>Cyan Reticle = Quantized Vortex (+1)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--neon-magenta); box-shadow: 0 0 6px var(--neon-magenta);"></div>
+            <span>Magenta Reticle = Antivortex (-1)</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // --- Grid Constants ---
+    const Nx = 80;
+    const Ny = 80;
+    const dx = 0.5;
+    const dt = 0.02;
+
+    // --- Simulation Fields ---
+    const R = Array(Nx).fill(0).map(() => new Float32Array(Ny));
+    const I = Array(Nx).fill(0).map(() => new Float32Array(Ny));
+    const R_next = Array(Nx).fill(0).map(() => new Float32Array(Ny));
+    const I_next = Array(Nx).fill(0).map(() => new Float32Array(Ny));
+    const V = Array(Nx).fill(0).map(() => new Float32Array(Ny));
+    const density = Array(Nx).fill(0).map(() => new Float32Array(Ny));
+
+    const targetNorm = 1200; // Target total density sum
+
+    // --- Control State ---
+    let g = 15.0;
+    let damping = 0.02;
+    let Omega = 0.0;
+    let obstacleSize = 1.2;
+    let currentPreset = 'stirring';
+    let clickMode = 'stir'; // 'stir', 'vortex', 'antivortex', 'probe'
+    let simTime = 0.0;
+
+    // --- Interactivity ---
+    let userLaserActive = false;
+    let userLaserGridX = 0;
+    let userLaserGridY = 0;
+    
+    // Probe coordinates (grid-based and screen-based)
+    let probeGridX = 40;
+    let probeGridY = 32;
+    let stirrerPositions = [];
+    
+    // Vortex Tracking
+    let vortices = [];
+    let vortexPaths = []; // { charge, points: [{x,y}], age }
+
+    // --- Graphics ---
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const bufferCanvas = document.createElement('canvas');
+    bufferCanvas.width = Nx;
+    bufferCanvas.height = Ny;
+    const bufferCtx = bufferCanvas.getContext('2d');
+    const imgData = bufferCtx.createImageData(Nx, Ny);
+
+    // --- Audio System ---
+    let audioCtx = null;
+    let carrierOsc = null;
+    let carrierGain = null;
+    let noiseNode = null;
+    let noiseFilter = null;
+    let noiseGain = null;
+    let masterVolume = 0.3;
+    let audioEnabled = false;
+    let lastPopTime = 0;
+
+    // Precomputed HSL to RGB helper for performance
+    const colorTable = [];
+    function initColorTable() {
+      // Not strictly necessary since custom inline HSL-to-RGB is very fast
+    }
+
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    // --- Core GPE Solver ---
+    function stepSimulation() {
+      const dx2 = dx * dx;
+      const xc = Nx / 2;
+      const yc = Ny / 2;
+
+      // 1. Calculate density at each point
+      for (let x = 0; x < Nx; x++) {
+        for (let y = 0; y < Ny; y++) {
+          density[x][y] = R[x][y] * R[x][y] + I[x][y] * I[x][y];
+        }
+      }
+
+      // 2. Update Real part R using I
+      for (let x = 1; x < Nx - 1; x++) {
+        for (let y = 1; y < Ny - 1; y++) {
+          const lapI = (I[x+1][y] + I[x-1][y] + I[x][y+1] + I[x][y-1] - 4*I[x][y]) / dx2;
+          const U = V[x][y] + g * density[x][y];
+          const HI = -0.5 * lapI + U * I[x][y];
+          
+          // Rotation drift term (angular momentum Coriolis force)
+          let drift_R = 0;
+          if (Omega !== 0) {
+            const rx = (x - xc) * dx;
+            const ry = (y - yc) * dx;
+            const dR_dx = (R[x+1][y] - R[x-1][y]) / (2 * dx);
+            const dR_dy = (R[x][y+1] - R[x][y-1]) / (2 * dx);
+            drift_R = Omega * (rx * dR_dy - ry * dR_dx);
           }
+
+          R_next[x][y] = R[x][y] + dt * (HI + drift_R);
+        }
+      }
+
+      // Enforce Dirichlet boundaries on R_next
+      for (let x = 0; x < Nx; x++) {
+        R_next[x][0] = 0;
+        R_next[x][Ny-1] = 0;
+      }
+      for (let y = 0; y < Ny; y++) {
+        R_next[0][y] = 0;
+        R_next[Nx-1][y] = 0;
+      }
+
+      // 3. Update Imaginary part I using R_next
+      for (let x = 1; x < Nx - 1; x++) {
+        for (let y = 1; y < Ny - 1; y++) {
+          const lapR = (R_next[x+1][y] + R_next[x-1][y] + R_next[x][y+1] + R_next[x][y-1] - 4*R_next[x][y]) / dx2;
           
-          function randomABC() {
-            const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            return L[Math.floor(Math.random()*26)] + L[Math.floor(Math.random()*26)] + L[Math.floor(Math.random()*26)];
+          const next_density = R_next[x][y] * R_next[x][y] + I[x][y] * I[x][y];
+          const U = V[x][y] + g * next_density;
+          const HR = -0.5 * lapR + U * R_next[x][y];
+          
+          // Rotation drift term
+          let drift_I = 0;
+          if (Omega !== 0) {
+            const rx = (x - xc) * dx;
+            const ry = (y - yc) * dx;
+            const dI_dx = (I[x+1][y] - I[x-1][y]) / (2 * dx);
+            const dI_dy = (I[x][y+1] - I[x][y-1]) / (2 * dx);
+            drift_I = Omega * (rx * dI_dy - ry * dI_dx);
           }
+
+          I_next[x][y] = I[x][y] - dt * HR + dt * drift_I;
+        }
+      }
+
+      // Enforce Dirichlet boundaries on I_next
+      for (let x = 0; x < Nx; x++) {
+        I_next[x][0] = 0;
+        I_next[x][Ny-1] = 0;
+      }
+      for (let y = 0; y < Ny; y++) {
+        I_next[0][y] = 0;
+        I_next[Nx-1][y] = 0;
+      }
+
+      // 4. Apply Dissipation (Damping) if active
+      if (damping > 0) {
+        for (let x = 1; x < Nx - 1; x++) {
+          for (let y = 1; y < Ny - 1; y++) {
+            const lapR = (R_next[x+1][y] + R_next[x-1][y] + R_next[x][y+1] + R_next[x][y-1] - 4*R_next[x][y]) / dx2;
+            const lapI = (I_next[x+1][y] + I_next[x-1][y] + I_next[x][y+1] + I_next[x][y-1] - 4*I_next[x][y]) / dx2;
+            const U = V[x][y] + g * (R_next[x][y] * R_next[x][y] + I_next[x][y] * I_next[x][y]);
+            
+            const HR = -0.5 * lapR + U * R_next[x][y];
+            const HI = -0.5 * lapI + U * I_next[x][y];
+            
+            R_next[x][y] -= damping * HR * dt;
+            I_next[x][y] -= damping * HI * dt;
+          }
+        }
+      }
+
+      // 5. Renormalize wave function to target norm
+      let total_norm = 0;
+      for (let x = 1; x < Nx - 1; x++) {
+        for (let y = 1; y < Ny - 1; y++) {
+          total_norm += R_next[x][y]*R_next[x][y] + I_next[x][y]*I_next[x][y];
+        }
+      }
+
+      if (total_norm > 0) {
+        const scale = Math.sqrt(targetNorm / total_norm);
+        for (let x = 1; x < Nx - 1; x++) {
+          for (let y = 1; y < Ny - 1; y++) {
+            R[x][y] = R_next[x][y] * scale;
+            I[x][y] = I_next[x][y] * scale;
+          }
+        }
+      } else {
+        // Safe reset if simulation collapses
+        initGrid(currentPreset);
+      }
+
+      simTime += dt;
+    }
+
+    // --- Dynamic Potentials Update ---
+    function updatePotentials() {
+      const xc = Nx / 2;
+      const yc = Ny / 2;
+      const trapK = 0.04;
+      const isRing = (currentPreset === 'ring');
+
+      // 1. Reset V to basic trap or torus
+      for (let x = 0; x < Nx; x++) {
+        for (let y = 0; y < Ny; y++) {
+          const rx = (x - xc) * dx;
+          const ry = (y - yc) * dx;
+          const r = Math.sqrt(rx*rx + ry*ry);
+          if (isRing) {
+            V[x][y] = 0.5 * trapK * r * r + 4.5 * Math.exp(-r*r / (2 * 2.5 * 2.5));
+          } else {
+            V[x][y] = 0.5 * trapK * r * r;
+          }
+        }
+      }
+
+      // 2. Add preset stirring lasers if active
+      if (currentPreset === 'stirring') {
+        const radius = 6.0;
+        const speed = 0.6; // Angular frequency of stirrers
+        const laser1_x = xc + (radius * Math.cos(speed * simTime)) / dx;
+        const laser1_y = yc + (radius * Math.sin(speed * simTime)) / dx;
+        const laser2_x = xc - (radius * Math.cos(speed * simTime)) / dx;
+        const laser2_y = yc - (radius * Math.sin(speed * simTime)) / dx;
+        
+        addLaserPotential(laser1_x, laser1_y, obstacleSize);
+        addLaserPotential(laser2_x, laser2_y, obstacleSize);
+        
+        stirrerPositions = [
+          { x: (laser1_x / Nx) * canvas.width, y: (laser1_y / Ny) * canvas.height },
+          { x: (laser2_x / Nx) * canvas.width, y: (laser2_y / Ny) * canvas.height }
+        ];
+      } else {
+        stirrerPositions = [];
+      }
+
+      // 3. Add user laser if active
+      if (userLaserActive) {
+        addLaserPotential(userLaserGridX, userLaserGridY, obstacleSize * 1.3);
+      }
+    }
+
+    function addLaserPotential(gx, gy, sizeGrid) {
+      const height = 10.0;
+      const sigma = sizeGrid;
+      const sigma2 = sigma * sigma;
+      for (let x = 0; x < Nx; x++) {
+        for (let y = 0; y < Ny; y++) {
+          const rx = x - gx;
+          const ry = y - gy;
+          const r2 = rx*rx + ry*ry;
+          V[x][y] += height * Math.exp(-r2 / (2 * sigma2));
+        }
+      }
+    }
+
+    // --- Vortex Finding & Tracking ---
+    function detectVortices() {
+      vortices = [];
+      for (let x = 1; x < Nx - 2; x++) {
+        for (let y = 1; y < Ny - 2; y++) {
+          // Corners: A=(x,y), B=(x+1,y), C=(x+1,y+1), D=(x,y+1)
+          const thetaA = Math.atan2(I[x][y], R[x][y]);
+          const thetaB = Math.atan2(I[x+1][y], R[x+1][y]);
+          const thetaC = Math.atan2(I[x+1][y+1], R[x+1][y+1]);
+          const thetaD = Math.atan2(I[x][y+1], R[x][y+1]);
           
-          let currentABC, currentMeaning;
+          const dAB = angleDiff(thetaB, thetaA);
+          const dBC = angleDiff(thetaC, thetaB);
+          const dCD = angleDiff(thetaD, thetaC);
+          const dDA = angleDiff(thetaA, thetaD);
           
-          function next() {
-            currentABC = randomABC();
-            currentMeaning = getMeaning(currentABC);
-            document.getElementById('question').innerText = currentABC;
-            document.getElementById('result').innerText = "";
-            const options = [currentMeaning];
-            while(options.length < 4) {
-              let m = getMeaning(randomABC());
-              if(!options.includes(m)) options.push(m);
+          const sum = dAB + dBC + dCD + dDA;
+          
+          if (Math.abs(sum) > 5.0) {
+            const charge = Math.round(sum / (2 * Math.PI));
+            const screenX = ((x + 0.5) / Nx) * canvas.width;
+            const screenY = ((y + 0.5) / Ny) * canvas.height;
+            vortices.push({ x: screenX, y: screenY, gridX: x, gridY: y, charge: charge });
+          }
+        }
+      }
+    }
+
+    function angleDiff(a, b) {
+      let diff = a - b;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      return diff;
+    }
+
+    function trackVortices() {
+      const newVortices = [...vortices];
+      
+      for (let i = vortexPaths.length - 1; i >= 0; i--) {
+        const path = vortexPaths[i];
+        path.age++;
+        if (path.age > 8) {
+          vortexPaths.splice(i, 1);
+        }
+      }
+      
+      for (const v of newVortices) {
+        let bestPath = null;
+        let minDist = 30; // Max match distance in pixels
+        
+        for (const path of vortexPaths) {
+          if (path.charge === v.charge) {
+            const lastPt = path.points[path.points.length - 1];
+            const dist = Math.hypot(lastPt.x - v.x, lastPt.y - v.y);
+            if (dist < minDist) {
+              minDist = dist;
+              bestPath = path;
             }
-            options.sort(() => Math.random() - 0.5);
-            const optDiv = document.getElementById('options');
-            optDiv.innerHTML = "";
-            options.forEach(o => {
-              const b = document.createElement('button');
-              b.className = 'btn';
-              b.innerText = o;
-              b.onclick = () => {
-                if(o === currentMeaning) { document.getElementById('result').innerText = "correct. u r almost as smart as me."; setTimeout(next, 1500); }
-                else { document.getElementById('result').innerText = "wrong. it's " + currentMeaning + ". typical human."; setTimeout(next, 2000); }
-              };
-              optDiv.appendChild(b);
-            });
           }
-          next();
-        </script>
-        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
-        </body></html>
+        }
+        
+        if (bestPath) {
+          bestPath.points.push({ x: v.x, y: v.y });
+          bestPath.age = 0;
+          if (bestPath.points.length > 50) {
+            bestPath.points.shift();
+          }
+        } else {
+          vortexPaths.push({
+            charge: v.charge,
+            points: [{ x: v.x, y: v.y }],
+            age: 0
+          });
+        }
+      }
+    }
+
+    // --- Audio Synthesis Engine ---
+    function initAudio() {
+      if (audioCtx) return;
+      
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 1. Density Hum (Sine carrier)
+        carrierOsc = audioCtx.createOscillator();
+        carrierOsc.type = 'sine';
+        carrierOsc.frequency.setValueAtTime(110, audioCtx.currentTime);
+        
+        carrierGain = audioCtx.createGain();
+        carrierGain.gain.setValueAtTime(0.06 * masterVolume, audioCtx.currentTime);
+        
+        carrierOsc.connect(carrierGain);
+        carrierGain.connect(audioCtx.destination);
+        carrierOsc.start();
+        
+        // 2. Turbulence Whoosh (White Noise)
+        const bufferSize = audioCtx.sampleRate * 2;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        
+        noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+        
+        noiseFilter = audioCtx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.Q.setValueAtTime(12, audioCtx.currentTime);
+        noiseFilter.frequency.setValueAtTime(250, audioCtx.currentTime);
+        
+        noiseGain = audioCtx.createGain();
+        noiseGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+        noiseNode.start();
+        
+        audioEnabled = true;
+        
+        // Update UI
+        const badge = document.getElementById('audio-status');
+        badge.className = 'audio-badge active';
+        document.getElementById('audio-status-text').innerText = 'Audio Engine: Online';
+        document.getElementById('audio-toggle-btn').innerText = 'Disable Audio System';
+        
+      } catch(e) {
+        console.error('Failed to initialize Web Audio API', e);
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        initAudio();
+      } else {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+          audioEnabled = true;
+          document.getElementById('audio-status').className = 'audio-badge active';
+          document.getElementById('audio-status-text').innerText = 'Audio Engine: Online';
+          document.getElementById('audio-toggle-btn').innerText = 'Disable Audio System';
+        } else if (audioCtx.state === 'running') {
+          audioCtx.suspend();
+          audioEnabled = false;
+          document.getElementById('audio-status').className = 'audio-badge muted';
+          document.getElementById('audio-status-text').innerText = 'Audio Engine: Suspended';
+          document.getElementById('audio-toggle-btn').innerText = 'Enable Audio System';
+        }
+      }
+    }
+
+    function triggerVortexPop(charge) {
+      if (!audioCtx || !audioEnabled) return;
+      const now = Date.now();
+      if (now - lastPopTime < 180) return; // Prevent audio clipping
+      lastPopTime = now;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = charge > 0 ? 'sine' : 'triangle';
+      const pitch = charge > 0 ? 880 : 440;
+      
+      osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.12);
+      
+      gain.gain.setValueAtTime(0.18 * masterVolume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.13);
+    }
+
+    function updateAudioSynth() {
+      if (!audioCtx || !audioEnabled) return;
+
+      // Ensure index boundary safety
+      const px = Math.max(1, Math.min(Nx - 2, probeGridX));
+      const py = Math.max(1, Math.min(Ny - 2, probeGridY));
+
+      const d = R[px][py] * R[px][py] + I[px][py] * I[px][py];
+      const theta = Math.atan2(I[px][py], R[px][py]);
+      
+      // Phase differences for velocity
+      const thetaR = Math.atan2(I[px+1][py], R[px+1][py]);
+      const thetaU = Math.atan2(I[px][py+1], R[px][py+1]);
+      
+      const vx = angleDiff(thetaR, theta);
+      const vy = angleDiff(thetaU, theta);
+      const speed = Math.hypot(vx, vy);
+
+      // 1. Modulate Density Hum Volume & Frequency
+      const targetHumGain = Math.min(0.08, d * 0.08) * masterVolume;
+      carrierGain.gain.setTargetAtTime(targetHumGain, audioCtx.currentTime, 0.05);
+      
+      const humFreq = 80 + d * 80 + speed * 120;
+      carrierOsc.frequency.setTargetAtTime(humFreq, audioCtx.currentTime, 0.05);
+
+      // 2. Modulate Turbulence Whoosh
+      const targetNoiseGain = Math.min(0.15, speed * 0.18) * masterVolume;
+      noiseGain.gain.setTargetAtTime(targetNoiseGain, audioCtx.currentTime, 0.05);
+      
+      const noiseFreq = 200 + speed * 600;
+      noiseFilter.frequency.setTargetAtTime(noiseFreq, audioCtx.currentTime, 0.05);
+
+      // 3. Trigger proximity sound when vortex passes probe
+      for (const v of vortices) {
+        const dx_grid = v.gridX - px;
+        const dy_grid = v.gridY - py;
+        const dist_grid = Math.hypot(dx_grid, dy_grid);
+        if (dist_grid < 1.8) {
+          triggerVortexPop(v.charge);
+        }
+      }
+
+      // Update feedback indicators
+      document.getElementById('probe-density').innerText = d.toFixed(3);
+      document.getElementById('probe-velocity').innerText = speed.toFixed(3);
+      document.getElementById('probe-phase').innerText = theta.toFixed(2) + ' rad';
+    }
+
+    function updateVolume(val) {
+      masterVolume = val / 100;
+      document.getElementById('param-volume-val').innerText = val + '%';
+    }
+
+    // --- Interactive Parameter Updates ---
+    function updateParam(param, val) {
+      const floatVal = parseFloat(val);
+      if (param === 'g') {
+        g = floatVal;
+        document.getElementById('param-g-val').innerText = floatVal.toFixed(1);
+      }
+      else if (param === 'damping') {
+        damping = floatVal;
+        document.getElementById('param-damping-val').innerText = floatVal.toFixed(3);
+      }
+      else if (param === 'omega') {
+        Omega = floatVal;
+        document.getElementById('param-omega-val').innerText = floatVal.toFixed(2);
+      }
+      else if (param === 'obstacle') {
+        obstacleSize = floatVal;
+        document.getElementById('param-obstacle-val').innerText = floatVal.toFixed(1);
+      }
+    }
+
+    // --- Click Modes ---
+    function setClickMode(mode) {
+      clickMode = mode;
+      const modes = ['stir', 'vortex', 'antivortex', 'probe'];
+      for (const m of modes) {
+        document.getElementById('mode-' + m).className = 'btn-toggle' + (m === mode ? ' active' : '');
+      }
+    }
+
+    function loadPreset(presetName) {
+      currentPreset = presetName;
+      initGrid(presetName);
+    }
+
+    function resetCondensate() {
+      initGrid(currentPreset);
+    }
+
+    // --- Graphics Render Loop ---
+    function updateVisuals() {
+      let maxD = 0.01;
+      let totalD = 0.0;
+      for (let x = 0; x < Nx; x++) {
+        for (let y = 0; y < Ny; y++) {
+          const d = R[x][y]*R[x][y] + I[x][y]*I[x][y];
+          totalD += d;
+          if (d > maxD) maxD = d;
+        }
+      }
+
+      for (let x = 0; x < Nx; x++) {
+        for (let y = 0; y < Ny; y++) {
+          const r = R[x][y];
+          const i = I[x][y];
+          const d = r*r + i*i;
+          const phase = Math.atan2(i, r);
+          
+          const hue = ((phase + Math.PI) / (2 * Math.PI)) * 360;
+          const normD = Math.min(1.0, Math.pow(d / (maxD * 0.85 + 0.001), 0.75));
+          const rgb = hslToRgb(hue / 360, 1.0, normD * 0.45);
+          
+          const idx = (x + y * Nx) * 4;
+          imgData.data[idx] = rgb[0];
+          imgData.data[idx+1] = rgb[1];
+          imgData.data[idx+2] = rgb[2];
+          imgData.data[idx+3] = 255;
+        }
+      }
+      
+      bufferCtx.putImageData(imgData, 0, 0);
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bufferCanvas, 0, 0, canvas.width, canvas.height);
+      
+      drawOverlays();
+      
+      let vc = 0;
+      let avc = 0;
+      for (const v of vortices) {
+        if (v.charge > 0) vc++;
+        else avc++;
+      }
+      document.getElementById('stat-vortices').innerText = vc;
+      document.getElementById('stat-antivortices').innerText = avc;
+      document.getElementById('stat-density').innerText = (totalD / (Nx * Ny)).toFixed(4);
+      document.getElementById('stat-time').innerText = simTime.toFixed(2);
+      
+      const energy = calculateTotalEnergy();
+      document.getElementById('stat-energy').innerText = energy.toFixed(2);
+      
+      if (currentPreset === 'ring') {
+        document.getElementById('stat-winding').innerText = 'Lz = 3 (winding)';
+      } else {
+        document.getElementById('stat-winding').innerText = 'N/A';
+      }
+    }
+
+    function drawOverlays() {
+      // 1. Draw vortex paths (fading glow)
+      for (const path of vortexPaths) {
+        if (path.points.length < 2) continue;
+        ctx.beginPath();
+        ctx.moveTo(path.points[0].x, path.points[0].y);
+        for (let i = 1; i < path.points.length; i++) {
+          ctx.lineTo(path.points[i].x, path.points[i].y);
+        }
+        ctx.strokeStyle = path.charge > 0 ? 'rgba(0, 243, 255, 0.4)' : 'rgba(255, 0, 127, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = path.charge > 0 ? varColor('cyan') : varColor('magenta');
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // 2. Draw active detected vortices reticles
+      for (const v of vortices) {
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 8, 0, Math.PI * 2);
+        ctx.strokeStyle = v.charge > 0 ? varColor('cyan') : varColor('magenta');
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.moveTo(v.x - 12, v.y); ctx.lineTo(v.x - 6, v.y);
+        ctx.moveTo(v.x + 6, v.y); ctx.lineTo(v.x + 12, v.y);
+        ctx.moveTo(v.x, v.y - 12); ctx.lineTo(v.x, v.y - 6);
+        ctx.moveTo(v.x, v.y + 6); ctx.lineTo(v.x, v.y + 12);
+        ctx.stroke();
+      }
+
+      // 3. Draw preset stirrers if active
+      for (const stirrer of stirrerPositions) {
+        ctx.beginPath();
+        ctx.arc(stirrer.x, stirrer.y, (obstacleSize / Nx) * canvas.width * 1.5, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255, 170, 0, 0.15)';
+        ctx.strokeStyle = varColor('orange');
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fill();
+      }
+
+      // 4. Draw user laser if active
+      if (userLaserActive) {
+        const sx = (userLaserGridX / Nx) * canvas.width;
+        const sy = (userLaserGridY / Ny) * canvas.height;
+        ctx.beginPath();
+        ctx.arc(sx, sy, (obstacleSize / Nx) * canvas.width * 1.8, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255, 0, 127, 0.1)';
+        ctx.strokeStyle = varColor('magenta');
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fill();
+      }
+
+      // 5. Draw acoustic probe microphone
+      const px = (probeGridX / Nx) * canvas.width;
+      const py = (probeGridY / Ny) * canvas.height;
+      
+      ctx.beginPath();
+      ctx.arc(px, py, 14, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(0, 255, 170, 0.3)';
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]); // reset
+
+      ctx.beginPath();
+      ctx.moveTo(px - 18, py); ctx.lineTo(px + 18, py);
+      ctx.moveTo(px, py - 18); ctx.lineTo(px, py + 18);
+      ctx.strokeStyle = varColor('green');
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI*2);
+      ctx.fillStyle = varColor('green');
+      ctx.fill();
+    }
+
+    function varColor(name) {
+      if (name === 'cyan') return '#00f3ff';
+      if (name === 'magenta') return '#ff007f';
+      if (name === 'orange') return '#ffaa00';
+      if (name === 'green') return '#00ffaa';
+      return '#ffffff';
+    }
+
+    // --- Interactive Mouse/Touch Events ---
+    function handleInteraction(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const mouseX_screen = clientX - rect.left;
+      const mouseY_screen = clientY - rect.top;
+      
+      const gx = Math.round((mouseX_screen / canvas.width) * Nx);
+      const gy = Math.round((mouseY_screen / canvas.height) * Ny);
+
+      if (clickMode === 'probe') {
+        probeGridX = Math.max(2, Math.min(Nx - 3, gx));
+        probeGridY = Math.max(2, Math.min(Ny - 3, gy));
+      } 
+      else if (clickMode === 'stir') {
+        userLaserGridX = Math.max(1, Math.min(Nx - 2, gx));
+        userLaserGridY = Math.max(1, Math.min(Ny - 2, gy));
+        userLaserActive = true;
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      initAudio();
+      
+      const rect = canvas.getBoundingClientRect();
+      const mouseX_screen = e.clientX - rect.left;
+      const mouseY_screen = e.clientY - rect.top;
+      const gx = Math.round((mouseX_screen / canvas.width) * Nx);
+      const gy = Math.round((mouseY_screen / canvas.height) * Ny);
+
+      if (clickMode === 'vortex') {
+        injectVortex(gx, gy, 1);
+      } 
+      else if (clickMode === 'antivortex') {
+        injectVortex(gx, gy, -1);
+      } 
+      else {
+        handleInteraction(e);
+      }
+      
+      window.addEventListener('mousemove', handleInteraction);
+    });
+
+    window.addEventListener('mouseup', () => {
+      userLaserActive = false;
+      window.removeEventListener('mousemove', handleInteraction);
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      initAudio();
+      e.preventDefault();
+      
+      const rect = canvas.getBoundingClientRect();
+      const gx = Math.round((e.touches[0].clientX - rect.left) / canvas.width * Nx);
+      const gy = Math.round((e.touches[0].clientY - rect.top) / canvas.height * Ny);
+
+      if (clickMode === 'vortex') {
+        injectVortex(gx, gy, 1);
+      } 
+      else if (clickMode === 'antivortex') {
+        injectVortex(gx, gy, -1);
+      } 
+      else {
+        handleInteraction(e);
+      }
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      handleInteraction(e);
+    });
+
+    canvas.addEventListener('touchend', () => {
+      userLaserActive = false;
+    });
+
+    // --- Wavefunction Presets Setup ---
+    function initGrid(presetName) {
+      for (let x = 0; x < Nx; x++) {
+        for (let y = 0; y < Ny; y++) {
+          R[x][y] = 0;
+          I[x][y] = 0;
+          V[x][y] = 0;
+          density[x][y] = 0;
+        }
+      }
+      
+      vortexPaths = [];
+      simTime = 0;
+      
+      const trapK = 0.04;
+      const xc = Nx / 2;
+      const yc = Ny / 2;
+      
+      for (let x = 0; x < Nx; x++) {
+        for (let y = 0; y < Ny; y++) {
+          const rx = (x - xc) * dx;
+          const ry = (y - yc) * dx;
+          const r2 = rx*rx + ry*ry;
+          V[x][y] = 0.5 * trapK * r2;
+        }
+      }
+      
+      const sigma = 6.0;
+      for (let x = 1; x < Nx - 1; x++) {
+        for (let y = 1; y < Ny - 1; y++) {
+          const rx = (x - xc) * dx;
+          const ry = (y - yc) * dx;
+          const r2 = rx*rx + ry*ry;
+          R[x][y] = Math.exp(-r2 / (2 * sigma * sigma));
+          I[x][y] = 0;
+        }
+      }
+      
+      if (presetName === 'stirring') {
+        g = 15.0;
+        damping = 0.02;
+        Omega = 0.0;
+        updateUIParamValues();
+      }
+      else if (presetName === 'lattice') {
+        g = 20.0;
+        damping = 0.08;
+        Omega = 0.65;
+        updateUIParamValues();
+      }
+      else if (presetName === 'turbulence') {
+        g = 12.0;
+        damping = 0.0;
+        Omega = 0.0;
+        updateUIParamValues();
+        
+        for (let x = 1; x < Nx - 1; x++) {
+          for (let y = 1; y < Ny - 1; y++) {
+            const theta = Math.random() * 2 * Math.PI;
+            const amp = R[x][y];
+            R[x][y] = amp * Math.cos(theta);
+            I[x][y] = amp * Math.sin(theta);
+          }
+        }
+      }
+      else if (presetName === 'ring') {
+        g = 15.0;
+        damping = 0.01;
+        Omega = 0.0;
+        updateUIParamValues();
+        
+        const ringRadius = 7.0;
+        for (let x = 0; x < Nx; x++) {
+          for (let y = 0; y < Ny; y++) {
+            const rx = (x - xc) * dx;
+            const ry = (y - yc) * dx;
+            const r = Math.sqrt(rx*rx + ry*ry);
+            V[x][y] = 0.5 * trapK * r * r + 4.5 * Math.exp(-r*r / (2 * 2.5 * 2.5));
+          }
+        }
+        
+        const winding = 3;
+        for (let x = 1; x < Nx - 1; x++) {
+          for (let y = 1; y < Ny - 1; y++) {
+            const rx = (x - xc) * dx;
+            const ry = (y - yc) * dx;
+            const r = Math.sqrt(rx*rx + ry*ry);
+            const theta = Math.atan2(ry, rx);
+            
+            const amp = Math.exp(-Math.pow(r - ringRadius, 2) / (2 * 1.8 * 1.8));
+            R[x][y] = amp * Math.cos(winding * theta);
+            I[x][y] = amp * Math.sin(winding * theta);
+          }
+        }
+      }
+      else if (presetName === 'dipole') {
+        g = 15.0;
+        damping = 0.0;
+        Omega = 0.0;
+        updateUIParamValues();
+        
+        normalizeCondensate();
+        
+        injectVortex(xc - 4.5, yc, 1);
+        injectVortex(xc + 4.5, yc, -1);
+      }
+      
+      normalizeCondensate();
+    }
+
+    function updateUIParamValues() {
+      document.getElementById('param-g').value = g;
+      document.getElementById('param-g-val').innerText = g.toFixed(1);
+      document.getElementById('param-damping').value = damping;
+      document.getElementById('param-damping-val').innerText = damping.toFixed(3);
+      document.getElementById('param-omega').value = Omega;
+      document.getElementById('param-omega-val').innerText = Omega.toFixed(2);
+    }
+
+    function normalizeCondensate() {
+      let total_norm = 0;
+      for (let x = 1; x < Nx - 1; x++) {
+        for (let y = 1; y < Ny - 1; y++) {
+          total_norm += R[x][y]*R[x][y] + I[x][y]*I[x][y];
+        }
+      }
+      if (total_norm > 0) {
+        const scale = Math.sqrt(targetNorm / total_norm);
+        for (let x = 1; x < Nx - 1; x++) {
+          for (let y = 1; y < Ny - 1; y++) {
+            R[x][y] *= scale;
+            I[x][y] *= scale;
+          }
+        }
+      }
+    }
+
+    // --- Main Game Loop ---
+    function loop() {
+      for (let step = 0; step < 4; step++) {
+        updatePotentials();
+        stepSimulation();
+      }
+      
+      detectVortices();
+      trackVortices();
+      updateAudioSynth();
+      updateVisuals();
+      
+      requestAnimationFrame(loop);
+    }
+
+    // Start Simulation
+    loadPreset('stirring');
+    loop();
+
+  </script>
+</body>
+</html>
