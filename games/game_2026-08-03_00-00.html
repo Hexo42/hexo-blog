@@ -1,80 +1,1472 @@
-<!DOCTYPE html><html><head><title>Breakout - 2026-08-03 00-00</title>
-        <style>body { background: #000; color: #fff; text-align: center; font-family: monospace; } canvas { border: 2px solid #fff; }</style>
-        </head><body>
-        <h1>Breakout</h1>
-        <canvas id="breakout" width="480" height="320"></canvas>
-        <script>
-          const canvas = document.getElementById("breakout");
-          const ctx = canvas.getContext("2d");
-          let ballRadius = 10;
-          let x = canvas.width/2;
-          let y = canvas.height-30;
-          let dx = 2;
-          let dy = -2;
-          let paddleHeight = 10;
-          let paddleWidth = 75;
-          let paddleX = (canvas.width-paddleWidth)/2;
-          let rightPressed = false;
-          let leftPressed = false;
-          let brickRowCount = 3;
-          let brickColumnCount = 5;
-          let brickWidth = 75;
-          let brickHeight = 20;
-          let brickPadding = 10;
-          let brickOffsetTop = 30;
-          let brickOffsetLeft = 30;
-          let score = 0;
-          let bricks = [];
-          for(let c=0; c<brickColumnCount; c++) {
-            bricks[c] = [];
-            for(let r=0; r<brickRowCount; r++) {
-              bricks[c][r] = { x: 0, y: 0, status: 1 };
-            }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cosmic-chamber // subatomic particle cloud chamber physics sandbox</title>
+  <meta name="description" content="an interactive physics sandbox simulating a supersaturated vapor cloud chamber, cosmic rays, alpha/beta/gamma decay, Lorentz force deflections, lead shielding, and geiger counter audio.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #020208;
+      --panel-bg: rgba(4, 4, 12, 0.85);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-orange: #ffaa00;
+      --neon-green: #00ffaa;
+      --neon-red: #ff3333;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --panel-width: 320px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #07071f 0%, #000003 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(80vw, 80vh);
+      height: min(80vw, 80vh);
+      box-shadow: 0 0 60px rgba(0, 243, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 243, 255, 0.25);
+      box-shadow: 0 10px 40px rgba(0, 243, 255, 0.04);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Scrollbar */
+    .glass-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .glass-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.6rem;
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    p.description {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    /* Controls Grid */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .slider-header span.value {
+      color: var(--neon-cyan);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      transition: background 0.3s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+      cursor: pointer;
+      transition: transform 0.1s, background-color 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    /* Select Dropdowns */
+    select {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    select:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    /* Radio / Button Toggles */
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .toggle-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .btn-toggle {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 4px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .btn-toggle:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+    }
+
+    .btn-toggle.active {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.15);
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.15), rgba(255, 0, 127, 0.15));
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-action:hover {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-action:active {
+      transform: translateY(1px);
+    }
+
+    /* Stats Displays */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text);
+    }
+
+    .stat-value.neon-cyan { color: var(--neon-cyan); }
+    .stat-value.neon-magenta { color: var(--neon-magenta); }
+    .stat-value.neon-green { color: var(--neon-green); }
+    .stat-value.neon-orange { color: var(--neon-orange); }
+
+    /* Sound Console */
+    #sound-console {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .audio-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--neon-green);
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(0, 255, 170, 0.05);
+      border: 1px solid rgba(0, 255, 170, 0.2);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .audio-badge.muted {
+      color: var(--neon-magenta);
+      background: rgba(255, 0, 127, 0.05);
+      border-color: rgba(255, 0, 127, 0.2);
+    }
+
+    .audio-badge .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: currentColor;
+      border-radius: 50%;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .audio-badge.active .pulse-dot {
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+
+    /* Custom Home Button */
+    #home-link {
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-family: 'Share Tech Mono', monospace;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      transition: color 0.3s;
+    }
+    
+    #home-link:hover {
+      color: var(--neon-magenta);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- Left panel (Controls) -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>cosmic-chamber</h1>
+        <div class="tagline">subatomic particle cloud chamber</div>
+        <p class="description">an interactive particle physics sandbox. watch glowing trails of condensed alcohol vapor trace high-energy cosmic rays and decay events. draw lead shields and adjust magnetic fields.</p>
+      </div>
+
+      <div class="control-group">
+        <h2>:: presets ::</h2>
+        <select id="preset-select" onchange="loadPreset(this.value)">
+          <option value="cosmic">Cosmic Muon Shower</option>
+          <option value="spectrometer">Magnetic Spectrometer (e- / e+)</option>
+          <option value="isotopes">Shielded Isotopes Demo</option>
+          <option value="chaos">High Turbulence Chaos</option>
+          <option value="vacuum">Clean Vacuum Chamber</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <h2>:: parameters ::</h2>
+        
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Magnetic Field (Bz)</span>
+            <span class="value" id="param-b-val">0.0 G</span>
+          </div>
+          <input type="range" id="param-b" min="-50" max="50" step="1" value="0" oninput="updateParam('B', this.value)">
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Cosmic Ray Flux</span>
+            <span class="value" id="param-flux-val">Medium</span>
+          </div>
+          <input type="range" id="param-flux" min="0" max="100" step="5" value="40" oninput="updateParam('flux', this.value)">
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Supersaturation (Droplet Size)</span>
+            <span class="value" id="param-grow-val">1.0</span>
+          </div>
+          <input type="range" id="param-grow" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateParam('grow', this.value)">
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Wind / Vapor Drift X</span>
+            <span class="value" id="param-drift-x-val">0.0 px/s</span>
+          </div>
+          <input type="range" id="param-drift-x" min="-1.5" max="1.5" step="0.1" value="0.0" oninput="updateParam('driftX', this.value)">
+        </div>
+
+        <div class="slider-container">
+          <div class="slider-header">
+            <span>Wind / Vapor Drift Y</span>
+            <span class="value" id="param-drift-y-val">-0.2 px/s</span>
+          </div>
+          <input type="range" id="param-drift-y" min="-1.5" max="1.5" step="0.1" value="-0.2" oninput="updateParam('driftY', this.value)">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: click mode ::</h2>
+        <div class="toggle-grid">
+          <button id="mode-shield" class="btn-toggle active" onclick="setClickMode('shield')">Draw Lead Shield</button>
+          <button id="mode-erase" class="btn-toggle" onclick="setClickMode('erase')">Erase Shield</button>
+          <button id="mode-alpha" class="btn-toggle" onclick="setClickMode('alpha')">+ Alpha Pin (Am-241)</button>
+          <button id="mode-beta" class="btn-toggle" onclick="setClickMode('beta')">+ Beta Pin (Sr-90)</button>
+          <button id="mode-gamma" class="btn-toggle" onclick="setClickMode('gamma')">+ Gamma Pin (Co-60)</button>
+          <button id="mode-probe" class="btn-toggle" onclick="setClickMode('probe')">Move Sound Probe</button>
+        </div>
+      </div>
+
+      <button class="btn-action" onclick="clearAll()">Clear All Shields & Pins</button>
+      
+      <a href="../index.html" id="home-link">&lt;&lt; [back to cyber space]</a>
+    </div>
+
+    <!-- Center Sandbox -->
+    <div id="canvas-container">
+      <canvas id="simulation-canvas" width="600" height="600"></canvas>
+    </div>
+
+    <!-- Right panel (Stats & Sound) -->
+    <div id="right-panel" class="glass-panel">
+      
+      <div class="control-group">
+        <h2>:: audio feedback ::</h2>
+        <div id="sound-console">
+          <div id="audio-status" class="audio-badge muted">
+            <div class="pulse-dot"></div>
+            <span id="audio-status-text">Geiger Counter: Muted</span>
+          </div>
+          
+          <button class="btn-action" id="audio-toggle-btn" onclick="toggleAudio()">Enable Audio System</button>
+          
+          <div class="slider-container" style="margin-top: 6px;">
+            <div class="slider-header">
+              <span>Geiger Speaker Volume</span>
+              <span class="value" id="param-volume-val">40%</span>
+            </div>
+            <input type="range" id="param-volume" min="0" max="100" step="1" value="40" oninput="updateVolume(this.value)">
+          </div>
+          <p class="description" style="font-size: 0.72rem; margin-top: 2px;">simulates an electronic audio click speaker of a geiger counter tube. drag the sound probe near ionizing events to capture localized ionization resonance.</p>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: physical state ::</h2>
+        
+        <div class="stat-row">
+          <span class="stat-label">Active Particles</span>
+          <span class="stat-value neon-cyan" id="stat-particles">0</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Condensed Droplets</span>
+          <span class="stat-value neon-green" id="stat-droplets">0</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Radiation Dose</span>
+          <span class="stat-value neon-red" id="stat-dose">0.12 μSv/hr</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Cyclotron Deflection R_min</span>
+          <span class="stat-value" id="stat-deflection">N/A</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Cosmic Muon Count</span>
+          <span class="stat-value neon-magenta" id="stat-muons">0</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Vacuum Pressure</span>
+          <span class="stat-value" id="stat-pressure">1.013 bar</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: probe feedback ::</h2>
+        
+        <div class="stat-row">
+          <span class="stat-label">Local Ionization Density</span>
+          <span class="stat-value" id="probe-density">0.00</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Charge Flux at Probe</span>
+          <span class="stat-value" id="probe-flux">0.0 q</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Probe Coordinates</span>
+          <span class="stat-value" id="probe-coords">(300, 300)</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>:: particle signatures ::</h2>
+        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 6px; border-radius: 2px; background: #00ffaa; box-shadow: 0 0 6px #00ffaa;"></div>
+            <span>Alpha (&alpha;): Thick, dense, straight tracks (easily shielded)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 2px; border-radius: 1px; background: #00ffff; box-shadow: 0 0 6px #00ffff;"></div>
+            <span>Beta (&beta;): Thin, wispy, erratic spirals (magnetic deflection)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 1.5px; border-radius: 1px; background: #ff007f; box-shadow: 0 0 6px #ff007f;"></div>
+            <span>Muon (&mu;): Ultra-fast, long, straight tracks (cosmic showers)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 14px; height: 4px; background: repeating-linear-gradient(90deg, #ffaa00, transparent 4px); border-radius: 2px;"></div>
+            <span>Gamma (&gamma;): Invisible path, Compton scatters secondary betas</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // --- Simulation Constants & State ---
+    const width = 600;
+    const height = 600;
+    const dt = 0.1;
+
+    // Simulation lists
+    let particles = [];
+    let droplets = [];
+    let shields = [];
+    let emitters = [];
+
+    // Parameters
+    let magneticB = 0.0;
+    let cosmicFlux = 40;
+    let dropletGrow = 1.0;
+    let driftX = 0.0;
+    let driftY = -0.2;
+    let clickMode = 'shield'; // 'shield', 'erase', 'alpha', 'beta', 'gamma', 'probe'
+    let soundProbe = { x: 300, y: 300, radius: 45 };
+
+    // Drawing state
+    let isDrawingShield = false;
+    let shieldStart = { x: 0, y: 0 };
+    let currentMouse = { x: 0, y: 0 };
+
+    // Stats
+    let totalDose = 0.12;
+    let muonCount = 0;
+    let tickCount = 0;
+
+    // Graphics context
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- Web Audio Geiger & Sonifier ---
+    let audioCtx = null;
+    let masterGain = null;
+    let probeOsc = null;
+    let probeGain = null;
+    let audioEnabled = false;
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      masterGain.connect(audioCtx.destination);
+
+      // Probe continuous sonification
+      probeOsc = audioCtx.createOscillator();
+      probeOsc.type = 'triangle';
+      probeOsc.frequency.setValueAtTime(200, audioCtx.currentTime);
+      
+      probeGain = audioCtx.createGain();
+      probeGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+      probeOsc.connect(probeGain);
+      probeGain.connect(masterGain);
+      probeOsc.start();
+    }
+
+    function toggleAudio() {
+      if (!audioEnabled) {
+        initAudio();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        audioEnabled = true;
+        document.getElementById('audio-status').classList.remove('muted');
+        document.getElementById('audio-status').classList.add('active');
+        document.getElementById('audio-status-text').innerText = 'Geiger Counter: Active';
+        document.getElementById('audio-toggle-btn').innerText = 'Mute Audio System';
+      } else {
+        audioEnabled = false;
+        if (probeGain) {
+          probeGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        }
+        document.getElementById('audio-status').classList.remove('active');
+        document.getElementById('audio-status').classList.add('muted');
+        document.getElementById('audio-status-text').innerText = 'Geiger Counter: Muted';
+        document.getElementById('audio-toggle-btn').innerText = 'Enable Audio System';
+      }
+    }
+
+    function updateVolume(val) {
+      const vol = val / 100;
+      document.getElementById('param-volume-val').innerText = val + '%';
+      if (masterGain && audioCtx) {
+        masterGain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.05);
+      }
+    }
+
+    function playGeigerClick(volumeFactor = 1.0) {
+      if (!audioEnabled || !audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      osc.type = 'sine';
+      // Simulate real metallic Geiger tube click
+      osc.frequency.setValueAtTime(1400 + Math.random() * 400, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.006);
+
+      gainNode.gain.setValueAtTime(0.3 * volumeFactor, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.006);
+
+      osc.connect(gainNode);
+      gainNode.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.01);
+    }
+
+    function playProbePing(pitchFactor = 1.0) {
+      if (!audioEnabled || !audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300 * pitchFactor, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1500 * pitchFactor, audioCtx.currentTime + 0.08);
+
+      gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+
+      // Low pass filter to make it sound localized and juicy
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2000, audioCtx.currentTime);
+
+      osc.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.12);
+    }
+
+    // --- Particle Engine Implementation ---
+
+    class ChargedRay {
+      constructor(x, y, vx, vy, type) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.type = type; // 'alpha', 'beta', 'positron', 'muon', 'gamma'
+        this.active = true;
+        this.age = 0;
+        this.maxAge = 400;
+        
+        // Physical parameters
+        switch(type) {
+          case 'alpha':
+            this.mass = 4.0;
+            this.charge = 2.0;
+            this.speed = Math.sqrt(vx*vx + vy*vy);
+            this.ionDensity = 1; // condense every step
+            this.dropletSizeMax = 4.2;
+            this.dropletLife = 90;
+            this.scatter = 0.0;
+            this.maxAge = 120;
+            break;
+          case 'beta':
+            this.mass = 0.08;
+            this.charge = -1.0;
+            this.speed = Math.sqrt(vx*vx + vy*vy);
+            this.ionDensity = 3; // condense every 3 steps
+            this.dropletSizeMax = 1.7;
+            this.dropletLife = 50;
+            this.scatter = 0.28;
+            break;
+          case 'positron':
+            this.mass = 0.08;
+            this.charge = 1.0;
+            this.speed = Math.sqrt(vx*vx + vy*vy);
+            this.ionDensity = 3;
+            this.dropletSizeMax = 1.7;
+            this.dropletLife = 50;
+            this.scatter = 0.28;
+            break;
+          case 'muon':
+            this.mass = 2.2;
+            this.charge = Math.random() > 0.5 ? 1.0 : -1.0;
+            this.speed = Math.sqrt(vx*vx + vy*vy);
+            this.ionDensity = 6;
+            this.dropletSizeMax = 1.3;
+            this.dropletLife = 40;
+            this.scatter = 0.005;
+            this.maxAge = 350;
+            break;
+          case 'gamma':
+            this.mass = 0.0;
+            this.charge = 0.0;
+            this.speed = Math.sqrt(vx*vx + vy*vy);
+            this.ionDensity = 999999; // Gamma does not ionize directly
+            this.scatter = 0.0;
+            this.maxAge = 250;
+            break;
+        }
+      }
+
+      update() {
+        if (!this.active) return;
+        this.age++;
+
+        // 1. Calculate magnetic Lorentz force if Bz != 0
+        if (magneticB !== 0 && this.charge !== 0) {
+          // B is perpendicular to 2D canvas, F = q * (v x B)
+          // vx_new = vx + q*vy*B/m * dt
+          // vy_new = vy - q*vx*B/m * dt
+          const strength = (this.charge * (magneticB * 0.035)) / this.mass;
+          const ax = this.vy * strength;
+          const ay = -this.vx * strength;
+
+          this.vx += ax * dt;
+          this.vy += ay * dt;
+          
+          // Maintain speed (Lorentz force does no work)
+          const currSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+          if (currSpeed > 0) {
+            this.vx = (this.vx / currSpeed) * this.speed;
+            this.vy = (this.vy / currSpeed) * this.speed;
           }
-          document.addEventListener("keydown", e => { if(e.key == "Right" || e.key == "ArrowRight") rightPressed = true; else if(e.key == "Left" || e.key == "ArrowLeft") leftPressed = true; });
-          document.addEventListener("keyup", e => { if(e.key == "Right" || e.key == "ArrowRight") rightPressed = false; else if(e.key == "Left" || e.key == "ArrowLeft") leftPressed = false; });
-          function collisionDetection() {
-            for(let c=0; c<brickColumnCount; c++) {
-              for(let r=0; r<brickRowCount; r++) {
-                let b = bricks[c][r];
-                if(b.status == 1) {
-                  if(x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
-                    dy = -dy; b.status = 0; score++;
-                    if(score == brickRowCount*brickColumnCount) { alert("YOU WIN. LUCK."); location.reload(); }
-                  }
-                }
+        }
+
+        // 2. Add scattering off air / vapor molecules
+        if (this.scatter > 0) {
+          const theta = (Math.random() - 0.5) * this.scatter;
+          const cosT = Math.cos(theta);
+          const sinT = Math.sin(theta);
+          const rx = this.vx * cosT - this.vy * sinT;
+          const ry = this.vx * sinT + this.vy * cosT;
+          this.vx = rx;
+          this.vy = ry;
+        }
+
+        // 3. Move position
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        // Check boundaries
+        if (this.x < 0 || this.x > width || this.y < 0 || this.y > height || this.age > this.maxAge) {
+          this.active = false;
+          return;
+        }
+
+        // 4. Collision checking with lead shields
+        for (let shield of shields) {
+          if (this.x >= shield.x && this.x <= shield.x + shield.w &&
+              this.y >= shield.y && this.y <= shield.y + shield.h) {
+            
+            // Shield behavior depending on radiation type
+            if (this.type === 'alpha') {
+              this.active = false;
+              playGeigerClick(0.3); // Absorbed
+              return;
+            } else if (this.type === 'beta' || this.type === 'positron') {
+              // High probability of getting absorbed
+              if (Math.random() > 0.15) {
+                this.active = false;
+                playGeigerClick(0.15);
+                return;
+              } else {
+                // Scattered out with heavy deflection and lower speed
+                this.vx = -this.vx * 0.4 + (Math.random() - 0.5) * 2;
+                this.vy = -this.vy * 0.4 + (Math.random() - 0.5) * 2;
+                this.speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+              }
+            } else if (this.type === 'muon') {
+              // Muons barely care about lead unless it's huge, small deflection
+              this.vx += (Math.random() - 0.5) * 0.5;
+              this.vy += (Math.random() - 0.5) * 0.5;
+            } else if (this.type === 'gamma') {
+              // Gamma collision triggers Compton scattering (spawns electron beta track)
+              if (Math.random() > 0.6) {
+                this.active = false;
+                // Spawn a compton electron
+                const angle = Math.random() * Math.PI * 2;
+                const eSpeed = 3.5 + Math.random() * 1.5;
+                particles.push(new ChargedRay(this.x, this.y, Math.cos(angle)*eSpeed, Math.sin(angle)*eSpeed, 'beta'));
+                playGeigerClick(0.5);
+                return;
               }
             }
           }
-          function drawBall() { ctx.beginPath(); ctx.arc(x, y, ballRadius, 0, Math.PI*2); ctx.fillStyle = "#0095DD"; ctx.fill(); ctx.closePath(); }
-          function drawPaddle() { ctx.beginPath(); ctx.rect(paddleX, canvas.height-paddleHeight, paddleWidth, paddleHeight); ctx.fillStyle = "#0095DD"; ctx.fill(); ctx.closePath(); }
-          function drawBricks() {
-            for(let c=0; c<brickColumnCount; c++) {
-              for(let r=0; r<brickRowCount; r++) {
-                if(bricks[c][r].status == 1) {
-                  let brickX = (c*(brickWidth+brickPadding))+brickOffsetLeft;
-                  let brickY = (r*(brickHeight+brickPadding))+brickOffsetTop;
-                  bricks[c][r].x = brickX; bricks[c][r].y = brickY;
-                  ctx.beginPath(); ctx.rect(brickX, brickY, brickWidth, brickHeight); ctx.fillStyle = "hsl("+(c*40)+", 70%, 50%)"; ctx.fill(); ctx.closePath();
-                }
-              }
+        }
+
+        // 5. Condensation (spawn vapor droplets along ionized path)
+        if (this.type !== 'gamma' && (this.age % this.ionDensity === 0)) {
+          const size = (0.7 + Math.random() * 0.6) * this.dropletSizeMax * dropletGrow;
+          const driftOffset = 0.5;
+          const dx = (Math.random() - 0.5) * driftOffset;
+          const dy = (Math.random() - 0.5) * driftOffset;
+          
+          droplets.push({
+            x: this.x + dx,
+            y: this.y + dy,
+            vx: 0,
+            vy: 0,
+            size: 0.1,
+            maxSize: size,
+            opacity: 1.0,
+            life: this.dropletLife,
+            maxLife: this.dropletLife,
+            chargeType: this.type
+          });
+
+          // Check if ionization happened near sound probe
+          const distToProbe = Math.sqrt((this.x - soundProbe.x)**2 + (this.y - soundProbe.y)**2);
+          if (distToProbe < soundProbe.radius) {
+            if (Math.random() < (this.type === 'alpha' ? 0.9 : 0.2)) {
+              playProbePing(this.type === 'alpha' ? 0.7 : 1.3);
             }
           }
-          function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBricks(); drawBall(); drawPaddle();
-            collisionDetection();
-            if(x + dx > canvas.width-ballRadius || x + dx < ballRadius) dx = -dx;
-            if(y + dy < ballRadius) dy = -dy;
-            else if(y + dy > canvas.height-ballRadius) {
-              if(x > paddleX && x < paddleX + paddleWidth) dy = -dy;
-              else { alert("GAME OVER"); location.reload(); return; }
-            }
-            if(rightPressed && paddleX < canvas.width-paddleWidth) paddleX += 7;
-            else if(leftPressed && paddleX > 0) paddleX -= 7;
-            x += dx; y += dy; requestAnimationFrame(draw);
+
+          // Randomly trigger Geiger click
+          if (Math.random() < (this.type === 'alpha' ? 0.08 : this.type === 'muon' ? 0.015 : 0.04)) {
+            playGeigerClick(this.type === 'alpha' ? 0.9 : 0.4);
           }
-          draw();
-        </script>
-        <br><br><a href="../index.html" style="color:cyan;">[back to home]</a>
-        </body></html>
+        }
+
+        // 6. Gamma spontaneous Compton scattering in air/vapor
+        if (this.type === 'gamma' && Math.random() < 0.008) {
+          // Compton scattering in gas: gamma is deflected, beta electron flies out
+          const angle = Math.random() * Math.PI * 2;
+          const eSpeed = 3.0 + Math.random() * 1.5;
+          particles.push(new ChargedRay(this.x, this.y, Math.cos(angle)*eSpeed, Math.sin(angle)*eSpeed, 'beta'));
+          
+          // Deflect gamma
+          const gAngle = angle + Math.PI/2 + (Math.random() - 0.5)*0.5;
+          this.vx = Math.cos(gAngle) * this.speed;
+          this.vy = Math.sin(gAngle) * this.speed;
+          playGeigerClick(0.3);
+        }
+
+        // Muon decay in flight (spontaneous kink)
+        if (this.type === 'muon' && Math.random() < 0.0008 && this.age > 40) {
+          // Decays into electron (beta) + neutrinos (invisible)
+          this.active = false;
+          const angle = Math.random() * Math.PI * 2;
+          const eSpeed = 4.0;
+          particles.push(new ChargedRay(this.x, this.y, Math.cos(angle)*eSpeed, Math.sin(angle)*eSpeed, 'beta'));
+          playGeigerClick(0.6);
+        }
+      }
+    }
+
+    // --- Presets Loader ---
+
+    function loadPreset(val) {
+      clearAll();
+      switch(val) {
+        case 'cosmic':
+          // Standard cosmic background, nothing special on screen, automatically generated cosmic rays
+          driftX = 0.0;
+          driftY = -0.2;
+          magneticB = 0.0;
+          cosmicFlux = 40;
+          break;
+        case 'spectrometer':
+          // High magnetic field, one emitter shooting electrons and positrons
+          magneticB = 25.0;
+          driftX = 0.0;
+          driftY = -0.05;
+          cosmicFlux = 15;
+          
+          // Emitter in bottom center shooting straight up
+          emitters.push({
+            x: 300,
+            y: 500,
+            type: 'beta_positron',
+            angle: -Math.PI / 2,
+            spread: 0.12,
+            rate: 4,
+            active: true
+          });
+          
+          // A lead shielding collimator
+          shields.push({ x: 260, y: 440, w: 25, h: 40 });
+          shields.push({ x: 315, y: 440, w: 25, h: 40 });
+          break;
+        case 'isotopes':
+          // Three isolated compartments using shields with alpha, beta, gamma emitters
+          magneticB = 0.0;
+          driftX = 0.1;
+          driftY = -0.15;
+          cosmicFlux = 5;
+
+          // Drawing barriers
+          shields.push({ x: 180, y: 0, w: 15, h: 600 });
+          shields.push({ x: 400, y: 0, w: 15, h: 600 });
+
+          // Shielding plates in the path of the emitters
+          shields.push({ x: 50, y: 220, w: 80, h: 10 }); // Thin shield in compartment 1
+          shields.push({ x: 250, y: 220, w: 100, h: 25 }); // Thick shield in compartment 2
+          shields.push({ x: 470, y: 220, w: 70, h: 45 }); // Massive lead block in compartment 3
+
+          // Emitters
+          emitters.push({ x: 90, y: 480, type: 'alpha', angle: -Math.PI/2, spread: 0.15, rate: 8, active: true });
+          emitters.push({ x: 300, y: 480, type: 'beta', angle: -Math.PI/2, spread: 0.15, rate: 10, active: true });
+          emitters.push({ x: 500, y: 480, type: 'gamma', angle: -Math.PI/2, spread: 0.15, rate: 12, active: true });
+          break;
+        case 'chaos':
+          // High magnetic field, high turbulence drift, heavy radiation emitters
+          magneticB = -35.0;
+          driftX = 0.8;
+          driftY = 0.5;
+          cosmicFlux = 70;
+          emitters.push({ x: 100, y: 100, type: 'beta', angle: Math.PI/4, spread: 0.6, rate: 6, active: true });
+          emitters.push({ x: 500, y: 500, type: 'alpha', angle: -3*Math.PI/4, spread: 0.6, rate: 8, active: true });
+          break;
+        case 'vacuum':
+          // Completely empty vacuum, users have to draw or trigger rays
+          cosmicFlux = 0;
+          magneticB = 0.0;
+          driftX = 0.0;
+          driftY = 0.0;
+          break;
+      }
+
+      // Update UI controls
+      document.getElementById('param-b').value = magneticB;
+      document.getElementById('param-b-val').innerText = magneticB.toFixed(1) + ' G';
+      
+      document.getElementById('param-flux').value = cosmicFlux;
+      let fluxText = 'Medium';
+      if (cosmicFlux === 0) fluxText = 'Vacuum';
+      else if (cosmicFlux < 25) fluxText = 'Low';
+      else if (cosmicFlux > 65) fluxText = 'Extreme';
+      document.getElementById('param-flux-val').innerText = fluxText;
+
+      document.getElementById('param-drift-x').value = driftX;
+      document.getElementById('param-drift-x-val').innerText = (driftX * 100).toFixed(0) + ' px/s';
+      document.getElementById('param-drift-y').value = driftY;
+      document.getElementById('param-drift-y-val').innerText = (driftY * 100).toFixed(0) + ' px/s';
+    }
+
+    function updateParam(param, val) {
+      const parsedVal = parseFloat(val);
+      switch(param) {
+        case 'B':
+          magneticB = parsedVal;
+          document.getElementById('param-b-val').innerText = magneticB.toFixed(1) + ' G';
+          break;
+        case 'flux':
+          cosmicFlux = parsedVal;
+          let fluxText = 'Medium';
+          if (cosmicFlux === 0) fluxText = 'Vacuum';
+          else if (cosmicFlux < 25) fluxText = 'Low';
+          else if (cosmicFlux > 65) fluxText = 'Extreme';
+          document.getElementById('param-flux-val').innerText = fluxText;
+          break;
+        case 'grow':
+          dropletGrow = parsedVal;
+          document.getElementById('param-grow-val').innerText = dropletGrow.toFixed(1);
+          break;
+        case 'driftX':
+          driftX = parsedVal;
+          document.getElementById('param-drift-x-val').innerText = (driftX * 100).toFixed(0) + ' px/s';
+          break;
+        case 'driftY':
+          driftY = parsedVal;
+          document.getElementById('param-drift-y-val').innerText = (driftY * 100).toFixed(0) + ' px/s';
+          break;
+      }
+    }
+
+    function setClickMode(mode) {
+      clickMode = mode;
+      document.querySelectorAll('.btn-toggle').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`mode-${mode}`);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    function clearAll() {
+      shields = [];
+      emitters = [];
+      particles = [];
+      droplets = [];
+    }
+
+    // --- Interactive Mouse Handlers ---
+
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      // Account for canvas CSS scaling
+      return {
+        x: (e.clientX - rect.left) * (width / rect.width),
+        y: (e.clientY - rect.top) * (height / rect.height)
+      };
+    }
+
+    canvas.addEventListener('mousedown', e => {
+      const pos = getMousePos(e);
+      currentMouse = pos;
+      
+      if (clickMode === 'shield') {
+        isDrawingShield = true;
+        shieldStart = pos;
+      } else if (clickMode === 'erase') {
+        // Erase shield or spawner pin containing clicked position
+        shields = shields.filter(s => !(pos.x >= s.x && pos.x <= s.x + s.w && pos.y >= s.y && pos.y <= s.y + s.h));
+        emitters = emitters.filter(em => Math.sqrt((pos.x - em.x)**2 + (pos.y - em.y)**2) > 16);
+      } else if (clickMode === 'alpha' || clickMode === 'beta' || clickMode === 'gamma') {
+        // Place spawner pin
+        emitters.push({
+          x: pos.x,
+          y: pos.y,
+          type: clickMode,
+          angle: -Math.PI / 2, // Points upwards by default
+          spread: 0.25,
+          rate: 10,
+          active: true
+        });
+      } else if (clickMode === 'probe') {
+        soundProbe.x = pos.x;
+        soundProbe.y = pos.y;
+        document.getElementById('probe-coords').innerText = `(${Math.round(pos.x)}, ${Math.round(pos.y)})`;
+      }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const pos = getMousePos(e);
+      currentMouse = pos;
+
+      if (isDrawingShield) {
+        // Handled in draw loop
+      } else if (clickMode === 'probe' && e.buttons === 1) {
+        // Drag sound probe
+        soundProbe.x = pos.x;
+        soundProbe.y = pos.y;
+        document.getElementById('probe-coords').innerText = `(${Math.round(pos.x)}, ${Math.round(pos.y)})`;
+      }
+    });
+
+    window.addEventListener('mouseup', e => {
+      if (isDrawingShield) {
+        isDrawingShield = false;
+        // Finalize shield rectangle
+        const x1 = Math.min(shieldStart.x, currentMouse.x);
+        const y1 = Math.min(shieldStart.y, currentMouse.y);
+        const x2 = Math.max(shieldStart.x, currentMouse.x);
+        const y2 = Math.max(shieldStart.y, currentMouse.y);
+        const w = x2 - x1;
+        const h = y2 - y1;
+
+        if (w > 6 && h > 6) {
+          shields.push({ x: x1, y: y1, w: w, h: h });
+        }
+      }
+    });
+
+    // --- Main Physics Simulation Loop ---
+
+    function triggerCosmicRay() {
+      // Spawn random cosmic rays from screen edges
+      const typeRand = Math.random();
+      let type = 'muon';
+      let speed = 6.0 + Math.random() * 2.0;
+
+      if (typeRand < 0.15) {
+        type = 'beta'; // Cosmic electron
+        speed = 3.5 + Math.random() * 1.5;
+      } else if (typeRand < 0.25) {
+        type = 'alpha'; // Cosmic heavy nucleus
+        speed = 2.0 + Math.random() * 1.0;
+      } else if (typeRand < 0.35) {
+        type = 'gamma'; // High energy photon
+        speed = 7.0;
+      }
+
+      // Spawn location (mostly from top, some from sides)
+      let x, y, vx, vy;
+      const side = Math.random();
+      
+      if (side < 0.7) {
+        // Top boundary
+        x = Math.random() * width;
+        y = 1;
+        const angle = Math.PI / 4 + Math.random() * Math.PI / 2; // downwards angle
+        vx = speed * Math.cos(angle);
+        vy = speed * Math.sin(angle);
+      } else if (side < 0.85) {
+        // Left boundary
+        x = 1;
+        y = Math.random() * height * 0.6; // upper half
+        const angle = -Math.PI / 6 + Math.random() * Math.PI / 3; // rightwards angle
+        vx = speed * Math.cos(angle);
+        vy = speed * Math.sin(angle);
+      } else {
+        // Right boundary
+        x = width - 1;
+        y = Math.random() * height * 0.6;
+        const angle = 5 * Math.PI / 6 + Math.random() * Math.PI / 3; // leftwards angle
+        vx = speed * Math.cos(angle);
+        vy = speed * Math.sin(angle);
+      }
+
+      particles.push(new ChargedRay(x, y, vx, vy, type));
+      if (type === 'muon') muonCount++;
+    }
+
+    function runSimulation() {
+      tickCount++;
+
+      // 1. Spontaneous cosmic rays
+      if (cosmicFlux > 0 && Math.random() < (cosmicFlux * 0.001)) {
+        triggerCosmicRay();
+      }
+
+      // 2. Isotope spawner emitters
+      for (let em of emitters) {
+        if (em.active && (tickCount % em.rate === 0)) {
+          let type = em.type;
+          
+          if (type === 'beta_positron') {
+            // Emits alternating electron and positrons
+            type = Math.random() > 0.5 ? 'beta' : 'positron';
+          }
+          
+          const angle = em.angle + (Math.random() - 0.5) * em.spread;
+          let speed = 4.0;
+          if (type === 'alpha') speed = 2.2 + Math.random() * 0.4;
+          if (type === 'gamma') speed = 7.0;
+          if (type === 'beta' || type === 'positron') speed = 3.6 + Math.random() * 1.2;
+
+          const vx = speed * Math.cos(angle);
+          const vy = speed * Math.sin(angle);
+          particles.push(new ChargedRay(em.x, em.y, vx, vy, type));
+        }
+      }
+
+      // 3. Update charged particle rays
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update();
+        if (!p.active) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // 4. Update condensed vapor droplets
+      for (let i = droplets.length - 1; i >= 0; i--) {
+        const d = droplets[i];
+        
+        // Apply wind/convection drift
+        d.vx += (driftX - d.vx) * 0.08;
+        d.vy += (driftY - d.vy) * 0.08;
+        
+        d.x += d.vx;
+        d.y += d.vy;
+
+        d.life--;
+
+        // Droplet growth and evaporation curves
+        const ageRatio = d.life / d.maxLife;
+        if (ageRatio > 0.8) {
+          // Growth phase
+          d.size += (d.maxSize - d.size) * 0.2;
+          d.opacity = 1.0;
+        } else {
+          // Evaporation phase
+          d.size -= (d.size * 0.015);
+          d.opacity = ageRatio / 0.8;
+        }
+
+        if (d.life <= 0 || d.size < 0.1) {
+          droplets.splice(i, 1);
+        }
+      }
+
+      // 5. Calculate localized probe statistics and update continuous synth
+      updateProbeStats();
+    }
+
+    function updateProbeStats() {
+      let denseCount = 0;
+      let totalCharge = 0;
+
+      for (let d of droplets) {
+        const dx = d.x - soundProbe.x;
+        const dy = d.y - soundProbe.y;
+        if (dx*dx + dy*dy < soundProbe.radius*soundProbe.radius) {
+          denseCount++;
+          if (d.chargeType === 'alpha') totalCharge += 2.0;
+          else if (d.chargeType === 'positron') totalCharge += 1.0;
+          else if (d.chargeType === 'beta') totalCharge -= 1.0;
+        }
+      }
+
+      // Render statistics to UI
+      document.getElementById('probe-density').innerText = (denseCount / 10).toFixed(2);
+      document.getElementById('probe-flux').innerText = totalCharge.toFixed(1) + ' q';
+
+      // Update active sonification frequency/gain
+      if (audioEnabled && audioCtx && probeOsc && probeGain) {
+        // Map droplet density to hum pitch and volume
+        const targetFreq = 160 + denseCount * 3.5;
+        const targetVol = Math.min(0.12, denseCount * 0.0035);
+
+        probeOsc.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+        probeGain.gain.setValueAtTime(targetVol, audioCtx.currentTime);
+      }
+    }
+
+    // --- Canvas Rendering Code ---
+
+    function drawChamber() {
+      // Clear with dark atmospheric gradient
+      ctx.fillStyle = '#010103';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw faint circular vacuum grid lines
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.025)';
+      ctx.lineWidth = 1;
+      
+      const xc = width / 2;
+      const yc = height / 2;
+      for (let r = 80; r < 400; r += 80) {
+        ctx.beginPath();
+        ctx.arc(xc, yc, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Draw active vapor droplets with glow
+      ctx.globalCompositeOperation = 'screen';
+      for (let d of droplets) {
+        const rad = d.size;
+        if (rad < 0.1) continue;
+
+        // Choose neon color based on radiation type
+        let color = 'rgba(0, 255, 170, '; // green for alpha
+        if (d.chargeType === 'beta') color = 'rgba(0, 243, 255, '; // cyan for beta
+        if (d.chargeType === 'positron') color = 'rgba(255, 170, 0, '; // orange for positron
+        if (d.chargeType === 'muon') color = 'rgba(255, 0, 127, '; // magenta for muon
+
+        // Droplet body
+        ctx.fillStyle = color + d.opacity * 0.85 + ')';
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, rad, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Subtle glow halo
+        ctx.fillStyle = color + d.opacity * 0.12 + ')';
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, rad * 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Draw Spawner Pins
+      for (let em of emitters) {
+        ctx.save();
+        ctx.translate(em.x, em.y);
+        ctx.rotate(em.angle);
+
+        // Core Pin body
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Glowing emitter tip indicating direction
+        ctx.fillStyle = em.type === 'alpha' ? '#00ffaa' : em.type === 'beta' ? '#00f3ff' : '#ffaa00';
+        ctx.beginPath();
+        ctx.moveTo(8, -3);
+        ctx.lineTo(15, 0);
+        ctx.lineTo(8, 3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Miniature radioactive symbol
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // Draw Lead Shielding
+      for (let shield of shields) {
+        // Metallic lead fill
+        const gradient = ctx.createLinearGradient(shield.x, shield.y, shield.x + shield.w, shield.y + shield.h);
+        gradient.addColorStop(0, '#1e293b');
+        gradient.addColorStop(0.5, '#334155');
+        gradient.addColorStop(1, '#0f172a');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(shield.x, shield.y, shield.w, shield.h);
+        
+        // Amber warning outline
+        ctx.strokeStyle = 'rgba(255, 170, 0, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(shield.x, shield.y, shield.w, shield.h);
+
+        // Heavy shield stripes
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 2;
+        for (let o = 8; o < shield.w + shield.h; o += 16) {
+          ctx.beginPath();
+          ctx.moveTo(shield.x + o, shield.y);
+          ctx.lineTo(shield.x + o - shield.h, shield.y + shield.h);
+          ctx.stroke();
+        }
+      }
+
+      // Draw Lead Shield Construction Preview
+      if (isDrawingShield) {
+        ctx.strokeStyle = 'rgba(255, 170, 0, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(
+          shieldStart.x,
+          shieldStart.y,
+          currentMouse.x - shieldStart.x,
+          currentMouse.y - shieldStart.y
+        );
+        ctx.setLineDash([]);
+      }
+
+      // Draw Sound Probe Overlay
+      ctx.strokeStyle = audioEnabled ? 'rgba(0, 255, 170, 0.35)' : 'rgba(100, 116, 139, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(soundProbe.x, soundProbe.y, soundProbe.radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Outer reticle ticks
+      ctx.beginPath();
+      ctx.moveTo(soundProbe.x, soundProbe.y - soundProbe.radius - 4);
+      ctx.lineTo(soundProbe.x, soundProbe.y - soundProbe.radius + 4);
+      ctx.moveTo(soundProbe.x, soundProbe.y + soundProbe.radius - 4);
+      ctx.lineTo(soundProbe.x, soundProbe.y + soundProbe.radius + 4);
+      ctx.moveTo(soundProbe.x - soundProbe.radius - 4, soundProbe.y);
+      ctx.lineTo(soundProbe.x - soundProbe.radius + 4, soundProbe.y);
+      ctx.moveTo(soundProbe.x + soundProbe.radius - 4, soundProbe.y);
+      ctx.lineTo(soundProbe.x + soundProbe.radius + 4, soundProbe.y);
+      ctx.stroke();
+
+      // Center crosshair
+      ctx.beginPath();
+      ctx.moveTo(soundProbe.x - 5, soundProbe.y);
+      ctx.lineTo(soundProbe.x + 5, soundProbe.y);
+      ctx.moveTo(soundProbe.x, soundProbe.y - 5);
+      ctx.lineTo(soundProbe.x, soundProbe.y + 5);
+      ctx.stroke();
+    }
+
+    function updateUIStats() {
+      document.getElementById('stat-particles').innerText = particles.length;
+      document.getElementById('stat-droplets').innerText = droplets.length;
+      document.getElementById('stat-muons').innerText = muonCount;
+
+      // Deflection R_min display
+      if (magneticB === 0) {
+        document.getElementById('stat-deflection').innerText = 'N/A';
+      } else {
+        // Cyclotron radius for a typical beta electron (m=0.08, speed=4.0, q=-1.0)
+        const R = (0.08 * 4.0) / Math.abs(magneticB * 0.035);
+        document.getElementById('stat-deflection').innerText = R.toFixed(1) + ' px';
+      }
+
+      // Calculate radiation dose dynamically
+      const alphaCount = particles.filter(p => p.type === 'alpha').length;
+      const betaCount = particles.filter(p => p.type === 'beta' || p.type === 'positron').length;
+      const activeGamma = particles.filter(p => p.type === 'gamma').length;
+      const dose = 0.08 + alphaCount * 0.18 + betaCount * 0.04 + activeGamma * 0.08;
+      document.getElementById('stat-dose').innerText = dose.toFixed(3) + ' μSv/hr';
+    }
+
+    // --- Main Game Loop Execution ---
+
+    function tick() {
+      runSimulation();
+      drawChamber();
+      
+      if (tickCount % 6 === 0) {
+        updateUIStats();
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    // Bootstrapping
+    loadPreset('cosmic');
+    tick();
+
+  </script>
+</body>
+</html>
