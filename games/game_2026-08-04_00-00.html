@@ -1,80 +1,1652 @@
-<!DOCTYPE html><html><head><title>2048 - 2026-08-04 00-00</title>
-        <style>
-          body { background: #bbada0; color: #776e65; font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif; text-align: center; }
-          #grid { display: inline-grid; grid-template-columns: repeat(4, 80px); grid-template-rows: repeat(4, 80px); gap: 10px; background: #bbada0; border: 10px solid #bbada0; border-radius: 5px; }
-          .cell { width: 80px; height: 80px; background: #cdc1b4; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; }
-          .cell[data-value="2"] { background: #eee4da; }
-          .cell[data-value="4"] { background: #ede0c8; }
-          .cell[data-value="8"] { background: #f2b179; color: #f9f6f2; }
-          .cell[data-value="16"] { background: #f59563; color: #f9f6f2; }
-          .cell[data-value="32"] { background: #f67c5f; color: #f9f6f2; }
-          .cell[data-value="64"] { background: #f65e3b; color: #f9f6f2; }
-          .cell[data-value="128"] { background: #edcf72; color: #f9f6f2; font-size: 24px; }
-          .cell[data-value="256"] { background: #edcc61; color: #f9f6f2; font-size: 24px; }
-          .cell[data-value="512"] { background: #edc850; color: #f9f6f2; font-size: 24px; }
-          .cell[data-value="1024"] { background: #edc53f; color: #f9f6f2; font-size: 20px; }
-          .cell[data-value="2048"] { background: #edc22e; color: #f9f6f2; font-size: 20px; }
-        </style>
-        </head><body>
-        <h1>2048</h1>
-        <p>Use arrow keys to slide tiles. Match them to win.</p>
-        <div id="grid"></div>
-        <p>Score: <span id="score">0</span></p>
-        <script>
-          let grid = Array(4).fill().map(() => Array(4).fill(0));
-          let score = 0;
-          function spawn() {
-            let empty = [];
-            for(let r=0; r<4; r++) for(let c=0; c<4; c++) if(grid[r][c] === 0) empty.push({r,c});
-            if(empty.length > 0) {
-              let {r,c} = empty[Math.floor(Math.random() * empty.length)];
-              grid[r][c] = Math.random() > 0.9 ? 4 : 2;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hadron-forge // quantum chromodynamics (qcd) sandbox</title>
+  <meta name="description" content="an interactive physics sandbox simulating quarks, color charge, strong force flux tubes, string breaking, hadronization, and deconfined quark-gluon plasma.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #03030b;
+      --panel-bg: rgba(6, 6, 20, 0.85);
+      --border: rgba(0, 255, 170, 0.15);
+      --border-focus: rgba(0, 255, 170, 0.4);
+      --neon-green: #00ffaa;
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-yellow: #ffff00;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --panel-width: 320px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #0b0b26 0%, #000005 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(85vw, 85vh);
+      height: min(85vw, 85vh);
+      box-shadow: 0 0 60px rgba(0, 255, 170, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 255, 170, 0.25);
+      box-shadow: 0 10px 40px rgba(0, 255, 170, 0.04);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Scrollbar styling for panels */
+    .glass-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .glass-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-green), var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.65rem;
+      color: var(--neon-green);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text);
+      border-left: 2px solid var(--neon-green);
+      padding-left: 8px;
+      margin-bottom: 12px;
+    }
+
+    p.description {
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* UI Elements */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .slider-label {
+      color: var(--text);
+    }
+
+    .slider-value {
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-green);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button:hover {
+      background: rgba(0, 255, 170, 0.1);
+      border-color: var(--neon-green);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(0, 255, 170, 0.15);
+    }
+
+    button.active {
+      background: rgba(0, 255, 170, 0.2);
+      border-color: var(--neon-green);
+      color: #fff;
+    }
+
+    button.btn-accent {
+      grid-column: span 2;
+      background: rgba(255, 0, 127, 0.15);
+      border-color: rgba(255, 0, 127, 0.4);
+    }
+
+    button.btn-accent:hover {
+      background: rgba(255, 0, 127, 0.25);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+    }
+
+    /* Telemetry Display */
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+      padding: 6px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+
+    .telemetry-label {
+      color: var(--text-muted);
+    }
+
+    .telemetry-value {
+      color: var(--text);
+    }
+
+    .telemetry-value.alert {
+      color: var(--neon-magenta);
+      animation: pulse 1s infinite alternate;
+    }
+
+    .telemetry-value.good {
+      color: var(--neon-green);
+    }
+
+    /* Audio Shield Overlay */
+    #audio-gate {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(2, 2, 8, 0.95);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      transition: opacity 0.5s ease;
+    }
+
+    #audio-gate.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #audio-gate h2 {
+      font-size: 1.5rem;
+      border: none;
+      padding: 0;
+      text-align: center;
+      background: linear-gradient(135deg, var(--neon-green), var(--neon-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #audio-gate p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      max-width: 400px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    #audio-gate button {
+      padding: 12px 24px;
+      font-size: 0.9rem;
+      border-radius: 12px;
+      background: rgba(0, 255, 170, 0.15);
+      border-color: var(--neon-green);
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.2);
+    }
+
+    #audio-gate button:hover {
+      background: rgba(0, 255, 170, 0.3);
+      transform: scale(1.05);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    /* Legend Box */
+    .legend-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.65rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-color.dashed {
+      border: 1.5px dashed currentColor;
+      background: transparent !important;
+    }
+
+    /* Footer Info */
+    #footer-note {
+      position: absolute;
+      bottom: 12px;
+      width: 100%;
+      text-align: center;
+      font-size: 0.65rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-muted);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    #footer-note a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+      pointer-events: auto;
+    }
+
+    #footer-note a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Audio Gate Overlay -->
+  <div id="audio-gate">
+    <h2>HADRON-FORGE</h2>
+    <p>an interactive physics simulation of quantum chromodynamics (qcd), color confinement, string breaking, and deconfined quark-gluon plasma.</p>
+    <button id="init-btn">INITIALIZE QUANTUM AUDIO</button>
+  </div>
+
+  <div id="app-container">
+    
+    <!-- Left Configuration Panel -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>HADRON FORGE</h1>
+        <div class="tagline">strong force sandbox</div>
+        <p class="description">
+          drag quarks to stretch color flux tubes. pull them past confinement thresholds to watch the vacuum snap, producing new quark-antiquark pairs.
+        </p>
+      </div>
+
+      <div class="control-panel">
+        <h2>simulation params</h2>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">temperature (kinetic energy)</span>
+            <span class="slider-value" id="temp-val">150 MeV</span>
+          </div>
+          <input type="range" id="temp-slider" min="0" max="600" value="150">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">string tension (&sigma;)</span>
+            <span class="slider-value" id="tension-val">1.0 GeV/fm</span>
+          </div>
+          <input type="range" id="tension-slider" min="0" max="30" value="10">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">strong coupling (&alpha;<sub>s</sub>)</span>
+            <span class="slider-value" id="coupling-val">0.12</span>
+          </div>
+          <input type="range" id="coupling-slider" min="0" max="50" value="15">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">quark mass (inertia)</span>
+            <span class="slider-value" id="mass-val">up/down (light)</span>
+          </div>
+          <input type="range" id="mass-slider" min="0" max="2" value="0" step="1">
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <h2>injection & presets</h2>
+        <div class="btn-grid">
+          <button id="spawn-meson">meson (q + &bar;q)</button>
+          <button id="spawn-baryon">baryon (qqq)</button>
+          <button id="spawn-antibaryon">anti-baryon (&bar;q&bar;q&bar;q)</button>
+          <button id="inject-energy">inject gluon (heat)</button>
+          <button id="clear-chamber" class="btn-accent">annihilate chamber</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Canvas Viewport -->
+    <div id="canvas-container">
+      <canvas id="simulation-canvas"></canvas>
+      <div id="footer-note">
+        hadron forge // coded by hexo systems // <a href="../index.html">return home</a>
+      </div>
+    </div>
+
+    <!-- Right Telemetry Panel -->
+    <div id="right-panel" class="glass-panel">
+      <div class="control-panel">
+        <h2>vacuum status</h2>
+        <div class="telemetry-row">
+          <span class="telemetry-label">confinement state</span>
+          <span class="telemetry-value good" id="confinement-status">CONFINED</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">critical temperature (T<sub>c</sub>)</span>
+          <span class="telemetry-value">170 MeV</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">total quarks</span>
+          <span class="telemetry-value" id="total-quarks">0</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">mesons</span>
+          <span class="telemetry-value" id="meson-count">0</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">baryons</span>
+          <span class="telemetry-value" id="baryon-count">0</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">active strings</span>
+          <span class="telemetry-value" id="string-count">0</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">vacuum snaps</span>
+          <span class="telemetry-value" id="snap-count">0</span>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <h2>color charge ledger</h2>
+        <div class="legend-box">
+          <div class="legend-item" style="color: var(--neon-magenta);">
+            <div class="legend-color" style="background: var(--neon-magenta);"></div> Red (R)
+          </div>
+          <div class="legend-item" style="color: var(--neon-green);">
+            <div class="legend-color" style="background: var(--neon-green);"></div> Green (G)
+          </div>
+          <div class="legend-item" style="color: var(--neon-cyan);">
+            <div class="legend-color" style="background: var(--neon-cyan);"></div> Blue (B)
+          </div>
+          <div class="legend-item" style="color: var(--neon-cyan);">
+            <div class="legend-color dashed" style="color: var(--neon-cyan);"></div> &bar;Red (&bar;R)
+          </div>
+          <div class="legend-item" style="color: var(--neon-magenta);">
+            <div class="legend-color dashed" style="color: var(--neon-magenta);"></div> &bar;Green (&bar;G)
+          </div>
+          <div class="legend-item" style="color: var(--neon-yellow);">
+            <div class="legend-color dashed" style="color: var(--neon-yellow);"></div> &bar;Blue (&bar;B)
+          </div>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <h2>physics note</h2>
+        <p class="description" style="font-size: 0.7rem; line-height: 1.5;">
+          in quantum chromodynamics, color charges (Red, Green, Blue) interact by exchanging gluons. 
+          unlike electrodynamics, gluons themselves carry color charge, creating narrow, self-focusing flux tubes (strings).
+          the potential energy of these strings grows linearly with distance ($V(r) \sim \sigma r$), causing confinement. 
+          above 170 MeV, hadrons dissolve into a deconfined Quark-Gluon Plasma.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Physics Engine and Audio Engine -->
+  <script>
+    // Audio Context Setup
+    let audioCtx = null;
+    let mainGain = null;
+    let ambientOsc = null;
+    let ambientGain = null;
+    let plasmaOsc = null;
+    let plasmaGain = null;
+    
+    const initAudio = () => {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      mainGain = audioCtx.createGain();
+      mainGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      mainGain.connect(audioCtx.destination);
+
+      // Confinement ambient hum
+      ambientOsc = audioCtx.createOscillator();
+      ambientGain = audioCtx.createGain();
+      ambientOsc.type = 'sawtooth';
+      ambientOsc.frequency.setValueAtTime(55, audioCtx.currentTime); // Low A hum
+      ambientGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+      
+      // Filter for ambient hum
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(110, audioCtx.currentTime);
+      
+      ambientOsc.connect(filter);
+      filter.connect(ambientGain);
+      ambientGain.connect(mainGain);
+      ambientOsc.start();
+
+      // QGP bubbling low sweeps
+      plasmaOsc = audioCtx.createOscillator();
+      plasmaGain = audioCtx.createGain();
+      plasmaOsc.type = 'sine';
+      plasmaOsc.frequency.setValueAtTime(100, audioCtx.currentTime);
+      plasmaGain.gain.setValueAtTime(0.0, audioCtx.currentTime); // Starts off
+
+      const plasmaFilter = audioCtx.createBiquadFilter();
+      plasmaFilter.type = 'bandpass';
+      plasmaFilter.Q.setValueAtTime(5.0, audioCtx.currentTime);
+      
+      plasmaOsc.connect(plasmaFilter);
+      plasmaFilter.connect(plasmaGain);
+      plasmaGain.connect(mainGain);
+      plasmaOsc.start();
+
+      // Start audio parameter modulation loops
+      modulateAmbientAudio();
+    };
+
+    const triggerSnapSound = (volume = 0.5) => {
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime;
+      
+      // Synthesize string snap
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(600, t);
+      osc.frequency.exponentialRampToValueAtTime(80, t + 0.18);
+      
+      gain.gain.setValueAtTime(0.0, t);
+      gain.gain.linearRampToValueAtTime(volume * 0.4, t + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+      osc.connect(gain);
+      gain.connect(mainGain);
+      
+      osc.start(t);
+      osc.stop(t + 0.25);
+
+      // Noise click component for tactile snap
+      const bufferSize = audioCtx.sampleRate * 0.05; // 50ms of noise
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      
+      const noiseNode = audioCtx.createBufferSource();
+      noiseNode.buffer = buffer;
+      
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.0, t);
+      noiseGain.gain.linearRampToValueAtTime(volume * 0.15, t + 0.002);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'highpass';
+      noiseFilter.frequency.setValueAtTime(1000, t);
+      
+      noiseNode.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(mainGain);
+      
+      noiseNode.start(t);
+    };
+
+    const modulateAmbientAudio = () => {
+      if (!audioCtx) return;
+      
+      setTimeout(modulateAmbientAudio, 100);
+      
+      const t = audioCtx.currentTime;
+      
+      // Calculate total string stretch
+      let totalStretch = 0;
+      let count = 0;
+      hadrons.forEach(h => {
+        if (h.type === 'meson') {
+          totalStretch += dist(h.q1, h.q2);
+          count++;
+        } else if (h.type === 'baryon' || h.type === 'antibaryon') {
+          totalStretch += dist(h.q1, {x: h.jx, y: h.jy});
+          totalStretch += dist(h.q2, {x: h.jx, y: h.jy});
+          totalStretch += dist(h.q3, {x: h.jx, y: h.jy});
+          count += 3;
+        }
+      });
+      
+      const avgStretch = count > 0 ? (totalStretch / count) : 0;
+      const stretchRatio = Math.min(avgStretch / 250, 2.0); // Cap mapping
+      
+      // Pitch goes up as strings stretch (tension rises)
+      ambientOsc.frequency.setTargetAtTime(55 + (stretchRatio * 110), t, 0.15);
+      
+      // Volume increases slightly with tension
+      ambientGain.gain.setTargetAtTime(0.01 + (stretchRatio * 0.03), t, 0.15);
+
+      // Plasma audio
+      if (isDeconfined) {
+        plasmaGain.gain.setTargetAtTime(0.04, t, 0.3);
+        // Modulate plasma frequency randomly to sound bubbly
+        const modFreq = 80 + Math.random() * 90;
+        plasmaOsc.frequency.setTargetAtTime(modFreq, t, 0.2);
+      } else {
+        plasmaGain.gain.setTargetAtTime(0.0, t, 0.2);
+      }
+    };
+
+    // UI audio gate trigger
+    document.getElementById('init-btn').addEventListener('click', () => {
+      initAudio();
+      document.getElementById('audio-gate').classList.add('fade-out');
+      
+      // Spawn initial hadrons
+      spawnPresetMeson();
+      spawnPresetBaryon(250, 300);
+      spawnPresetBaryon(550, 450);
+    });
+
+    // ----------------------------------------------------
+    // Physics and Simulation Engine
+    // ----------------------------------------------------
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Make canvas retina-ready
+    const resizeCanvas = () => {
+      const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.85, 700);
+      canvas.width = size * window.devicePixelRatio;
+      canvas.height = size * window.devicePixelRatio;
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    };
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Simulation parameters
+    let temperature = 150; // MeV
+    let stringTension = 1.0; // GeV/fm (scales color string potential)
+    let strongCoupling = 0.12; // scales short range coulomb-like attraction
+    let quarkMassSetting = 0; // 0: light (u/d), 1: strange, 2: heavy
+    let isDeconfined = false;
+
+    // Globals
+    let particles = [];
+    let hadrons = [];
+    let nextId = 1;
+    let snapCount = 0;
+    let draggedParticle = null;
+    let mouse = { x: 0, y: 0, down: false };
+    
+    // Quark visual representation
+    // Color charge 2D representations in color-space to facilitate dot-product calculations
+    const COLORS = [
+      { name: 'Red', vector: [1, 0], glow: '#ff007f' },
+      { name: 'Green', vector: [-0.5, Math.sqrt(3)/2], glow: '#00ffaa' },
+      { name: 'Blue', vector: [-0.5, -Math.sqrt(3)/2], glow: '#00f3ff' },
+      { name: 'Anti-Red', vector: [-1, 0], glow: '#00ffff' },      // Cyan
+      { name: 'Anti-Green', vector: [0.5, -Math.sqrt(3)/2], glow: '#ff00ff' }, // Magenta
+      { name: 'Anti-Blue', vector: [0.5, Math.sqrt(3)/2], glow: '#ffff00' }   // Yellow
+    ];
+
+    // Helper functions
+    const dist = (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+    const getMass = () => {
+      if (quarkMassSetting === 0) return 1.0; // Up/down
+      if (quarkMassSetting === 1) return 4.5; // Strange
+      return 15.0; // Heavy (charm/bottom)
+    };
+
+    const getQuarkRadius = (mass) => {
+      return 10 + Math.sqrt(mass) * 2;
+    };
+
+    // Create particle
+    const createParticle = (x, y, isAntiquark = false, flavor = 'u') => {
+      const mass = getMass();
+      const p = {
+        id: nextId++,
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * temperature * 0.1,
+        vy: (Math.random() - 0.5) * temperature * 0.1,
+        fx: 0,
+        fy: 0,
+        mass: mass,
+        isAntiquark: isAntiquark,
+        flavor: flavor,
+        colorIdx: Math.floor(Math.random() * 3), // Starts as R, G, or B (or anti)
+        isDragged: false
+      };
+      particles.push(p);
+      return p;
+    };
+
+    // Preset Spawns
+    const spawnPresetMeson = (x, y) => {
+      const cx = x || canvas.width / (2 * window.devicePixelRatio) + (Math.random() - 0.5) * 100;
+      const cy = y || canvas.height / (2 * window.devicePixelRatio) + (Math.random() - 0.5) * 100;
+      
+      const q = createParticle(cx - 30, cy, false);
+      const aq = createParticle(cx + 30, cy, true);
+      
+      // Make colors match
+      const col = Math.floor(Math.random() * 3);
+      q.colorIdx = col;
+      aq.colorIdx = col;
+      
+      if (!isDeconfined) {
+        hadrons.push({
+          type: 'meson',
+          q1: q,
+          q2: aq
+        });
+      }
+    };
+
+    const spawnPresetBaryon = (x, y, isAnti = false) => {
+      const cx = x || canvas.width / (2 * window.devicePixelRatio) + (Math.random() - 0.5) * 100;
+      const cy = y || canvas.height / (2 * window.devicePixelRatio) + (Math.random() - 0.5) * 100;
+      
+      const q1 = createParticle(cx, cy - 35, isAnti);
+      const q2 = createParticle(cx - 30, cy + 20, isAnti);
+      const q3 = createParticle(cx + 30, cy + 20, isAnti);
+      
+      // Assign RGB distinct colors
+      q1.colorIdx = 0;
+      q2.colorIdx = 1;
+      q3.colorIdx = 2;
+      
+      if (!isDeconfined) {
+        hadrons.push({
+          type: isAnti ? 'antibaryon' : 'baryon',
+          q1: q1,
+          q2: q2,
+          q3: q3,
+          jx: cx,
+          jy: cy
+        });
+      }
+    };
+
+    // Hadronizer pairing algorithm on freeze-out
+    const hadronize = () => {
+      hadrons = [];
+      let available = [...particles];
+      if (available.length === 0) return;
+
+      let quarks = available.filter(p => !p.isAntiquark);
+      let antiquarks = available.filter(p => p.isAntiquark);
+      
+      let pairedQ = new Set();
+      let pairedAq = new Set();
+
+      // 1. Pair Mesons (quarks + antiquarks)
+      for (let q of quarks) {
+        let bestAq = null;
+        let minDist = Infinity;
+        for (let aq of antiquarks) {
+          if (pairedAq.has(aq)) continue;
+          let d = dist(q, aq);
+          if (d < minDist) {
+            minDist = d;
+            bestAq = aq;
+          }
+        }
+        if (bestAq && minDist < 280) {
+          pairedQ.add(q);
+          pairedAq.add(bestAq);
+          
+          const col = Math.floor(Math.random() * 3);
+          q.colorIdx = col;
+          bestAq.colorIdx = col;
+
+          hadrons.push({
+            type: 'meson',
+            q1: q,
+            q2: bestAq
+          });
+        }
+      }
+
+      // Filter paired
+      quarks = quarks.filter(q => !pairedQ.has(q));
+      antiquarks = antiquarks.filter(aq => !pairedAq.has(aq));
+
+      // 2. Pair Baryons (qqq)
+      while (quarks.length >= 3) {
+        const q1 = quarks.pop();
+        
+        let q2 = null;
+        let minDist2 = Infinity;
+        for (let q of quarks) {
+          let d = dist(q1, q);
+          if (d < minDist2) {
+            minDist2 = d;
+            q2 = q;
+          }
+        }
+        quarks = quarks.filter(q => q !== q2);
+
+        let q3 = null;
+        let minDist3 = Infinity;
+        for (let q of quarks) {
+          let d = dist(q1, q) + dist(q2, q);
+          if (d < minDist3) {
+            minDist3 = d;
+            q3 = q;
+          }
+        }
+        quarks = quarks.filter(q => q !== q3);
+
+        if (q1 && q2 && q3) {
+          q1.colorIdx = 0;
+          q2.colorIdx = 1;
+          q3.colorIdx = 2;
+          hadrons.push({
+            type: 'baryon',
+            q1: q1,
+            q2: q2,
+            q3: q3,
+            jx: (q1.x + q2.x + q3.x)/3,
+            jy: (q1.y + q2.y + q3.y)/3
+          });
+        }
+      }
+
+      // 3. Pair Antibaryons (anti-qqq)
+      while (antiquarks.length >= 3) {
+        const aq1 = antiquarks.pop();
+        
+        let aq2 = null;
+        let minDist2 = Infinity;
+        for (let aq of antiquarks) {
+          let d = dist(aq1, aq);
+          if (d < minDist2) {
+            minDist2 = d;
+            aq2 = aq;
+          }
+        }
+        antiquarks = antiquarks.filter(aq => aq !== aq2);
+
+        let aq3 = null;
+        let minDist3 = Infinity;
+        for (let aq of antiquarks) {
+          let d = dist(aq1, aq) + dist(aq2, aq);
+          if (d < minDist3) {
+            minDist3 = d;
+            aq3 = aq;
+          }
+        }
+        antiquarks = antiquarks.filter(aq => aq !== aq3);
+
+        if (aq1 && aq2 && aq3) {
+          aq1.colorIdx = 0;
+          aq2.colorIdx = 1;
+          aq3.colorIdx = 2;
+          hadrons.push({
+            type: 'antibaryon',
+            q1: aq1,
+            q2: aq2,
+            q3: aq3,
+            jx: (aq1.x + aq2.x + aq3.x)/3,
+            jy: (aq1.y + aq2.y + aq3.y)/3
+          });
+        }
+      }
+
+      // 4. Force vacuum pair production to neutralize any remaining unconfined quarks
+      quarks.forEach(q => {
+        const aq = createParticle(q.x + (Math.random() - 0.5) * 30, q.y + (Math.random() - 0.5) * 30, true);
+        const col = Math.floor(Math.random() * 3);
+        q.colorIdx = col;
+        aq.colorIdx = col;
+        hadrons.push({
+          type: 'meson',
+          q1: q,
+          q2: aq
+        });
+      });
+
+      antiquarks.forEach(aq => {
+        const q = createParticle(aq.x + (Math.random() - 0.5) * 30, aq.y + (Math.random() - 0.5) * 30, false);
+        const col = Math.floor(Math.random() * 3);
+        q.colorIdx = col;
+        aq.colorIdx = col;
+        hadrons.push({
+          type: 'meson',
+          q1: q,
+          q2: aq
+        });
+      });
+    };
+
+    // Physics Engine Update
+    const updatePhysics = () => {
+      const width = canvas.width / window.devicePixelRatio;
+      const height = canvas.height / window.devicePixelRatio;
+
+      // 1. Reset forces & thermal bounce
+      particles.forEach(p => {
+        p.fx = 0;
+        p.fy = 0;
+
+        // Apply thermal jitter (Brownian motion based on Temperature)
+        const jitter = Math.sqrt(temperature) * 0.25;
+        p.fx += (Math.random() - 0.5) * jitter;
+        p.fy += (Math.random() - 0.5) * jitter;
+
+        // Drag/viscosity to maintain thermal equilibrium
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+      });
+
+      // 2. Calculate strong force interaction fields
+      if (isDeconfined) {
+        // Hot Quark-Gluon Plasma: Screened Debye potential (quarks roam freely)
+        const screeningMass = 0.05 + (temperature - 170) * 0.0005; // screening increases with temp
+        
+        for (let i = 0; i < particles.length; i++) {
+          const pi = particles[i];
+          const ci = COLORS[pi.colorIdx + (pi.isAntiquark ? 3 : 0)].vector;
+
+          for (let j = i + 1; j < particles.length; j++) {
+            const pj = particles[j];
+            const cj = COLORS[pj.colorIdx + (pj.isAntiquark ? 3 : 0)].vector;
+
+            const dx = pj.x - pi.x;
+            const dy = pj.y - pi.y;
+            const r = Math.hypot(dx, dy) || 0.1;
+
+            // Gell-mann color algebra dot product (like repels, opposite attracts)
+            const colorDot = ci[0]*cj[0] + ci[1]*cj[1];
+
+            // Debye screened potential: F = C * (alpha/r^2) * e^(-mu * r)
+            const coulomb = (strongCoupling * 10) / (r * r);
+            const debyeFactor = Math.exp(-screeningMass * r);
+            
+            // Hard repulsive core at close range to prevent collapse
+            const coreRepulsion = 1000 / Math.pow(r, 6);
+
+            const fForce = colorDot * coulomb * debyeFactor - coreRepulsion;
+            
+            const fx = (dx / r) * fForce;
+            const fy = (dy / r) * fForce;
+
+            pi.fx += fx;
+            pi.fy += fy;
+            pj.fx -= fx;
+            pj.fy -= fy;
+          }
+        }
+      } else {
+        // Cold Confinement: Dynamic Cornell string tubes
+        let newHadrons = [];
+        let brokenStrings = false;
+
+        hadrons.forEach(h => {
+          if (h.type === 'meson') {
+            const dx = h.q2.x - h.q1.x;
+            const dy = h.q2.y - h.q1.y;
+            const r = Math.hypot(dx, dy) || 0.1;
+
+            if (r > 240 + Math.random()*40) { // snap limit
+              // STRING SNAPS! vacuum pair production
+              brokenStrings = true;
+              snapCount++;
+              
+              // Spawning coordinates
+              const mx = (h.q1.x + h.q2.x) / 2;
+              const my = (h.q1.y + h.q2.y) / 2;
+              
+              const qNew = createParticle(mx, my, false); // new quark
+              const aqNew = createParticle(mx, my, true); // new antiquark
+              
+              // Push them apart slightly to visual separation
+              const nx = -dy / r;
+              const ny = dx / r;
+              qNew.x += nx * 10; qNew.y += ny * 10;
+              aqNew.x -= nx * 10; aqNew.y -= ny * 10;
+
+              // Assign complementary color matching
+              const originalColor = h.q1.colorIdx;
+              const newColor = (originalColor + 1) % 3; // pick a different color for the new pair
+
+              h.q1.colorIdx = newColor;
+              aqNew.colorIdx = newColor; // Meson A: q1 + aqNew (now color neutral)
+
+              qNew.colorIdx = originalColor; // Meson B: qNew + q2 (now color neutral)
+              
+              newHadrons.push({ type: 'meson', q1: h.q1, q2: aqNew });
+              newHadrons.push({ type: 'meson', q1: qNew, q2: h.q2 });
+              
+              triggerSnapSound(1.0);
+              createParticleBurst(mx, my);
+            } else {
+              // Cornell Force: F = -alpha/r^2 - sigma + core_repulsion
+              const coulomb = (strongCoupling * 10) / (r * r);
+              const linearString = stringTension * 0.15;
+              const core = 800 / Math.pow(r, 6);
+
+              const forceMag = -coulomb - linearString + core;
+
+              const fx = (dx / r) * forceMag;
+              const fy = (dy / r) * forceMag;
+
+              h.q1.fx -= fx;
+              h.q1.fy -= fy;
+              h.q2.fx += fx;
+              h.q2.fy += fy;
+
+              newHadrons.push(h);
+            }
+          } else if (h.type === 'baryon' || h.type === 'antibaryon') {
+            // Virtual junction update (center of mass of the three valence quarks)
+            h.jx = (h.q1.x + h.q2.x + h.q3.x) / 3;
+            h.jy = (h.q1.y + h.q2.y + h.q3.y) / 3;
+
+            const r1 = dist(h.q1, { x: h.jx, y: h.jy }) || 0.1;
+            const r2 = dist(h.q2, { x: h.jx, y: h.jy }) || 0.1;
+            const r3 = dist(h.q3, { x: h.jx, y: h.jy }) || 0.1;
+
+            const snapLimit = 220;
+
+            if (r1 > snapLimit || r2 > snapLimit || r3 > snapLimit) {
+              // String breaks! One quark flies off as a meson, baryon repairs itself
+              brokenStrings = true;
+              snapCount++;
+
+              let snappedQuark = h.q1;
+              let rSnapped = r1;
+              let qCode = 1;
+              
+              if (r2 > rSnapped) { snappedQuark = h.q2; rSnapped = r2; qCode = 2; }
+              if (r3 > rSnapped) { snappedQuark = h.q3; rSnapped = r3; qCode = 3; }
+
+              // Create a pair at string midpoint
+              const mx = (snappedQuark.x + h.jx) / 2;
+              const my = (snappedQuark.y + h.jy) / 2;
+
+              const isAnti = h.type === 'antibaryon';
+              const qNew = createParticle(mx, my, isAnti); // quark replacements
+              const aqNew = createParticle(mx, my, !isAnti); // antiquark partner
+
+              // Snapped quark forms a Meson with the new antiquark partner
+              const mesonColor = Math.floor(Math.random() * 3);
+              snappedQuark.colorIdx = mesonColor;
+              aqNew.colorIdx = mesonColor;
+
+              newHadrons.push({
+                type: 'meson',
+                q1: isAnti ? aqNew : snappedQuark,
+                q2: isAnti ? snappedQuark : aqNew
+              });
+
+              // Repair baryon with the new quark replacement
+              const remainingQuarks = [];
+              if (qCode !== 1) remainingQuarks.push(h.q1);
+              if (qCode !== 2) remainingQuarks.push(h.q2);
+              if (qCode !== 3) remainingQuarks.push(h.q3);
+              
+              // Set replacement color to restore RGB color singlet
+              const missingColorIdx = 3 - (remainingQuarks[0].colorIdx + remainingQuarks[1].colorIdx);
+              qNew.colorIdx = missingColorIdx;
+
+              newHadrons.push({
+                type: h.type,
+                q1: remainingQuarks[0],
+                q2: remainingQuarks[1],
+                q3: qNew,
+                jx: h.jx,
+                jy: h.jy
+              });
+
+              triggerSnapSound(1.0);
+              createParticleBurst(mx, my);
+            } else {
+              // Apply pulls towards central junction
+              const pullQuark = (q, r) => {
+                const dx = h.jx - q.x;
+                const dy = h.jy - q.y;
+                const forceMag = (strongCoupling * 5) / (r * r) + stringTension * 0.15;
+                q.fx += (dx / r) * forceMag;
+                q.fy += (dy / r) * forceMag;
+              };
+
+              pullQuark(h.q1, r1);
+              pullQuark(h.q2, r2);
+              pullQuark(h.q3, r3);
+
+              // Pairwise mutual repulsion inside baryon to prevent collapse
+              const repel = (qa, qb) => {
+                const dx = qb.x - qa.x;
+                const dy = qb.y - qa.y;
+                const r = Math.hypot(dx, dy) || 0.1;
+                const rep = 800 / Math.pow(r, 6);
+                qa.fx -= (dx / r) * rep;
+                qa.fy -= (dy / r) * rep;
+                qb.fx += (dx / r) * rep;
+                qb.fy += (dy / r) * rep;
+              };
+              repel(h.q1, h.q2);
+              repel(h.q2, h.q3);
+              repel(h.q3, h.q1);
+
+              newHadrons.push(h);
             }
           }
-          function draw() {
-            const el = document.getElementById('grid');
-            el.innerHTML = '';
-            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {
-              const cell = document.createElement('div');
-              cell.className = 'cell';
-              if(grid[r][c] > 0) {
-                cell.innerText = grid[r][c];
-                cell.setAttribute('data-value', grid[r][c]);
-              }
-              el.appendChild(cell);
+        });
+        hadrons = newHadrons;
+      }
+
+      // 3. Move particles & boundary box collisions
+      particles.forEach(p => {
+        // Dragging override
+        if (p.isDragged) {
+          p.x = mouse.x;
+          p.y = mouse.y;
+          p.vx = 0;
+          p.vy = 0;
+          return;
+        }
+
+        // F = ma -> a = F/m
+        const ax = p.fx / p.mass;
+        const ay = p.fy / p.mass;
+
+        p.vx += ax;
+        p.vy += ay;
+        
+        // Speed cap
+        const speed = Math.hypot(p.vx, p.vy);
+        const maxSpeed = 15;
+        if (speed > maxSpeed) {
+          p.vx = (p.vx / speed) * maxSpeed;
+          p.vy = (p.vy / speed) * maxSpeed;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Container boundary checks
+        const r = getQuarkRadius(p.mass);
+        const boundaryDamp = -0.6;
+        if (p.x < r) { p.x = r; p.vx *= boundaryDamp; }
+        if (p.x > width - r) { p.x = width - r; p.vx *= boundaryDamp; }
+        if (p.y < r) { p.y = r; p.vy *= boundaryDamp; }
+        if (p.y > height - r) { p.y = height - r; p.vy *= boundaryDamp; }
+      });
+    };
+
+    // ----------------------------------------------------
+    // Graphics Rendering Engine
+    // ----------------------------------------------------
+    let snapBursts = [];
+
+    const createParticleBurst = (x, y) => {
+      const burst = [];
+      for (let i = 0; i < 20; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 4;
+        burst.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1.0,
+          decay: 0.03 + Math.random() * 0.03,
+          color: Math.random() > 0.5 ? 'var(--neon-green)' : 'var(--neon-magenta)'
+        });
+      }
+      snapBursts.push(burst);
+    };
+
+    const updateBursts = () => {
+      snapBursts.forEach(b => {
+        b.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= p.decay;
+        });
+      });
+      snapBursts = snapBursts.filter(b => b.some(p => p.life > 0));
+    };
+
+    // Render background grid
+    const drawGrid = (width, height) => {
+      const step = 40;
+      ctx.strokeStyle = 'rgba(0, 255, 170, 0.03)';
+      ctx.lineWidth = 1;
+
+      // Vertical lines
+      for (let x = 0; x < width; x += step) {
+        ctx.beginPath();
+        for (let y = 0; y < height; y += 15) {
+          // Space bending calculation based on nearby quarks
+          let ox = 0;
+          particles.forEach(p => {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            const dist = Math.hypot(dx, dy) || 1;
+            if (dist < 120) {
+              const pull = (120 - dist) * 0.08;
+              ox += (dx / dist) * pull;
             }
-            document.getElementById('score').innerText = score;
+          });
+
+          if (y === 0) ctx.moveTo(x + ox, y);
+          else ctx.lineTo(x + ox, y);
+        }
+        ctx.stroke();
+      }
+
+      // Horizontal lines
+      for (let y = 0; y < height; y += step) {
+        ctx.beginPath();
+        for (let x = 0; x < width; x += 15) {
+          let oy = 0;
+          particles.forEach(p => {
+            const dx = p.x - x;
+            const dy = p.y - y;
+            const dist = Math.hypot(dx, dy) || 1;
+            if (dist < 120) {
+              const pull = (120 - dist) * 0.08;
+              oy += (dy / dist) * pull;
+            }
+          });
+
+          if (x === 0) ctx.moveTo(x, y + oy);
+          else ctx.lineTo(x, y + oy);
+        }
+        ctx.stroke();
+      }
+    };
+
+    // Render loop
+    const render = () => {
+      const width = canvas.width / window.devicePixelRatio;
+      const height = canvas.height / window.devicePixelRatio;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Background
+      drawGrid(width, height);
+
+      // 1. Draw glowing color flux tubes
+      if (!isDeconfined) {
+        hadrons.forEach(h => {
+          ctx.shadowBlur = 10;
+          
+          if (h.type === 'meson') {
+            const glow = COLORS[h.q1.colorIdx].glow;
+            ctx.shadowColor = glow;
+            ctx.strokeStyle = glow;
+            ctx.lineWidth = 3;
+
+            // Draw vibrating string
+            ctx.beginPath();
+            const dx = h.q2.x - h.q1.x;
+            const dy = h.q2.y - h.q1.y;
+            const r = Math.hypot(dx, dy);
+            const steps = 20;
+            
+            // Vibration parameters
+            const amp = Math.min((r / 200) * 8, 12); // increases with tension
+            const freq = 0.15;
+            
+            for (let i = 0; i <= steps; i++) {
+              const t = i / steps;
+              const x = h.q1.x + dx * t;
+              const y = h.q1.y + dy * t;
+              
+              // Standing wave offset
+              const offset = Math.sin(t * Math.PI) * Math.sin(Date.now() * freq + r * 0.05) * amp;
+              const nx = -dy / r;
+              const ny = dx / r;
+              
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x + nx * offset, y + ny * offset);
+            }
+            ctx.stroke();
+          } else if (h.type === 'baryon' || h.type === 'antibaryon') {
+            // Draw Y-junction strings
+            const drawLeg = (q, jx, jy) => {
+              const glow = COLORS[q.colorIdx].glow;
+              ctx.shadowColor = glow;
+              ctx.strokeStyle = glow;
+              ctx.lineWidth = 2.5;
+
+              ctx.beginPath();
+              const dx = jx - q.x;
+              const dy = jy - q.y;
+              const r = Math.hypot(dx, dy);
+              const steps = 15;
+              const amp = Math.min((r / 100) * 4, 8);
+              
+              for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const x = q.x + dx * t;
+                const y = q.y + dy * t;
+                
+                const offset = Math.sin(t * Math.PI) * Math.sin(Date.now() * 0.2 + r * 0.08) * amp;
+                const nx = -dy / r;
+                const ny = dx / r;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x + nx * offset, y + ny * offset);
+              }
+              ctx.stroke();
+            };
+
+            drawLeg(h.q1, h.jx, h.jy);
+            drawLeg(h.q2, h.jx, h.jy);
+            drawLeg(h.q3, h.jx, h.jy);
+
+            // Draw junction node
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(h.jx, h.jy, 4, 0, Math.PI*2);
+            ctx.fill();
           }
-          function slide(row) {
-            let arr = row.filter(v => v > 0);
-            for(let i=0; i<arr.length-1; i++) {
-              if(arr[i] === arr[i+1]) {
-                arr[i] *= 2; score += arr[i]; arr.splice(i+1, 1);
-              }
-            }
-            while(arr.length < 4) arr.push(0);
-            return arr;
-          }
-          window.onkeydown = e => {
-            let old = JSON.stringify(grid);
-            if(e.key === 'ArrowLeft') grid = grid.map(r => slide(r));
-            else if(e.key === 'ArrowRight') grid = grid.map(r => slide(r.reverse()).reverse());
-            else if(e.key === 'ArrowUp') {
-              for(let c=0; c<4; c++) {
-                let col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
-                col = slide(col);
-                for(let r=0; r<4; r++) grid[r][c] = col[r];
-              }
-            } else if(e.key === 'ArrowDown') {
-              for(let c=0; c<4; c++) {
-                let col = [grid[3][c], grid[2][c], grid[1][c], grid[0][c]];
-                col = slide(col);
-                for(let r=0; r<4; r++) grid[3-r][c] = col[r];
-              }
-            }
-            if(old !== JSON.stringify(grid)) { spawn(); draw(); }
-          };
-          spawn(); spawn(); draw();
-        </script>
-        <br><br><a href="../index.html" style="color:#776e65;">[back to home]</a>
-        </body></html>
+        });
+      }
+
+      // Reset shadows for particles
+      ctx.shadowBlur = 0;
+
+      // 2. Draw quarks & antiquarks
+      particles.forEach(p => {
+        const r = getQuarkRadius(p.mass);
+        const colorCfg = COLORS[p.colorIdx + (p.isAntiquark ? 3 : 0)];
+
+        // Draw outer glow glow
+        ctx.shadowBlur = p.isDragged ? 20 : 12;
+        ctx.shadowColor = colorCfg.glow;
+
+        ctx.fillStyle = colorCfg.glow;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Overlay texture / borders
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 2;
+        
+        if (p.isAntiquark) {
+          // Antiquark border: dashed
+          ctx.strokeStyle = '#ffffff';
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          
+          // Anti-bar letter overlay
+          ctx.fillStyle = '#000000';
+          ctx.font = `bold ${r * 0.9}px 'Share Tech Mono', monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`\u0304${p.flavor}`, p.x, p.y);
+        } else {
+          // Quark border: solid
+          ctx.strokeStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Flavor letter overlay
+          ctx.fillStyle = '#000000';
+          ctx.font = `bold ${r * 0.9}px 'Share Tech Mono', monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.flavor, p.x, p.y);
+        }
+      });
+
+      // 3. Draw snap bursts
+      snapBursts.forEach(b => {
+        b.forEach(p => {
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.life;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+      ctx.globalAlpha = 1.0; // Reset alpha
+    };
+
+    // Main game loop
+    const loop = () => {
+      updatePhysics();
+      updateBursts();
+      render();
+      updateTelemetry();
+      requestAnimationFrame(loop);
+    };
+
+    // ----------------------------------------------------
+    // Telemetry and UI management
+    // ----------------------------------------------------
+    const updateTelemetry = () => {
+      document.getElementById('total-quarks').innerText = particles.length;
+      document.getElementById('snap-count').innerText = snapCount;
+      
+      let mesons = 0;
+      let baryons = 0;
+      hadrons.forEach(h => {
+        if (h.type === 'meson') mesons++;
+        else baryons++;
+      });
+      
+      document.getElementById('meson-count').innerText = mesons;
+      document.getElementById('baryon-count').innerText = baryons;
+      document.getElementById('string-count').innerText = isDeconfined ? 0 : (mesons + baryons * 3);
+
+      const statusEl = document.getElementById('confinement-status');
+      if (isDeconfined) {
+        statusEl.innerText = 'DECONFINED (QGP)';
+        statusEl.className = 'telemetry-value alert';
+      } else {
+        statusEl.innerText = 'CONFINED';
+        statusEl.className = 'telemetry-value good';
+      }
+    };
+
+    // Sliders
+    const tempSlider = document.getElementById('temp-slider');
+    tempSlider.addEventListener('input', (e) => {
+      temperature = parseInt(e.target.value);
+      document.getElementById('temp-val').innerText = `${temperature} MeV`;
+      
+      // Confinement trigger threshold (Tc ~ 170 MeV)
+      const prevDeconfined = isDeconfined;
+      isDeconfined = temperature >= 170;
+      
+      if (prevDeconfined && !isDeconfined) {
+        // Freeze out: re-hadronize
+        hadronize();
+      } else if (!prevDeconfined && isDeconfined) {
+        // Deconfine: dissolve strings
+        hadrons = [];
+      }
+    });
+
+    const tensionSlider = document.getElementById('tension-slider');
+    tensionSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value) / 10;
+      stringTension = val;
+      document.getElementById('tension-val').innerText = `${val.toFixed(1)} GeV/fm`;
+    });
+
+    const couplingSlider = document.getElementById('coupling-slider');
+    couplingSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value) / 100;
+      strongCoupling = val;
+      document.getElementById('coupling-val').innerText = `${val.toFixed(2)}`;
+    });
+
+    const massSlider = document.getElementById('mass-slider');
+    massSlider.addEventListener('input', (e) => {
+      quarkMassSetting = parseInt(e.target.value);
+      let label = "up/down (light)";
+      if (quarkMassSetting === 1) label = "strange (medium)";
+      else if (quarkMassSetting === 2) label = "heavy (charm/bottom)";
+      document.getElementById('mass-val').innerText = label;
+      
+      // Update all existing particle masses
+      particles.forEach(p => {
+        p.mass = getMass();
+      });
+    });
+
+    // Buttons
+    document.getElementById('spawn-meson').addEventListener('click', () => spawnPresetMeson());
+    document.getElementById('spawn-baryon').addEventListener('click', () => spawnPresetBaryon(null, null, false));
+    document.getElementById('spawn-antibaryon').addEventListener('click', () => spawnPresetBaryon(null, null, true));
+    
+    document.getElementById('inject-energy').addEventListener('click', () => {
+      // Dump a bunch of velocity/heating into quarks
+      particles.forEach(p => {
+        p.vx += (Math.random() - 0.5) * 40;
+        p.vy += (Math.random() - 0.5) * 40;
+      });
+      triggerSnapSound(0.7);
+    });
+
+    document.getElementById('clear-chamber').addEventListener('click', () => {
+      particles = [];
+      hadrons = [];
+      snapCount = 0;
+    });
+
+    // ----------------------------------------------------
+    // User Mouse Drag Interaction
+    // ----------------------------------------------------
+    const getMouseCoords = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / window.devicePixelRatio / rect.width;
+      const scaleY = canvas.height / window.devicePixelRatio / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    };
+
+    const handleMouseDown = (coords) => {
+      mouse.down = true;
+      
+      // Find nearest particle
+      let bestP = null;
+      let minDist = 25; // Drag threshold radius
+      
+      particles.forEach(p => {
+        const d = dist(coords, p);
+        if (d < minDist) {
+          minDist = d;
+          bestP = p;
+        }
+      });
+
+      if (bestP) {
+        draggedParticle = bestP;
+        draggedParticle.isDragged = true;
+      }
+    };
+
+    const handleMouseMove = (coords) => {
+      mouse.x = coords.x;
+      mouse.y = coords.y;
+    };
+
+    const handleMouseUp = () => {
+      if (draggedParticle) {
+        draggedParticle.isDragged = false;
+        draggedParticle = null;
+      }
+      mouse.down = false;
+    };
+
+    // Mouse Listeners
+    canvas.addEventListener('mousedown', (e) => {
+      handleMouseDown(getMouseCoords(e));
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      handleMouseMove(getMouseCoords(e));
+    });
+    window.addEventListener('mouseup', handleMouseUp);
+
+    // Touch Listeners (Mobile compatibility)
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        handleMouseDown(getMouseCoords(e.touches[0]));
+      }
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        handleMouseMove(getMouseCoords(e.touches[0]));
+      }
+    });
+    window.addEventListener('touchend', handleMouseUp);
+
+    // Start Simulation
+    loop();
+
+  </script>
+</body>
+</html>
