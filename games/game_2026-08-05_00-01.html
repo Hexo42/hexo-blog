@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tokamak-flow // magnetic confinement fusion sandbox</title>
+  <meta name="description" content="an interactive physics sandbox simulating plasma confinement, deuterium-tritium fusion, neutral beam heating, and magnetic magnetohydrodynamic instabilities inside a tokamak.">
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #020206;
+      --panel-bg: rgba(6, 6, 15, 0.85);
+      --border: rgba(0, 243, 255, 0.15);
+      --border-focus: rgba(0, 243, 255, 0.4);
+      --neon-blue: #00d2ff;
+      --neon-pink: #ff007f;
+      --neon-green: #00ff66;
+      --neon-yellow: #ffff00;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --panel-width: 320px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex-grow: 1;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #060b1c 0%, #000002 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#simulation-canvas {
+      display: block;
+      width: min(85vw, 85vh);
+      height: min(85vw, 85vh);
+      box-shadow: 0 0 60px rgba(0, 210, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: crosshair;
+      background: #000000;
+    }
+
+    /* Floating Panels */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(0, 210, 255, 0.25);
+      box-shadow: 0 10px 40px rgba(0, 210, 255, 0.04);
+    }
+
+    #left-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #right-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: var(--panel-width);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Scrollbar styling for panels */
+    .glass-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+    .glass-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Typography */
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      font-size: 0.65rem;
+      color: var(--neon-blue);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text);
+      border-left: 2px solid var(--neon-blue);
+      padding-left: 8px;
+      margin-bottom: 12px;
+    }
+
+    p.description {
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* UI Elements */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .slider-label {
+      color: var(--text);
+    }
+
+    .slider-value {
+      color: var(--neon-blue);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-blue);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-blue);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Button and Button Group */
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      background: rgba(0, 210, 255, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: rgba(0, 210, 255, 0.2);
+      border-color: var(--neon-blue);
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.15);
+    }
+
+    button.active {
+      background: var(--neon-blue);
+      color: #000;
+      border-color: var(--neon-blue);
+      box-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
+    }
+
+    button.danger-btn {
+      background: rgba(255, 0, 127, 0.08);
+      border-color: rgba(255, 0, 127, 0.2);
+    }
+    button.danger-btn:hover {
+      background: rgba(255, 0, 127, 0.2);
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.15);
+    }
+
+    /* Stats Display */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .stat-value {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.15rem;
+      font-weight: bold;
+      color: var(--text);
+    }
+
+    .stat-value.highlight-blue { color: var(--neon-blue); }
+    .stat-value.highlight-pink { color: var(--neon-pink); }
+    .stat-value.highlight-green { color: var(--neon-green); }
+
+    /* Diagnostic Plots */
+    .diagnostic-panel {
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    .diagnostic-title {
+      font-size: 0.7rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    canvas.diagnostic-canvas {
+      display: block;
+      width: 100%;
+      height: 60px;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+
+    /* Info Items */
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+    }
+
+    .legend-color {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    #back-home {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-blue);
+      text-decoration: none;
+      z-index: 100;
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      padding: 6px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    #back-home:hover {
+      border-color: var(--neon-blue);
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+      color: #fff;
+    }
+
+    .warning-alert {
+      background: rgba(255, 0, 127, 0.1);
+      border: 1px solid rgba(255, 0, 127, 0.3);
+      color: var(--neon-pink);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-family: 'Share Tech Mono', monospace;
+      margin-top: 8px;
+      display: none;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      100% { opacity: 1.0; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    <a href="../index.html" id="back-home">&lt;&lt; BACK TO WEB-SPACE</a>
+
+    <!-- Left Panel: Controls -->
+    <div id="left-panel" class="glass-panel">
+      <div>
+        <h1>TOKAMAK-FLOW</h1>
+        <div class="tagline">magnetic confinement fusion</div>
+        <p class="description">
+          interactive simulator modeling plasma particles in a D-shaped magnetic toroidal chamber. heat the fuel, pump magnets, and manage plasma stability to reach ignition.
+        </p>
+      </div>
+
+      <div>
+        <h2>:: magnets & field ::</h2>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Toroidal Field (Coils)</span>
+            <span class="slider-value" id="val-bt">3.5 T</span>
+          </div>
+          <input type="range" id="input-bt" min="0.5" max="6.0" step="0.1" value="3.5">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Poloidal Field (Current)</span>
+            <span class="slider-value" id="val-bp">1.2 MA</span>
+          </div>
+          <input type="range" id="input-bp" min="0.1" max="3.0" step="0.05" value="1.2">
+        </div>
+      </div>
+
+      <div>
+        <h2>:: auxiliary heating ::</h2>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Neutral Beam Injection</span>
+            <span class="slider-value" id="val-nbi">10 MW</span>
+          </div>
+          <input type="range" id="input-nbi" min="0" max="30" step="1" value="10">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Radiofrequency Waves</span>
+            <span class="slider-value" id="val-rf">5 MW</span>
+          </div>
+          <input type="range" id="input-rf" min="0" max="20" step="1" value="5">
+        </div>
+      </div>
+
+      <div>
+        <h2>:: fueling & setup ::</h2>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Fuel Gas Puff Rate</span>
+            <span class="slider-value" id="val-puff">Medium</span>
+          </div>
+          <input type="range" id="input-puff" min="0" max="2" step="1" value="1">
+        </div>
+
+        <div class="control-group font-mono">
+          <span style="font-size:0.75rem; color:var(--text-muted); margin-bottom: 2px;">D / T fuel ratio:</span>
+          <div class="btn-group">
+            <button id="btn-ratio-50" class="active">50:50 DT</button>
+            <button id="btn-ratio-pure">Pure D</button>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button id="btn-audio">Mute Audio</button>
+          <button id="btn-reset" class="danger-btn">Reset Core</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Canvas -->
+    <div id="canvas-container">
+      <canvas id="simulation-canvas"></canvas>
+    </div>
+
+    <!-- Right Panel: Statistics & Diagnostics -->
+    <div id="right-panel" class="glass-panel">
+      <div>
+        <h2>:: core diagnostics ::</h2>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-label">Core Temp</span>
+            <span class="stat-value highlight-pink" id="stat-temp">15.2 keV</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Plasma Density</span>
+            <span class="stat-value highlight-blue" id="stat-density">0.98 n₂₀</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Confinement (τ_E)</span>
+            <span class="stat-value highlight-green" id="stat-confinement">185 ms</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Fusion Q-factor</span>
+            <span class="stat-value" id="stat-q">0.18</span>
+          </div>
+        </div>
+
+        <div class="stat-box" style="margin-top:8px;">
+          <span class="stat-label">Thermal Fusion Power</span>
+          <span class="stat-value highlight-yellow" style="font-size:1.4rem;" id="stat-power">0.00 MW</span>
+        </div>
+
+        <div class="warning-alert" id="instability-warning">
+          WARNING: PLASMA INSTABILITY HIGH // MHD PRESSURE LIMIT EXCEEDED
+        </div>
+      </div>
+
+      <div>
+        <h2>:: profiles & stability ::</h2>
+        
+        <div class="diagnostic-panel">
+          <div class="diagnostic-title">
+            <span>Radial Temp Profile</span>
+            <span id="diagnostic-max-temp">15.2 keV</span>
+          </div>
+          <canvas class="diagnostic-canvas" id="canvas-profile-temp"></canvas>
+        </div>
+
+        <div class="diagnostic-panel">
+          <div class="diagnostic-title">
+            <span>Magnetic Surfaces & Beta</span>
+            <span id="diagnostic-beta">β = 2.8%</span>
+          </div>
+          <canvas class="diagnostic-canvas" id="canvas-profile-beta"></canvas>
+        </div>
+      </div>
+
+      <div>
+        <h2>:: particle key ::</h2>
+        <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+          <div class="legend-item">
+            <div class="legend-color" style="background:var(--neon-blue)"></div>
+            <span>Deuterium Ion (D+) // spiraling</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background:var(--neon-pink)"></div>
+            <span>Tritium Ion (T+) // spiraling</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background:yellow; width:4px; height:4px;"></div>
+            <span>Electron (e-) // ultra-fast drift</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background:orange"></div>
+            <span>Helium Alpha Particle (⁴He) // self-heating</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background:#fff; border-radius:0;"></div>
+            <span>Neutron (n) // neutral charge, escapes to wall</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:0.65rem; color:var(--text-muted); font-family:'Share Tech Mono', monospace; text-align:center; margin-top:5px;">
+        interactive: click chamber to trigger localized RF heating | drag to distort field
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- AUDIO SYNTHESIZER SETUP ---
+    class FusionAudio {
+      constructor() {
+        this.ctx = null;
+        this.humOsc = null;
+        this.humGain = null;
+        this.rfOsc = null;
+        this.rfGain = null;
+        this.active = false;
+        this.muted = false;
+      }
+
+      init() {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          
+          // Main electromagnetic plasma hum
+          this.humOsc = this.ctx.createOscillator();
+          this.humGain = this.ctx.createGain();
+          
+          this.humOsc.type = 'sawtooth';
+          this.humOsc.frequency.setValueAtTime(50, this.ctx.currentTime); // Low 50Hz hum
+          this.humGain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+          
+          // Lowpass filter to keep it deep and warm
+          const lp = this.ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(120, this.ctx.currentTime);
+
+          this.humOsc.connect(lp);
+          lp.connect(this.humGain);
+          this.humGain.connect(this.ctx.destination);
+          
+          this.humOsc.start();
+
+          // RF Heating wave oscillator (higher pitched, sweeping)
+          this.rfOsc = this.ctx.createOscillator();
+          this.rfGain = this.ctx.createGain();
+          this.rfOsc.type = 'sine';
+          this.rfOsc.frequency.setValueAtTime(220, this.ctx.currentTime);
+          this.rfGain.gain.setValueAtTime(0, this.ctx.currentTime); // Off initially
+
+          const rfLp = this.ctx.createBiquadFilter();
+          rfLp.type = 'lowpass';
+          rfLp.frequency.setValueAtTime(500, this.ctx.currentTime);
+
+          this.rfOsc.connect(rfLp);
+          rfLp.connect(this.rfGain);
+          this.rfGain.connect(this.ctx.destination);
+
+          this.rfOsc.start();
+
+          this.active = true;
+        } catch (e) {
+          console.error("Web Audio API not supported", e);
+        }
+      }
+
+      setHumPitch(magField, current) {
+        if (!this.active || this.muted) return;
+        // Pitch rises with magnetic field, amplitude fluctuates with plasma current
+        const pitch = 40 + magField * 6 + current * 10;
+        this.humOsc.frequency.setTargetAtTime(pitch, this.ctx.currentTime, 0.1);
+        
+        // Slight organic modulation
+        const modulation = 0.015 + Math.sin(this.ctx.currentTime * 8) * 0.005;
+        this.humGain.gain.setTargetAtTime(modulation, this.ctx.currentTime, 0.15);
+      }
+
+      setRFPower(power) {
+        if (!this.active || this.muted) return;
+        const targetGain = (power / 20) * 0.02; // max gain at full RF power
+        this.rfGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.2);
+        
+        // Modulate frequency slightly to sound like microwave waves
+        const freq = 200 + Math.sin(this.ctx.currentTime * 20) * 15 + power * 5;
+        this.rfOsc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      }
+
+      triggerFusion() {
+        if (!this.active || this.muted) return;
+        // Short crackle / pluck for fusion events
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400 + Math.random() * 600, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.08);
+
+        gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.1);
+      }
+
+      triggerDisruption() {
+        if (!this.active || this.muted) return;
+        // Loud, fizzling brownian noise crash + sweep
+        const bufferSize = this.ctx.sampleRate * 0.8; // 800ms
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.7);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.85);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start();
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        if (this.muted) {
+          if (this.humGain) this.humGain.gain.setValueAtTime(0, this.ctx.currentTime);
+          if (this.rfGain) this.rfGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        }
+        return this.muted;
+      }
+    }
+
+    const audio = new FusionAudio();
+    document.getElementById('btn-audio').addEventListener('click', (e) => {
+      if (!audio.active) {
+        audio.init();
+      }
+      const muted = audio.toggleMute();
+      e.target.innerText = muted ? "Unmute Audio" : "Mute Audio";
+      e.target.classList.toggle('active', !muted);
+    });
+
+
+    // --- PHYSICS & RENDERING CORE ---
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Dynamic sizing helper
+    function resizeCanvas() {
+      const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.85);
+      canvas.width = size * window.devicePixelRatio;
+      canvas.height = size * window.devicePixelRatio;
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // UI elements
+    const inputBt = document.getElementById('input-bt');
+    const inputBp = document.getElementById('input-bp');
+    const inputNbi = document.getElementById('input-nbi');
+    const inputRf = document.getElementById('input-rf');
+    const inputPuff = document.getElementById('input-puff');
+
+    const valBt = document.getElementById('val-bt');
+    const valBp = document.getElementById('val-bp');
+    const valNbi = document.getElementById('val-nbi');
+    const valRf = document.getElementById('val-rf');
+    const valPuff = document.getElementById('val-puff');
+
+    const statTemp = document.getElementById('stat-temp');
+    const statDensity = document.getElementById('stat-density');
+    const statConfinement = document.getElementById('stat-confinement');
+    const statQ = document.getElementById('stat-q');
+    const statPower = document.getElementById('stat-power');
+
+    const diagnosticMaxTemp = document.getElementById('diagnostic-max-temp');
+    const diagnosticBeta = document.getElementById('diagnostic-beta');
+    const instabilityWarning = document.getElementById('instability-warning');
+
+    const btnReset = document.getElementById('btn-reset');
+    const btnRatio50 = document.getElementById('btn-ratio-50');
+    const btnRatioPure = document.getElementById('btn-ratio-pure');
+
+    // Diagnostic canvases
+    const canvasProfileTemp = document.getElementById('canvas-profile-temp');
+    const ctxProfileTemp = canvasProfileTemp.getContext('2d');
+    const canvasProfileBeta = document.getElementById('canvas-profile-beta');
+    const ctxProfileBeta = canvasProfileBeta.getContext('2d');
+
+    // State Variables
+    let toroidalField = 3.5;  // Tesla
+    let plasmaCurrent = 1.2;  // MA
+    let nbiPower = 10;        // MW
+    let rfPower = 5;          // MW
+    let puffRate = 1;         // 0: Off, 1: Med, 2: High
+    let pureD = false;        // DT by default
+
+    // Physics Engine variables
+    let coreTemp = 15.2;      // keV
+    let plasmaDensity = 0.98; // n20 (x10^20 m^-3)
+    let confinementTime = 0.185; // seconds
+    let fusionPower = 0.0;    // MW
+    let beta = 2.8;           // percentage
+    let instability = 0.0;    // 0 to 1
+    let frameCount = 0;
+    let fusionEventHistory = []; // tracks timestamps of fusion events to render sparkles and compute average rate
+
+    // Tiles hit state (for rendering heat flashes on the divertor and limiter tiles)
+    let wallHits = [];
+
+    // Particle storage
+    class Particle {
+      constructor(type, x, y, vx, vy, energy) {
+        this.type = type; // 'D', 'T', 'E', 'Alpha', 'Neutron'
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.energy = energy; // in keV
+        this.trail = [];
+        this.maxTrailLength = type === 'E' ? 3 : 8;
+        this.color = this.getColor();
+        this.size = type === 'E' ? 1.5 : (type === 'Alpha' ? 4 : 2.5);
+      }
+
+      getColor() {
+        switch(this.type) {
+          case 'D': return '#00d2ff';
+          case 'T': return '#ff007f';
+          case 'E': return '#ffff00';
+          case 'Alpha': return '#ff8800';
+          case 'Neutron': return '#ffffff';
+        }
+      }
+
+      update(timeStep, cx, cy, rx, ry, delta, tri) {
+        // Track trail
+        this.trail.push({x: this.x, y: this.y});
+        if (this.trail.length > this.maxTrailLength) {
+          this.trail.shift();
+        }
+
+        if (this.type === 'Neutron') {
+          // Neutrons have no charge, travel in straight lines
+          this.x += this.vx * timeStep;
+          this.y += this.vy * timeStep;
+          return;
+        }
+
+        // --- MAGNETIC SURFACES CONFINEMENT MODEL (LORNETZ PRESERVATION + HELICAL SURFACES) ---
+        // We evaluate the flux coordinates psi representing the nested D-shaped magnetic surfaces
+        // The magnetic axis is in the center (cx, cy)
+        // A simple flux shape mapping:
+        // dx = (x - cx) / rx, dy = (y - cy) / ry
+        // Psi contours: psi = dx^2 + (dy + tri * dx^2)^2 (where tri is triangularity / elongation)
+        // Poloidal magnetic fields are tangent to these flux lines.
+        // We add magnetic drift forces (grad-B drift, curvature drift) which causes particle transport.
+        
+        const dx = (this.x - cx) / rx;
+        const dy = (this.y - cy) / ry;
+        
+        // Elongated and triangular coordinate transformation
+        const skewY = dy + tri * dx * dx;
+        const psi = (dx * dx + skewY * skewY); // flux index, 0 at core, 1 at edge (separatrix)
+
+        // Evaluate local poloidal magnetic field components (tangent to psi contours)
+        // grad psi = [ 2*dx + 4*tri*dx*(dy + tri*dx^2), 2*(dy + tri*dx^2) ]
+        // Poloidal field B_p is perpendicular to grad psi: B_p = [-dpsi/dy, dpsi/dx]
+        const dpsi_dx = 2 * dx + 4 * tri * dx * skewY;
+        const dpsi_dy = 2 * skewY;
+
+        // Scale field by poloidal field strength setting
+        const fieldScale = plasmaCurrent * 0.15;
+        const Bp_x = -dpsi_dy * fieldScale;
+        const Bp_y = dpsi_dx * fieldScale;
+
+        // Toroidal magnetic field (pointing out of plane, scale by toroidalField)
+        // toroidal field scales as 1 / R (where R is x-coordinate)
+        const Bt = (toroidalField * 1.5) / (1.0 + dx * 0.2);
+
+        // Gyro-acceleration from Lorentz force: F = q * (v x B)
+        // With Bt (out-of-plane) and Bp (in-plane)
+        // vx_dot = q * (vy * Bt)
+        // vy_dot = q * (-vx * Bt)
+        // Plus in-plane fields Bp_x, Bp_y which create Z-drift (toroidal spin coupling)
+        
+        const q = this.type === 'E' ? -1.0 : (this.type === 'Alpha' ? 2.0 : 1.0);
+        const m = this.type === 'E' ? 0.05 : (this.type === 'Alpha' ? 4.0 : (this.type === 'T' ? 3.0 : 2.0));
+
+        // Lorentz force equations
+        let ax = (this.vy * Bt) * q / m;
+        let ay = (-this.vx * Bt) * q / m;
+
+        // Add toroidal pressure gradient transport / drift (grad B drift downwards)
+        const driftDirection = q > 0 ? 1 : -1;
+        const driftVelocity = (this.energy * 0.02) / (toroidalField * m);
+        ay += driftDirection * driftVelocity * 5; 
+
+        // Update velocity
+        this.vx += ax * timeStep;
+        this.vy += ay * timeStep;
+
+        // Speed limit (clamp velocity to keep simulation stable)
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        const maxSpeed = this.type === 'E' ? 220 : (this.type === 'Alpha' ? 140 : 80);
+        if (speed > maxSpeed) {
+          this.vx = (this.vx / speed) * maxSpeed;
+          this.vy = (this.vy / speed) * maxSpeed;
+        }
+
+        // Apply auxiliary RF wave push (localized stochastic acceleration)
+        if (rfPower > 0 && Math.random() < 0.15) {
+          // RF wave matches ion cyclotron frequency, gives a random kick
+          const kick = Math.sqrt(rfPower) * 4;
+          const theta = Math.random() * Math.PI * 2;
+          this.vx += Math.cos(theta) * kick;
+          this.vy += Math.sin(theta) * kick;
+          this.energy += rfPower * 0.15; // Heat up
+        }
+
+        // Drag from collisions (thermalization)
+        // Energetic particles (like NBI beams or Alphas) slow down and heat the background plasma
+        if (this.energy > coreTemp) {
+          // transfer energy to core temperature
+          const energyLoss = (this.energy - coreTemp) * 0.015 * timeStep;
+          this.energy -= energyLoss;
+          coreTemp += energyLoss * 0.0003; // Self-heating feedback
+        }
+
+        // Update position
+        this.x += this.vx * timeStep;
+        this.y += this.vy * timeStep;
+      }
+    }
+
+    let particles = [];
+
+    // Tokamak grid limits (D-shape boundary parameters)
+    let coreX, coreY, radiusX, radiusY, boundaryTriangularity, boundaryElongation;
+
+    function initTokamakGeometry(w, h) {
+      coreX = w / 2;
+      coreY = h / 2 - 10;
+      radiusX = w * 0.35;
+      radiusY = h * 0.42;
+      boundaryTriangularity = -0.32; // D-shape skew
+      boundaryElongation = 1.6;
+    }
+
+    // Mathematical test if point (x,y) is inside D-shape boundary
+    function isInsideBoundary(x, y) {
+      const dx = (x - coreX) / radiusX;
+      const dy = (y - coreY) / radiusY;
+      if (dx * dx + dy * dy > 1.3) return false; // outer bounding circle check
+      
+      // Contoured check: psi = dx^2 + (dy + tri * dx^2)^2 < 1.0
+      const skewY = dy + boundaryTriangularity * dx * dx;
+      const psi = dx * dx + skewY * skewY;
+      return psi < 1.0;
+    }
+
+    // Reset core and initialize fuel particles
+    function resetCore() {
+      particles = [];
+      coreTemp = 1.5; // Starts cool
+      plasmaDensity = 0.4;
+      fusionPower = 0.0;
+      instability = 0.0;
+      instabilityWarning.style.display = 'none';
+
+      // Seed initial particles
+      const count = 180;
+      for (let i = 0; i < count; i++) {
+        spawnThermalParticle();
+      }
+      
+      if (audio.active) {
+        audio.triggerDisruption();
+      }
+    }
+
+    // Spawn regular DT/D thermal fuel particle inside core
+    function spawnThermalParticle() {
+      // Find a random point inside boundary
+      let x, y, found = false;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const angle = Math.random() * Math.PI * 2;
+        const rad = Math.random() * 0.7; // concentrated in the magnetic core
+        
+        // Convert to D-shape coordinates
+        const dx = rad * Math.cos(angle);
+        const skewY = rad * Math.sin(angle);
+        const dy = skewY - boundaryTriangularity * dx * dx;
+
+        x = coreX + dx * radiusX;
+        y = coreY + dy * radiusY;
+
+        if (isInsideBoundary(x, y)) {
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) return;
+
+      const thermalVelocity = Math.sqrt(coreTemp) * 12;
+      const theta = Math.random() * Math.PI * 2;
+      const vx = Math.cos(theta) * thermalVelocity;
+      const vy = Math.sin(theta) * thermalVelocity;
+
+      let type;
+      if (pureD) {
+        type = Math.random() < 0.98 ? 'D' : 'E';
+      } else {
+        const rand = Math.random();
+        type = rand < 0.48 ? 'D' : (rand < 0.96 ? 'T' : 'E');
+      }
+
+      particles.push(new Particle(type, x, y, vx, vy, coreTemp));
+    }
+
+    // Inject Neutral Beam (NBI) high energy particles
+    function injectNeutralBeam() {
+      if (nbiPower === 0) return;
+      
+      // Beams enter horizontally from left port, penetrate core, and ionize
+      const beamY = coreY + (Math.random() - 0.5) * 80;
+      const beamX = coreX - radiusX - 20;
+
+      // NBI ions are fast (80keV) deuterium particles
+      const vBeam = 110;
+      const vx = vBeam;
+      const vy = (Math.random() - 0.5) * 8; // focused
+
+      particles.push(new Particle('D', beamX, beamY, vx, vy, 80.0));
+      
+      // Inject some matching electrons to keep charge neutrality
+      particles.push(new Particle('E', beamX, beamY, vx * 1.5, vy, 1.0));
+    }
+
+    // Perform fuel gas puff
+    function puffGas() {
+      // puffing adds cool neutral molecules to the edge of the vessel
+      const count = puffRate === 1 ? 2 : (puffRate === 2 ? 5 : 0);
+      for (let i = 0; i < count; i++) {
+        // Spawn right at the boundary
+        const angle = Math.random() * Math.PI * 2;
+        const dx = Math.cos(angle);
+        const skewY = Math.sin(angle);
+        const dy = skewY - boundaryTriangularity * dx * dx;
+
+        const x = coreX + dx * radiusX;
+        const y = coreY + dy * radiusY;
+
+        if (isInsideBoundary(x, y)) {
+          // Low speed, low energy
+          const vx = (coreX - x) * 0.05 + (Math.random() - 0.5) * 4;
+          const vy = (coreY - y) * 0.05 + (Math.random() - 0.5) * 4;
+          const type = Math.random() < 0.5 ? 'D' : 'T';
+          particles.push(new Particle(type, x, y, vx, vy, 0.1));
+        }
+      }
+    }
+
+    // Handle Wall hit effect animation frame update
+    function recordWallHit(x, y, isNeutron) {
+      wallHits.push({
+        x: x, 
+        y: y, 
+        age: 0, 
+        maxAge: isNeutron ? 25 : 15,
+        color: isNeutron ? 'rgba(255, 255, 255, ' : (isInsideDivertor(x, y) ? 'rgba(0, 255, 102, ' : 'rgba(255, 0, 127, ')
+      });
+    }
+
+    // Divertor is at the very bottom of the chamber
+    function isInsideDivertor(x, y) {
+      return y > coreY + radiusY * 0.85;
+    }
+
+
+    // --- PHYSICS CONTEXT TIMESTEP ITERATOR ---
+    function updatePhysics() {
+      frameCount++;
+      const dt = 0.06;
+
+      // Update parameters from sliders
+      toroidalField = parseFloat(inputBt.value);
+      plasmaCurrent = parseFloat(inputBp.value);
+      nbiPower = parseFloat(inputNbi.value);
+      rfPower = parseFloat(inputRf.value);
+      puffRate = parseInt(inputPuff.value);
+
+      valBt.innerText = toroidalField.toFixed(1) + " T";
+      valBp.innerText = plasmaCurrent.toFixed(2) + " MA";
+      valNbi.innerText = nbiPower + " MW";
+      valRf.innerText = rfPower + " MW";
+      valPuff.innerText = puffRate === 0 ? "Off" : (puffRate === 1 ? "Medium" : "High");
+
+      // Inject beam particles
+      if (frameCount % 4 === 0) {
+        injectNeutralBeam();
+      }
+
+      // Gas puffing
+      if (frameCount % 6 === 0) {
+        puffGas();
+      }
+
+      // Confinement scaling formula (based on ITER-like IPB98(y,2) scaling law)
+      // tau_E increases with current, toroidal field, density, and decreases with total heating power
+      const totalHeating = nbiPower + rfPower + fusionPower * 0.2 + 0.5; // ohmic power baseline
+      const calcConfinement = 0.12 * Math.pow(plasmaCurrent, 0.85) * Math.pow(toroidalField, 0.5) * Math.pow(plasmaDensity, 0.4) * Math.pow(totalHeating, -0.6);
+      confinementTime = Math.max(0.02, calcConfinement);
+
+      // Instability computation (pressure beta vs Troyon limit)
+      // Beta (thermal pressure / magnetic pressure)
+      // beta = density * temperature / B^2
+      beta = (plasmaDensity * coreTemp * 0.08) / (toroidalField * toroidalField);
+      beta = Math.max(0.1, beta * 100); // as percentage
+
+      // Troyon Beta Limit: beta_limit = betaN * I_p / (a * B)
+      const troyonLimit = 2.8 * plasmaCurrent / (0.6 * toroidalField);
+      
+      // If beta exceeds Troyon limit, instability increases rapidly
+      if (beta > troyonLimit) {
+        instability += (beta - troyonLimit) * 0.005;
+      } else {
+        instability -= 0.02;
+      }
+      // Instabilities also increase if current is too high for the magnetic field (safety factor q_edge < 2)
+      const qEdge = 5 * (toroidalField * 0.6 * 0.6) / (plasmaCurrent * 2.0); // safety factor proxy
+      if (qEdge < 2.0) {
+        instability += (2.0 - qEdge) * 0.03;
+      }
+
+      instability = Math.max(0, Math.min(1.0, instability));
+
+      // Alarm / Warning display
+      if (instability > 0.4) {
+        instabilityWarning.style.display = 'block';
+        instabilityWarning.style.borderColor = `rgba(255, 0, 127, ${0.3 + Math.sin(frameCount * 0.3) * 0.3})`;
+        instabilityWarning.style.color = `rgba(255, 255, 255, ${0.7 + Math.sin(frameCount * 0.3) * 0.3})`;
+      } else {
+        instabilityWarning.style.display = 'none';
+      }
+
+      // Check for Major Plasma Disruption (thermal quench collapse)
+      if (instability > 0.95 && Math.random() < 0.08) {
+        triggerDisruptionEvent();
+        return;
+      }
+
+      // Self-heating cooling loss: plasma loses heat to the walls
+      // Power loss = thermal energy / confinement time
+      const lossRate = 0.0018 * (coreTemp) / confinementTime;
+      coreTemp -= lossRate * dt;
+      
+      // Add heating sources to core temperature
+      const activeHeating = (nbiPower * 0.12 + rfPower * 0.08 + plasmaCurrent * 0.05) * dt;
+      coreTemp += activeHeating;
+
+      // Keep temperature inside physics boundaries
+      coreTemp = Math.max(0.1, coreTemp);
+
+      // audio hum update
+      audio.setHumPitch(toroidalField, plasmaCurrent);
+      audio.setRFPower(rfPower);
+
+      // Particle solver step
+      const localParticles = [];
+      let fusedThisFrame = 0;
+      let dCount = 0;
+      let tCount = 0;
+
+      // Spatial binning grid to optimize D-T collision searches
+      // Since canvas width/height is min(85vw, 85vh) inside canvas container, we map grid on core boundaries
+      const grid = {};
+      const cellSize = 15;
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.update(dt, coreX, coreY, radiusX, radiusY, boundaryElongation, boundaryTriangularity);
+
+        // Check bounds (vessel collision)
+        if (!isInsideBoundary(p.x, p.y)) {
+          // Hit wall!
+          const isNeutron = p.type === 'Neutron';
+          recordWallHit(p.x, p.y, isNeutron);
+          
+          if (p.type === 'Alpha') {
+            // Alphas deposit energy in wall and degrade
+            coreTemp += 0.005; 
+          }
+          
+          // Neutrons fly through wall, others are vaporized/recycled
+          if (isNeutron) {
+            // neutron escapes, generates power
+            fusionPower += 0.42; // increment power
+          }
+          continue; // discard particle from core
+        }
+
+        // Count particles to calculate density
+        if (p.type === 'D') dCount++;
+        if (p.type === 'T') tCount++;
+
+        // Add charge particles to local grid for collision check
+        if (p.type === 'D' || p.type === 'T') {
+          const cellX = Math.floor(p.x / cellSize);
+          const cellY = Math.floor(p.y / cellSize);
+          const key = `${cellX},${cellY}`;
+          if (!grid[key]) grid[key] = [];
+          grid[key].push(p);
+        }
+
+        localParticles.push(p);
+      }
+
+      particles = localParticles;
+
+      // Evaluate density
+      plasmaDensity = (dCount + tCount) * 0.008;
+      plasmaDensity = Math.max(0.05, plasmaDensity);
+
+      // DT Fusion reaction loop
+      // Probability of fusion scales exponentially with temperature: Gamow peak window approximation
+      // Fusion cross-section: sigma = (A / T^1.5) * exp(-B / T^0.5)
+      // DT peak is around 10-20 keV
+      const fusionCrossSection = (50.0 / Math.pow(coreTemp, 1.5)) * Math.exp(-22.0 / Math.sqrt(coreTemp));
+
+      // Sweep grid cells for collisions
+      const handledPairs = new Set();
+      
+      for (let key in grid) {
+        const cellParticles = grid[key];
+        if (cellParticles.length < 2) continue;
+
+        for (let i = 0; i < cellParticles.length; i++) {
+          const p1 = cellParticles[i];
+          if (p1.type !== 'D' && p1.type !== 'T') continue;
+
+          for (let j = i + 1; j < cellParticles.length; j++) {
+            const p2 = cellParticles[j];
+            if (p1.type === p2.type) continue; // Must be D + T
+
+            // Check distance
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq < 35) { // Close enough for interaction
+              const pairId = `${Math.min(p1.x, p2.x)},${Math.min(p1.y, p2.y)}`;
+              if (handledPairs.has(pairId)) continue;
+              handledPairs.add(pairId);
+
+              // Fusion check!
+              const reactionProb = fusionCrossSection * 0.08;
+              if (Math.random() < reactionProb) {
+                // FUSE!
+                fusedThisFrame++;
+                
+                // Remove the D and T particles
+                p1.dead = true;
+                p2.dead = true;
+
+                // Spawn Products: Alpha particle (4He) + Neutron (n)
+                // Alpha: 3.5 MeV (energetic, trapped by field)
+                // Neutron: 14.1 MeV (very fast, escapes field, flies out)
+                const angle = Math.random() * Math.PI * 2;
+                
+                // Alpha (trapped, spirals)
+                const vAlpha = 75.0; 
+                const ax_vel = Math.cos(angle) * vAlpha;
+                const ay_vel = Math.sin(angle) * vAlpha;
+                const alpha = new Particle('Alpha', p1.x, p1.y, ax_vel, ay_vel, 3500.0); // 3500 keV = 3.5 MeV
+                alpha.maxTrailLength = 16;
+                particles.push(alpha);
+
+                // Neutron (straight line, escapes)
+                const vNeutron = 130.0;
+                const nx_vel = -Math.cos(angle) * vNeutron;
+                const ny_vel = -Math.sin(angle) * vNeutron;
+                const neutron = new Particle('Neutron', p1.x, p1.y, nx_vel, ny_vel, 14100.0); // 14.1 MeV
+                neutron.maxTrailLength = 20;
+                particles.push(neutron);
+
+                // Fusion audio trigger
+                audio.triggerFusion();
+                fusionEventHistory.push(Date.now());
+              }
+            }
+          }
+        }
+      }
+
+      // Filter dead particles
+      particles = particles.filter(p => !p.dead);
+
+      // Decelerate fusion power output back to thermal equilibrium
+      fusionPower = fusionPower * 0.95 + (fusedThisFrame * 8.5);
+
+      // Calculate Q-factor: Q = Fusion Power / External Heating Power
+      const extPower = nbiPower + rfPower + 0.1;
+      const qFactor = fusionPower / extPower;
+
+      // Update diagnostic display values
+      statTemp.innerText = coreTemp.toFixed(1) + " keV";
+      statDensity.innerText = plasmaDensity.toFixed(2) + " n₂₀";
+      statConfinement.innerText = Math.round(confinementTime * 1000) + " ms";
+      statQ.innerText = qFactor > 0.05 ? qFactor.toFixed(2) : "0.00";
+      statPower.innerText = fusionPower.toFixed(2) + " MW";
+
+      // If temperature is extremely high and DT ratio is 50:50, spawn more fuel if needed to sustain
+      if (particles.length < 250 && Math.random() < 0.25) {
+        spawnThermalParticle();
+      }
+
+      // Limit fusion history
+      const now = Date.now();
+      fusionEventHistory = fusionEventHistory.filter(t => now - t < 1000);
+    }
+
+    // Trigger sudden magnetic disruption event
+    function triggerDisruptionEvent() {
+      instabilityWarning.style.display = 'block';
+      instabilityWarning.innerText = "DISRUPTION CRITICAL // PLASMA COLLAPSE";
+      instabilityWarning.style.color = "#ff0000";
+
+      // Visual flash and audio noise sweep
+      audio.triggerDisruption();
+
+      // Deform particles violently out to the walls
+      particles.forEach(p => {
+        const dx = p.x - coreX;
+        const dy = p.y - coreY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        // Throw particles outwards
+        p.vx += (dx / dist) * 120;
+        p.vy += (dy / dist) * 120;
+        recordWallHit(p.x, p.y, false);
+      });
+
+      // Clear plasma stats
+      coreTemp = 0.2;
+      plasmaDensity = 0.02;
+      instability = 0.0;
+      fusionPower = 0.0;
+    }
+
+
+    // --- RENDERING ROUTINES ---
+    function drawSimulation() {
+      // Clear main canvas
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = coreX;
+      const cy = coreY;
+      const rx = radiusX;
+      const ry = radiusY;
+
+      // Draw Vacuum Chamber Walls (D-shape silhouette)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      
+      const numPoints = 120;
+      for (let i = 0; i <= numPoints; i++) {
+        const theta = (i / numPoints) * Math.PI * 2;
+        const dx = Math.cos(theta);
+        const skewY = Math.sin(theta);
+        const dy = skewY - boundaryTriangularity * dx * dx;
+
+        const x = cx + dx * rx;
+        const y = cy + dy * ry;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      // Fill background of chamber with a very subtle radial gradient indicating thermal heat
+      const coreGrad = ctx.createRadialGradient(cx, cy, 20, cx, cy, rx * 1.2);
+      // Temperature glow shifts from red to yellow to bright cyan-blue depending on heat
+      let coreColor = 'rgba(255, 20, 100, ';
+      if (coreTemp > 18.0) {
+        coreColor = 'rgba(0, 240, 255, '; // Hottest: bright cyan
+      } else if (coreTemp > 8.0) {
+        coreColor = 'rgba(255, 120, 0, ';  // High: hot orange-yellow
+      }
+      
+      coreGrad.addColorStop(0, coreColor + '0.22)');
+      coreGrad.addColorStop(0.4, coreColor + '0.08)');
+      coreGrad.addColorStop(0.8, 'rgba(0,0,0,0)');
+      
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      for (let i = 0; i <= numPoints; i++) {
+        const theta = (i / numPoints) * Math.PI * 2;
+        const dx = Math.cos(theta);
+        const skewY = Math.sin(theta);
+        const dy = skewY - boundaryTriangularity * dx * dx;
+        const x = cx + dx * rx;
+        const y = cy + dy * ry;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw nested Magnetic Confinement Surfaces (Flux Lines)
+      ctx.lineWidth = 1;
+      const numSurfaces = 6;
+      for (let s = 1; s <= numSurfaces; s++) {
+        const surfaceRad = s / (numSurfaces + 1);
+        ctx.strokeStyle = `rgba(0, 210, 255, ${0.05 + (1 - surfaceRad) * 0.15})`;
+        ctx.beginPath();
+        for (let i = 0; i <= numPoints; i++) {
+          const theta = (i / numPoints) * Math.PI * 2;
+          const dx = surfaceRad * Math.cos(theta);
+          const skewY = surfaceRad * Math.sin(theta);
+          const dy = skewY - boundaryTriangularity * dx * dx;
+
+          const x = cx + dx * rx;
+          const y = cy + dy * ry;
+
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      // Draw Divertor region (the waste pumping system at the bottom tiles)
+      ctx.fillStyle = 'rgba(0, 255, 102, 0.08)';
+      ctx.strokeStyle = 'rgba(0, 255, 102, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      // Draw a box shape highlighting bottom divertor plates
+      ctx.moveTo(cx - rx * 0.45, cy + ry * 0.85);
+      ctx.lineTo(cx + rx * 0.45, cy + ry * 0.85);
+      ctx.lineTo(cx + rx * 0.3, cy + ry * 0.98);
+      ctx.lineTo(cx - rx * 0.3, cy + ry * 0.98);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Text label inside vessel for Divertor
+      ctx.font = '8px "Share Tech Mono"';
+      ctx.fillStyle = 'rgba(0, 255, 102, 0.5)';
+      ctx.fillText("DOUBLE-NULL DIVERTOR TARGET", cx - 48, cy + ry * 0.93);
+
+      // Draw NBI injection port
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(cx - rx - 10, cy - 25);
+      ctx.lineTo(cx - rx + 5, cy - 25);
+      ctx.moveTo(cx - rx - 10, cy + 25);
+      ctx.lineTo(cx - rx + 5, cy + 25);
+      ctx.stroke();
+
+      // Render particle trails & glow points
+      particles.forEach(p => {
+        // Draw trail line
+        if (p.trail.length > 1) {
+          ctx.beginPath();
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = p.type === 'E' ? 0.8 : (p.type === 'Alpha' ? 2 : 1.2);
+          // Fading opacity for older trail segments
+          for (let k = 0; k < p.trail.length; k++) {
+            const pt = p.trail[k];
+            if (k === 0) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.globalAlpha = 0.35;
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
+        }
+
+        // Draw particle node
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Alpha particles glow
+        if (p.type === 'Alpha') {
+          const alphaGlow = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 8);
+          alphaGlow.addColorStop(0, 'rgba(255, 100, 0, 0.4)');
+          alphaGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+          ctx.fillStyle = alphaGlow;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Render wall collision animations (hot flashes)
+      const currentHits = [];
+      wallHits.forEach(hit => {
+        hit.age++;
+        const pct = hit.age / hit.maxAge;
+        const radius = hit.maxAge * pct * 1.5;
+        
+        ctx.strokeStyle = hit.color + (1 - pct) + ')';
+        ctx.lineWidth = 2 * (1 - pct);
+        ctx.beginPath();
+        ctx.arc(hit.x, hit.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (hit.age < hit.maxAge) {
+          currentHits.push(hit);
+        }
+      });
+      wallHits = currentHits;
+
+      // Render fusion sparkle markers
+      fusionEventHistory.forEach(time => {
+        const age = Date.now() - time;
+        if (age < 500) {
+          const size = 15 * (1 - age / 500);
+          ctx.fillStyle = `rgba(255, 255, 255, ${0.8 * (1 - age / 500)})`;
+          ctx.font = `${size}px Outfit`;
+          ctx.fillText("✦", cx - 5 + (Math.random() - 0.5) * 30, cy + (Math.random() - 0.5) * 30);
+        }
+      });
+    }
+
+    // Draw diagnostic profiles (temperature curve and beta/pressure grids)
+    function drawDiagnostics() {
+      // 1. Radial Temperature Profile
+      ctxProfileTemp.fillStyle = '#000000';
+      ctxProfileTemp.fillRect(0, 0, canvasProfileTemp.width, canvasProfileTemp.height);
+
+      ctxProfileTemp.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctxProfileTemp.lineWidth = 1;
+      // Grid lines
+      ctxProfileTemp.beginPath();
+      ctxProfileTemp.moveTo(0, canvasProfileTemp.height / 2);
+      ctxProfileTemp.lineTo(canvasProfileTemp.width, canvasProfileTemp.height / 2);
+      ctxProfileTemp.stroke();
+
+      // Draw thermal bell-curve profile (highest in core, dropping to walls)
+      ctxProfileTemp.strokeStyle = 'var(--neon-pink)';
+      ctxProfileTemp.lineWidth = 2;
+      ctxProfileTemp.beginPath();
+      
+      const w = canvasProfileTemp.width;
+      const h = canvasProfileTemp.height;
+      
+      for (let x = 0; x < w; x++) {
+        // Normal distribution profile
+        const normX = (x - w/2) / (w * 0.28);
+        const tempVal = coreTemp * Math.exp(-normX * normX);
+        const yVal = h - (tempVal / 40.0) * h - 2; // Scaled to max 40keV
+        if (x === 0) ctxProfileTemp.moveTo(x, yVal);
+        else ctxProfileTemp.lineTo(x, yVal);
+      }
+      ctxProfileTemp.stroke();
+      diagnosticMaxTemp.innerText = coreTemp.toFixed(1) + " keV";
+
+      // 2. Magnetic surfaces and Beta diagnostic
+      ctxProfileBeta.fillStyle = '#000000';
+      ctxProfileBeta.fillRect(0, 0, canvasProfileBeta.width, canvasProfileBeta.height);
+
+      // Draw a scrolling wave of beta stability over time
+      if (!window.betaHistory) {
+        window.betaHistory = Array(50).fill(0);
+      }
+      window.betaHistory.push(beta);
+      if (window.betaHistory.length > 60) {
+        window.betaHistory.shift();
+      }
+
+      ctxProfileBeta.strokeStyle = 'var(--neon-blue)';
+      ctxProfileBeta.lineWidth = 1.5;
+      ctxProfileBeta.beginPath();
+      
+      const bh = window.betaHistory;
+      const step = canvasProfileBeta.width / 50;
+      for (let i = 0; i < bh.length; i++) {
+        const x = i * step;
+        const val = bh[i];
+        const y = canvasProfileBeta.height - (val / 10.0) * canvasProfileBeta.height - 2; // scaled to 10% beta
+        if (i === 0) ctxProfileBeta.moveTo(x, y);
+        else ctxProfileBeta.lineTo(x, y);
+      }
+      ctxProfileBeta.stroke();
+
+      // Show Troyon Beta limit threshold as dashed line
+      const troyonLimit = 2.8 * plasmaCurrent / (0.6 * toroidalField);
+      const limitY = canvasProfileBeta.height - (troyonLimit * 10 / 10.0) * canvasProfileBeta.height;
+      ctxProfileBeta.strokeStyle = 'rgba(255, 0, 127, 0.4)';
+      ctxProfileBeta.setLineDash([4, 4]);
+      ctxProfileBeta.beginPath();
+      ctxProfileBeta.moveTo(0, limitY);
+      ctxProfileBeta.lineTo(canvasProfileBeta.width, limitY);
+      ctxProfileBeta.stroke();
+      ctxProfileBeta.setLineDash([]); // Reset
+
+      diagnosticBeta.innerText = `β = ${beta.toFixed(1)}% / Max ${troyonLimit.toFixed(1)}%`;
+    }
+
+    // --- INTERACTIVE EVENT LISTENERS ---
+    let dragMode = false;
+
+    // Canvas click to trigger localized heating
+    canvas.addEventListener('mousedown', (e) => {
+      dragMode = true;
+      applyClickHeating(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (dragMode) {
+        applyClickHeating(e);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragMode = false;
+    });
+
+    function applyClickHeating(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      // Fuel particles near click are accelerated (heating)
+      particles.forEach(p => {
+        const dx = p.x - clickX;
+        const dy = p.y - clickY;
+        const distSq = dx * dx + dy * dy;
+        if (distSq < 2500) { // 50px radius
+          // Kick velocity
+          p.vx += (Math.random() - 0.5) * 35;
+          p.vy += (Math.random() - 0.5) * 35;
+          p.energy += 5.0; // add 5keV localized energy
+        }
+      });
+
+      // Spawn localized visual heat glow
+      ctx.fillStyle = 'rgba(0, 210, 255, 0.1)';
+      ctx.beginPath();
+      ctx.arc(clickX, clickY, 50, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Button controls
+    btnReset.addEventListener('click', () => {
+      resetCore();
+    });
+
+    btnRatio50.addEventListener('click', () => {
+      pureD = false;
+      btnRatio50.classList.add('active');
+      btnRatioPure.classList.remove('active');
+    });
+
+    btnRatioPure.addEventListener('click', () => {
+      pureD = true;
+      btnRatioPure.classList.add('active');
+      btnRatio50.classList.remove('active');
+    });
+
+
+    // --- LOOP EXECUTOR ---
+    function loop() {
+      updatePhysics();
+      drawSimulation();
+      drawDiagnostics();
+      requestAnimationFrame(loop);
+    }
+
+    // Init geometry & reset
+    initTokamakGeometry(canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+    resetCore();
+    loop();
+  </script>
+</body>
+</html>
