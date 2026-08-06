@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>spacetime-chirp: gravitational wave simulator</title>
+  <style>
+    :root {
+      --bg-dark: #030209;
+      --panel-bg: rgba(10, 8, 22, 0.75);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --text-color: #e0e6ed;
+      --accent-cyan: #00f3ff;
+      --accent-pink: #ff007f;
+      --accent-green: #39ff14;
+      --glow-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(25, 10, 50, 0.4) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(5, 30, 45, 0.4) 0px, transparent 50%);
+      color: var(--text-color);
+      font-family: 'Courier New', Courier, monospace;
+      padding: 15px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    header h1 {
+      color: var(--accent-cyan);
+      font-size: 2.2rem;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.5), 2px 2px 0px rgba(255, 0, 127, 0.3);
+      letter-spacing: 2px;
+    }
+
+    header p {
+      font-size: 0.9rem;
+      color: #8fa0b5;
+      margin-top: 5px;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      gap: 15px;
+      flex: 1;
+    }
+
+    @media (max-width: 1100px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .panel h2 {
+      font-size: 1.1rem;
+      color: var(--accent-pink);
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      margin-bottom: 5px;
+      color: #a5b4fc;
+    }
+
+    .control-group label span.val {
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #1e1b4b;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    .btn {
+      background: #110e2e;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      box-shadow: var(--glow-shadow);
+    }
+
+    .btn-pink {
+      border-color: var(--accent-pink);
+      color: var(--accent-pink);
+    }
+
+    .btn-pink:hover {
+      background: var(--accent-pink);
+      color: #000;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .select-style {
+      background: #09071c;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px;
+      border-radius: 4px;
+      width: 100%;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    /* Simulation Canvas styling */
+    .canvas-container {
+      position: relative;
+      flex: 1;
+      min-height: 450px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #010006;
+      border: 1px solid rgba(0, 243, 255, 0.15);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    canvas#simCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      pointer-events: none;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.6);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 5px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .view-toggles {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .view-btn {
+      background: rgba(12, 10, 30, 0.85);
+      border: 1px solid var(--border-color);
+      color: #8fa0b5;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .view-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+    }
+
+    /* Telemetry and Plots */
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .telemetry-label {
+      color: #8fa0b5;
+    }
+
+    .telemetry-value {
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    .telemetry-value.alert {
+      color: var(--accent-pink);
+    }
+
+    .telemetry-value.ok {
+      color: var(--accent-green);
+    }
+
+    .plot-container {
+      background: #010006;
+      border: 1px solid rgba(0, 243, 255, 0.1);
+      border-radius: 4px;
+      height: 110px;
+      margin-top: 10px;
+      position: relative;
+    }
+
+    canvas.telemetryCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .audio-visualizer-container {
+      margin-top: 15px;
+      border-top: 1px dashed var(--border-color);
+      padding-top: 12px;
+    }
+
+    .status-terminal {
+      background: #020108;
+      border: 1px solid rgba(255, 0, 127, 0.2);
+      border-radius: 4px;
+      padding: 8px;
+      height: 60px;
+      font-size: 0.75rem;
+      color: #c084fc;
+      overflow-y: auto;
+      margin-top: 10px;
+      line-height: 1.3;
+    }
+
+    .help-tooltip {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-top: auto;
+      text-align: center;
+      line-height: 1.4;
+      padding-top: 10px;
+    }
+
+    .help-tooltip a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+
+    /* Accretion disk rendering optimizations / details */
+    .g-waves-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      margin-top: 5px;
+      padding: 0 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>spacetime-chirp</h1>
+    <p>general relativity binary merger & gravitational-wave interferometer simulator</p>
+  </header>
+
+  <div class="main-layout">
+
+    <!-- Left Controls Panel -->
+    <div class="panel">
+      <h2>:: configuration ::</h2>
+
+      <div class="control-group">
+        <label>Presets</label>
+        <select id="presetSelect" class="select-style">
+          <option value="stellar">Stellar-Mass BH Binary (10 M☉ + 15 M☉)</option>
+          <option value="intermediate">Intermediate BH Binary (100 M☉ + 120 M☉)</option>
+          <option value="supermassive">Supermassive BH Inspiral (1e5 M☉ + 2e5 M☉)</option>
+          <option value="emri" selected>Extreme Mass-Ratio Inspiral (50 M☉ + 1.2 M☉)</option>
+          <option value="unequal">Asymmetric Core Merger (40 M☉ + 3 M☉)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Core 1 Mass <span id="m1Val" class="val">50 M☉</span></label>
+        <input type="range" id="mass1Slider" min="1" max="250" value="50">
+      </div>
+
+      <div class="control-group">
+        <label>Core 2 Mass <span id="m2Val" class="val">1.2 M☉</span></label>
+        <input type="range" id="mass2Slider" min="0.1" max="250" step="0.1" value="1.2">
+      </div>
+
+      <div class="control-group">
+        <label>Initial Separation <span id="sepVal" class="val">45 pixels</span></label>
+        <input type="range" id="separationSlider" min="20" max="90" value="45">
+      </div>
+
+      <div class="control-group">
+        <label>Simulation Speed <span id="speedVal" class="val">1.0x</span></label>
+        <input type="range" id="speedSlider" min="0.1" max="3.0" step="0.1" value="1.0">
+      </div>
+
+      <div class="btn-group">
+        <button id="playPauseBtn" class="btn">Pause</button>
+        <button id="resetBtn" class="btn btn-pink">Reset</button>
+      </div>
+
+      <h2>:: audio engine ::</h2>
+      
+      <div class="control-group">
+        <label>Audio Synthesis</label>
+        <select id="audioModeSelect" class="select-style">
+          <option value="strain">Direct Strain Sonification</option>
+          <option value="ambient">Space Ambient Pad</option>
+          <option value="off">Muted</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label>Synthesizer Volume <span id="volVal" class="val">40%</span></label>
+        <input type="range" id="volumeSlider" min="0" max="100" value="40">
+      </div>
+
+      <div class="help-tooltip">
+        drag the cyan detector in the viewport to measure local waves. scroll/wheel does nothing, keep it clean.
+      </div>
+    </div>
+
+    <!-- Middle Viewport Panel -->
+    <div class="panel" style="padding: 10px;">
+      <div class="canvas-container">
+        <canvas id="simCanvas"></canvas>
+        <div class="canvas-overlay">
+          Target: Binary Cores | Metric: g_μν metric perturbation (h+, h×)
+        </div>
+        <div class="view-toggles">
+          <button id="view2DBtn" class="view-btn active">2D Wavefield</button>
+          <button id="view3DBtn" class="view-btn">3D Spacetime Curvature</button>
+          <button id="viewGridLinesBtn" class="view-btn">Grid Lines</button>
+        </div>
+      </div>
+      <div class="g-waves-legend">
+        <span style="color: var(--accent-pink); font-weight:bold;">h+ Expansion (+)</span>
+        <span style="color: rgba(255,255,255,0.4);">flat spacetime (0)</span>
+        <span style="color: var(--accent-cyan); font-weight:bold;">h+ Compression (-)</span>
+      </div>
+    </div>
+
+    <!-- Right Telemetry & Diagnostics Panel -->
+    <div class="panel">
+      <h2>:: telemetry dashboard ::</h2>
+      
+      <div class="telemetry-row">
+        <span class="telemetry-label">System Phase:</span>
+        <span id="telPhase" class="telemetry-value alert">INSPIRAL</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Orbital Separation:</span>
+        <span id="telSep" class="telemetry-value">45.00 km</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Orbital Frequency:</span>
+        <span id="telFreq" class="telemetry-value">22.4 Hz</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Grav-Wave Frequency:</span>
+        <span id="telGWFreq" class="telemetry-value">44.8 Hz</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Chirp Mass (M_c):</span>
+        <span id="telChirpMass" class="telemetry-value">8.42 M☉</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Energy Loss (dE/dt):</span>
+        <span id="telEnergy" class="telemetry-value">2.41e46 W</span>
+      </div>
+      <div class="telemetry-row">
+        <span class="telemetry-label">Detector Strain (h):</span>
+        <span id="telStrain" class="telemetry-value ok">0.00</span>
+      </div>
+
+      <h2 style="margin-top: 15px;">:: strain oscilloscope ::</h2>
+      <div class="plot-container">
+        <canvas id="oscCanvas" class="telemetryCanvas"></canvas>
+      </div>
+
+      <h2 style="margin-top: 15px;">:: frequency spectrogram ::</h2>
+      <div class="plot-container">
+        <canvas id="specCanvas" class="telemetryCanvas"></canvas>
+      </div>
+
+      <div id="terminal" class="status-terminal">
+        &gt; initialize detector arrays... done.<br>
+        &gt; listening for orbital perturbations...
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Physics parameters & state
+    let state = {
+      m1: 50.0,
+      m2: 1.2,
+      initSep: 45.0,
+      sep: 45.0,
+      theta: 0.0,
+      omega: 0.0,
+      t: 0.0,
+      isPaused: false,
+      speedFactor: 1.0,
+      phase: 'inspiral', // 'inspiral', 'merger', 'ringdown', 'merged'
+      mergeTime: 0.0,
+      finalMass: 51.2,
+      finalSpin: 0.6,
+      detectorX: 120, // offset from center
+      detectorY: 100, // offset from center
+      detectorArmLength: 70,
+      detectorAngle: 0.0,
+      waveSpeed: 6.0,
+      history: [] // stores binary states for retarded time lookup
+    };
+
+    // Diagnostics history
+    const oscHistory = [];
+    const specHistory = [];
+    const MAX_OSC_POINTS = 300;
+    const MAX_SPEC_POINTS = 300;
+
+    // View Options
+    let viewMode = '2D'; // '2D', '3D'
+    let showGridLines = false;
+
+    // Canvas settings
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const oscCanvas = document.getElementById('oscCanvas');
+    const oscCtx = oscCanvas.getContext('2d');
+    const specCanvas = document.getElementById('specCanvas');
+    const specCtx = specCanvas.getContext('2d');
+
+    // UI elements
+    const mass1Slider = document.getElementById('mass1Slider');
+    const mass2Slider = document.getElementById('mass2Slider');
+    const separationSlider = document.getElementById('separationSlider');
+    const speedSlider = document.getElementById('speedSlider');
+    const volumeSlider = document.getElementById('volumeSlider');
+    
+    const m1Val = document.getElementById('m1Val');
+    const m2Val = document.getElementById('m2Val');
+    const sepVal = document.getElementById('sepVal');
+    const speedVal = document.getElementById('speedVal');
+    const volVal = document.getElementById('volVal');
+    
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const view2DBtn = document.getElementById('view2DBtn');
+    const view3DBtn = document.getElementById('view3DBtn');
+    const viewGridLinesBtn = document.getElementById('viewGridLinesBtn');
+    const presetSelect = document.getElementById('presetSelect');
+    const audioModeSelect = document.getElementById('audioModeSelect');
+    const terminal = document.getElementById('terminal');
+
+    // Telemetry display elements
+    const telPhase = document.getElementById('telPhase');
+    const telSep = document.getElementById('telSep');
+    const telFreq = document.getElementById('telFreq');
+    const telGWFreq = document.getElementById('telGWFreq');
+    const telChirpMass = document.getElementById('telChirpMass');
+    const telEnergy = document.getElementById('telEnergy');
+    const telStrain = document.getElementById('telStrain');
+
+    // Web Audio Variables
+    let audioCtx = null;
+    let synthOsc = null;
+    let synthGain = null;
+    let filterNode = null;
+    let noiseNode = null;
+    let ambientOsc1 = null;
+    let ambientOsc2 = null;
+    let ambientGain = null;
+    let audioInitialized = false;
+
+    // Grid coordinates cache for performance
+    let waveGrid = [];
+    const GRID_SIZE = 40;
+
+    // Terminal Logging
+    function logTerm(msg) {
+      terminal.innerHTML += `<br>&gt; ${msg}`;
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // Set dimensions
+    function resizeCanvases() {
+      const container = canvas.parentElement;
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+      
+      oscCanvas.width = oscCanvas.parentElement.clientWidth;
+      oscCanvas.height = oscCanvas.parentElement.clientHeight;
+      
+      specCanvas.width = specCanvas.parentElement.clientWidth;
+      specCanvas.height = specCanvas.parentElement.clientHeight;
+
+      generateGridCache();
+    }
+
+    // Cache coordinates for grid rendering (optimizes CPU cycles)
+    function generateGridCache() {
+      waveGrid = [];
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const stepX = cw / GRID_SIZE;
+      const stepY = ch / GRID_SIZE;
+      
+      for (let i = 0; i <= GRID_SIZE; i++) {
+        for (let j = 0; j <= GRID_SIZE; j++) {
+          const gx = i * stepX;
+          const gy = j * stepY;
+          // distance and angle relative to center of screen
+          const dx = gx - cw / 2;
+          const dy = gy - ch / 2;
+          const r = Math.sqrt(dx * dx + dy * dy);
+          const phi = Math.atan2(dy, dx);
+          
+          waveGrid.push({
+            gridI: i,
+            gridJ: j,
+            x: gx,
+            y: gy,
+            r: r,
+            phi: phi
+          });
+        }
+      }
+    }
+
+    // Initialize Web Audio API
+    function initAudio() {
+      if (audioInitialized) return;
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        
+        // Synth Node
+        synthOsc = audioCtx.createOscillator();
+        synthOsc.type = 'sine';
+        synthOsc.frequency.setValueAtTime(40, audioCtx.currentTime);
+        
+        synthGain = audioCtx.createGain();
+        synthGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        
+        // Ambient Nodes
+        ambientOsc1 = audioCtx.createOscillator();
+        ambientOsc1.type = 'sawtooth';
+        ambientOsc1.frequency.setValueAtTime(55, audioCtx.currentTime); // A1
+        
+        ambientOsc2 = audioCtx.createOscillator();
+        ambientOsc2.type = 'triangle';
+        ambientOsc2.frequency.setValueAtTime(110, audioCtx.currentTime); // A2
+
+        filterNode = audioCtx.createBiquadFilter();
+        filterNode.type = 'lowpass';
+        filterNode.frequency.setValueAtTime(200, audioCtx.currentTime);
+        filterNode.Q.setValueAtTime(5.0, audioCtx.currentTime);
+        
+        ambientGain = audioCtx.createGain();
+        ambientGain.gain.setValueAtTime(0, audioCtx.currentTime);
+
+        // Connections
+        synthOsc.connect(synthGain);
+        synthGain.connect(audioCtx.destination);
+
+        ambientOsc1.connect(filterNode);
+        ambientOsc2.connect(filterNode);
+        filterNode.connect(ambientGain);
+        ambientGain.connect(audioCtx.destination);
+
+        // Start Oscillators
+        synthOsc.start();
+        ambientOsc1.start();
+        ambientOsc2.start();
+        
+        audioInitialized = true;
+        logTerm("audio context activated.");
+        updateAudioEngine();
+      } catch(e) {
+        console.error("Audio Context Failed:", e);
+        logTerm("error: audio blocked or unsupported.");
+      }
+    }
+
+    // Update synthesizer and gains based on controls & state
+    function updateAudioEngine() {
+      if (!audioInitialized) return;
+      
+      const mode = audioModeSelect.value;
+      const masterVol = volumeSlider.value / 100;
+      
+      if (audioCtx.state === 'suspended') {
+        // User interaction required to resume
+        return;
+      }
+
+      if (mode === 'off') {
+        synthGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        ambientGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        return;
+      }
+
+      if (mode === 'strain') {
+        ambientGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        
+        if (state.phase === 'merged') {
+          synthGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.08);
+        } else {
+          // Map strain amplitude and frequency to oscillator
+          const gwFreq = state.omega * 2 * 10; // scale to audible frequency
+          const clampedFreq = Math.max(20, Math.min(2200, gwFreq));
+          
+          synthOsc.frequency.setTargetAtTime(clampedFreq, audioCtx.currentTime, 0.02);
+          
+          // Strain volume proportional to strain strength
+          let gwVolume = Math.min(0.8, Math.abs(calculateStrainAtDetector()) * 1.5);
+          if (state.phase === 'merger') gwVolume = 0.9;
+          if (state.phase === 'ringdown') {
+            const timeSinceMerge = state.t - state.mergeTime;
+            gwVolume = 0.9 * Math.exp(-timeSinceMerge / 0.15);
+          }
+          
+          synthGain.gain.setTargetAtTime(gwVolume * masterVol, audioCtx.currentTime, 0.02);
+        }
+      } 
+      
+      else if (mode === 'ambient') {
+        synthGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        
+        // Space Ambient Synth mapping
+        const baseFreq = 55 + (state.omega * 5); // frequency goes up with orbit speed
+        ambientOsc1.frequency.setTargetAtTime(baseFreq, audioCtx.currentTime, 0.1);
+        ambientOsc2.frequency.setTargetAtTime(baseFreq * 2 + 1.2, audioCtx.currentTime, 0.1);
+        
+        // Modulate filter cutoff based on orbital dynamics
+        const filterCutoff = 150 + Math.sin(state.t * 3) * 50 + (state.omega * 100);
+        filterNode.frequency.setTargetAtTime(filterCutoff, audioCtx.currentTime, 0.08);
+        
+        ambientGain.gain.setTargetAtTime(0.3 * masterVol, audioCtx.currentTime, 0.05);
+      }
+    }
+
+    // Presets configuration
+    const presets = {
+      stellar: { m1: 15.0, m2: 10.0, sep: 55, name: "Stellar-Mass BH Merger" },
+      intermediate: { m1: 120.0, m2: 100.0, sep: 65, name: "Intermediate BH Merger" },
+      supermassive: { m1: 200.0, m2: 150.0, sep: 80, name: "Supermassive BH Inspiral" },
+      emri: { m1: 50.0, m2: 1.2, sep: 45, name: "Extreme Mass-Ratio Inspiral" },
+      unequal: { m1: 40.0, m2: 3.0, sep: 40, name: "Asymmetric Core Merger" }
+    };
+
+    function applyPreset(key) {
+      const p = presets[key];
+      if (!p) return;
+      
+      mass1Slider.value = p.m1;
+      mass2Slider.value = p.m2;
+      separationSlider.value = p.sep;
+      
+      m1Val.textContent = `${p.m1} M☉`;
+      m2Val.textContent = `${p.m2} M☉`;
+      sepVal.textContent = `${p.sep} pixels`;
+      
+      logTerm(`applied preset: ${p.name}`);
+      resetSimulation();
+    }
+
+    // Initial setup & reset
+    function resetSimulation() {
+      state.m1 = parseFloat(mass1Slider.value);
+      state.m2 = parseFloat(mass2Slider.value);
+      state.initSep = parseFloat(separationSlider.value);
+      state.sep = state.initSep;
+      state.theta = 0.0;
+      state.omega = Math.sqrt((state.m1 + state.m2) / Math.pow(state.sep, 3));
+      state.t = 0.0;
+      state.phase = 'inspiral';
+      state.mergeTime = 0.0;
+      state.finalMass = (state.m1 + state.m2) * 0.95; // 5% energy radiated away
+      state.finalSpin = 0.68;
+      state.history = [];
+      
+      oscHistory.length = 0;
+      specHistory.length = 0;
+
+      // Reset detector coordinates relative to center
+      state.detectorX = canvas.width / 2 + 130;
+      state.detectorY = canvas.height / 2 - 100;
+      
+      logTerm("simulation state initialized.");
+      logTerm(`chirp mass calculated: ${calculateChirpMass().toFixed(2)} M☉`);
+    }
+
+    // Helper math functions
+    function calculateChirpMass() {
+      const m1 = state.m1;
+      const m2 = state.m2;
+      return Math.pow(m1 * m2, 3/5) / Math.pow(m1 + m2, 1/5);
+    }
+
+    // General Relativity inspired evolution step
+    function updatePhysics(dt) {
+      if (state.phase === 'merged') return;
+
+      const m1 = state.m1;
+      const m2 = state.m2;
+      const M = m1 + m2;
+      const eta = (m1 * m2) / (M * M);
+      const Mc = calculateChirpMass();
+
+      if (state.phase === 'inspiral') {
+        // Peters-Mathews equation for gravitational radiation orbital decay:
+        // da/dt = - (64/5) * G^3 * m1 * m2 * (m1+m2) / (c^5 * a^3)
+        // We scale this to make the inspiral happen over a pleasant 10-30 seconds
+        const c_scaled = 12.0; // speed of light constant in sim
+        const decayConstant = (64.0 / 5.0) * eta * Math.pow(M, 3) / Math.pow(c_scaled, 5);
+        const da_dt = -decayConstant / Math.pow(state.sep, 3) * 6000; // arbitrary multiplier for UX speed
+        
+        state.sep += da_dt * dt;
+        
+        // Kepler's third law
+        state.omega = Math.sqrt(M / Math.pow(state.sep, 3));
+        state.theta += state.omega * dt * 25; // scaling velocity step
+
+        // Check if Schwarzschild radius / event horizon coalescence limit reached
+        const R_schwarzschild = 2 * M / 25; // event horizon radius scaling
+        if (state.sep <= Math.max(8.0, R_schwarzschild)) {
+          state.phase = 'merger';
+          state.mergeTime = state.t;
+          logTerm("COALESCENCE: Event Horizon crossing!");
+        }
+      } 
+      
+      else if (state.phase === 'merger') {
+        // Coalescence phase - spiral collapses into single rotating black hole
+        state.sep *= Math.exp(-1.5 * dt); // fast collapse
+        state.omega += (15.0 - state.omega) * 0.3; // spin up
+        state.theta += state.omega * dt * 25;
+        
+        if (state.sep < 0.5) {
+          state.sep = 0;
+          state.phase = 'ringdown';
+          logTerm("RINGDOWN: Black hole settling into Kerr geometry...");
+        }
+      } 
+      
+      else if (state.phase === 'ringdown') {
+        // Quasi-normal mode ringdown decay
+        const timeSinceMerge = state.t - state.mergeTime;
+        const decayRate = 6.0; // QNM damping factor
+        
+        // frequency is constant during ringdown
+        state.omega = 12.0; 
+        state.theta += state.omega * dt * 25;
+        
+        if (timeSinceMerge > 0.8) {
+          state.phase = 'merged';
+          logTerm(`MERGED: Stable black hole formed. Mass = ${state.finalMass.toFixed(2)} M☉.`);
+        }
+      }
+
+      state.t += dt;
+
+      // Keep state history for wave retarded time calculations
+      state.history.push({
+        t: state.t,
+        sep: state.sep,
+        theta: state.theta,
+        omega: state.omega,
+        phase: state.phase,
+        mergeTime: state.mergeTime
+      });
+
+      // Cap history list size to prevent memory leaks
+      if (state.history.length > 3000) {
+        state.history.shift();
+      }
+    }
+
+    // Binary search helper to find the binary state at a specific historical time
+    function getStateAtTime(targetT) {
+      const hist = state.history;
+      if (hist.length === 0) return null;
+      if (targetT <= hist[0].t) return hist[0];
+      if (targetT >= hist[hist.length - 1].t) return hist[hist.length - 1];
+
+      let low = 0;
+      let high = hist.length - 1;
+      
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        const mt = hist[mid].t;
+        if (Math.abs(mt - targetT) < 0.001) {
+          return hist[mid];
+        } else if (mt < targetT) {
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+      return hist[low];
+    }
+
+    // Calculate gravitational wave strain h at a given position and time
+    // h(r, t) = (1/r) * (d^2 Q / dt^2) evaluated at retarded time t_ret = t - r/c
+    function calculateWaveStrain(dx, dy, r, phi, targetT) {
+      if (r < 10) return 0; // prevent center singularity blowup
+      
+      const tRet = targetT - (r / state.waveSpeed);
+      const s = getStateAtTime(tRet);
+      if (!s) return 0;
+
+      const Mc = calculateChirpMass();
+
+      // Amplitude scales with Chirp Mass^(5/3) and Frequency^(2/3) / distance
+      let amp = 0.05 * Math.pow(Mc, 5/3) * Math.pow(s.omega, 2/3) / (r * 0.1 + 1.0);
+
+      // Handle phases
+      if (s.phase === 'ringdown') {
+        const timeSinceMerge = tRet - s.mergeTime;
+        amp = 0.05 * Math.pow(Mc, 5/3) * Math.pow(12.0, 2/3) / (r * 0.1 + 1.0);
+        amp *= Math.exp(-timeSinceMerge * 6.0); // QNM exponential decay
+      } else if (s.phase === 'merged') {
+        return 0;
+      }
+
+      // Quadrupole formula: strain wave propagates with double orbital frequency
+      const wavePhase = 2.0 * s.theta - 2.0 * phi;
+      return amp * Math.cos(wavePhase);
+    }
+
+    // Calculate strain specifically at the user's detector node
+    function calculateStrainAtDetector() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const dx = state.detectorX - cx;
+      const dy = state.detectorY - cy;
+      const r = Math.sqrt(dx * dx + dy * dy);
+      const phi = Math.atan2(dy, dx);
+      
+      let strain = calculateWaveStrain(dx, dy, r, phi, state.t);
+      
+      // Rotate based on detector arm angle (Antenna response lobes)
+      // h_det = h+ cos(2 theta_arm) + hx sin(2 theta_arm)
+      const antennaFactor = Math.cos(2 * state.detectorAngle);
+      return strain * antennaFactor;
+    }
+
+    // Render loop
+    function draw() {
+      const cw = canvas.width;
+      const ch = canvas.height;
+      const cx = cw / 2;
+      const cy = ch / 2;
+
+      // Clear with dark purple void
+      ctx.fillStyle = '#020108';
+      ctx.fillRect(0, 0, cw, ch);
+
+      // Render the gravitational wave field
+      if (viewMode === '2D') {
+        draw2DWavefield(cw, ch, cx, cy);
+      } else if (viewMode === '3D') {
+        draw3DGrid(cw, ch, cx, cy);
+      }
+
+      // Render grid overlay lines if toggled
+      if (showGridLines && viewMode === '2D') {
+        drawGridOverlay(cw, ch);
+      }
+
+      // Render laser interferometer arms and photodiode
+      drawInterferometer(cx, cy);
+
+      // Render Core Binary Stars/Black Holes
+      drawCores(cx, cy);
+
+      // Draw dashboard and widgets info
+      drawTelemetryData();
+    }
+
+    // 2D wavefield color mapping
+    function draw2DWavefield(cw, ch, cx, cy) {
+      const stepX = cw / GRID_SIZE;
+      const stepY = ch / GRID_SIZE;
+
+      for (let cell of waveGrid) {
+        const strain = calculateWaveStrain(cell.x - cx, cell.y - cy, cell.r, cell.phi, state.t);
+        
+        // Map strain to a gorgeous red-blue color ramp
+        // Positive strain = Glowing Pink/Neon Magenta
+        // Negative strain = Glowing Cyan/Electric Blue
+        let rVal = 2;
+        let gVal = 1;
+        let bVal = 8;
+        
+        if (strain > 0) {
+          const intensity = Math.min(255, Math.floor(strain * 1400));
+          rVal = 10 + intensity;
+          gVal = 5;
+          bVal = 20 + intensity / 2;
+        } else {
+          const intensity = Math.min(255, Math.floor(Math.abs(strain) * 1400));
+          rVal = 5;
+          gVal = 10 + intensity;
+          bVal = 25 + intensity;
+        }
+
+        ctx.fillStyle = `rgb(${rVal}, ${gVal}, ${bVal})`;
+        // Bilinear representation using grid tiles
+        ctx.fillRect(cell.x - stepX/2, cell.y - stepY/2, stepX + 0.5, stepY + 0.5);
+      }
+    }
+
+    // 3D Projected spacetime curvature grid
+    function draw3DGrid(cw, ch, cx, cy) {
+      const angleX = 0.95; // elevation rotation
+      const angleZ = -0.55; // azimuth rotation
+
+      function project3D(x, y, z) {
+        let px = x - cx;
+        let py = y - cy;
+        let pz = z;
+
+        // Rotation around Z axis
+        const cosZ = Math.cos(angleZ);
+        const sinZ = Math.sin(angleZ);
+        const rx1 = px * cosZ - py * sinZ;
+        const ry1 = px * sinZ + py * cosZ;
+
+        // Rotation around X axis
+        const cosX = Math.cos(angleX);
+        const sinX = Math.sin(angleX);
+        const rx2 = rx1;
+        const ry2 = ry1 * cosX - pz * sinX;
+        const rz2 = ry1 * sinX + pz * cosX;
+
+        // Perspective scaling
+        const dist = 500;
+        const scale = dist / (dist + rz2);
+
+        return {
+          x: cx + rx2 * scale,
+          y: cy + ry2 * scale
+        };
+      }
+
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+      ctx.lineWidth = 1;
+
+      const gridResolution = 30;
+      const stepX = cw / gridResolution;
+      const stepY = ch / gridResolution;
+
+      // Project grid vertices
+      const projectedGrid = [];
+      for (let i = 0; i <= gridResolution; i++) {
+        projectedGrid[i] = [];
+        for (let j = 0; j <= gridResolution; j++) {
+          const gx = i * stepX;
+          const gy = j * stepY;
+          const dx = gx - cx;
+          const dy = gy - cy;
+          const r = Math.sqrt(dx * dx + dy * dy);
+          const phi = Math.atan2(dy, dx);
+          
+          const strain = calculateWaveStrain(dx, dy, r, phi, state.t);
+          
+          // Height displacement mapped to strain wave
+          const z = strain * 350; 
+          
+          projectedGrid[i][j] = project3D(gx, gy, z);
+        }
+      }
+
+      // Draw grid lines
+      for (let i = 0; i < gridResolution; i++) {
+        for (let j = 0; j < gridResolution; j++) {
+          const p1 = projectedGrid[i][j];
+          const p2 = projectedGrid[i + 1][j];
+          const p3 = projectedGrid[i][j + 1];
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p3.x, p3.y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Static layout overlay lines
+    function drawGridOverlay(cw, ch) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 0.5;
+      
+      const gridWidth = 40;
+      for (let x = 0; x < cw; x += gridWidth) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ch);
+        ctx.stroke();
+      }
+      for (let y = 0; y < ch; y += gridWidth) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(cw, y);
+        ctx.stroke();
+      }
+    }
+
+    // Draw the binary cores (Accretion Disks, Einstein rings, event horizons)
+    function drawCores(cx, cy) {
+      if (state.phase === 'merged') {
+        // Draw the final Kerr black hole
+        const finalR = Math.max(10, Math.sqrt(state.finalMass) * 1.8);
+        
+        // Accretion disk glow
+        const radGlow = ctx.createRadialGradient(cx, cy, finalR, cx, cy, finalR * 4);
+        radGlow.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+        radGlow.addColorStop(0.3, 'rgba(255, 0, 100, 0.4)');
+        radGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = radGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, finalR * 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Event Horizon (Black center)
+        ctx.fillStyle = '#000000';
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(cx, cy, finalR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0; // reset
+        return;
+      }
+
+      // Draw binary companion bodies orbiting
+      const sep = state.sep;
+      const m1 = state.m1;
+      const m2 = state.m2;
+      const totalM = m1 + m2;
+      
+      // Orbit coordinates
+      const r1 = (m2 / totalM) * sep;
+      const r2 = (m1 / totalM) * sep;
+
+      const x1 = cx - r1 * Math.cos(state.theta);
+      const y1 = cy - r1 * Math.sin(state.theta);
+
+      const x2 = cx + r2 * Math.cos(state.theta);
+      const y2 = cy + r2 * Math.sin(state.theta);
+
+      // Event horizon scaling
+      const radius1 = Math.max(4, Math.sqrt(m1) * 1.5);
+      const radius2 = Math.max(2, Math.sqrt(m2) * 1.5);
+
+      // Core 1 (Primary)
+      drawSingleBlackHole(x1, y1, radius1, '#ff0055');
+      // Core 2 (Companion)
+      drawSingleBlackHole(x2, y2, radius2, '#00f3ff');
+
+      // Draw orbit paths (very faint)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    function drawSingleBlackHole(x, y, r, glowColor) {
+      // Einstein Ring / Accretion Glow
+      const grad = ctx.createRadialGradient(x, y, r, x, y, r * 3);
+      grad.addColorStop(0, glowColor);
+      grad.addColorStop(0.2, 'rgba(20, 10, 40, 0.5)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Shadowed Event Horizon
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Render Laser Interferometer (LIGO)
+    function drawInterferometer(cx, cy) {
+      const detX = state.detectorX;
+      const detY = state.detectorY;
+      const L = state.detectorArmLength;
+
+      // Antenna Pattern alignment rotation
+      const arm1X = detX + L * Math.cos(state.detectorAngle);
+      const arm1Y = detY + L * Math.sin(state.detectorAngle);
+      const arm2X = detX + L * Math.cos(state.detectorAngle + Math.PI / 2);
+      const arm2Y = detY + L * Math.sin(state.detectorAngle + Math.PI / 2);
+
+      // local strain perturbation modulates arm stretch display dynamically
+      const strain = calculateStrainAtDetector();
+      const stretchAmount = strain * 50; // amplify for visual feedback
+
+      const activeArm1X = detX + (L + stretchAmount) * Math.cos(state.detectorAngle);
+      const activeArm1Y = detY + (L + stretchAmount) * Math.sin(state.detectorAngle);
+      const activeArm2X = detX + (L - stretchAmount) * Math.cos(state.detectorAngle + Math.PI / 2);
+      const activeArm2Y = detY + (L - stretchAmount) * Math.sin(state.detectorAngle + Math.PI / 2);
+
+      // Draw Laser Arm Lines
+      ctx.shadowColor = 'rgba(0, 255, 100, 0.6)';
+      ctx.shadowBlur = 4;
+      ctx.strokeStyle = 'rgba(57, 255, 20, 0.85)'; // Neon Green Laser
+      ctx.lineWidth = 2.5;
+
+      // Arm 1
+      ctx.beginPath();
+      ctx.moveTo(detX, detY);
+      ctx.lineTo(activeArm1X, activeArm1Y);
+      ctx.stroke();
+
+      // Arm 2
+      ctx.beginPath();
+      ctx.moveTo(detX, detY);
+      ctx.lineTo(activeArm2X, activeArm2Y);
+      ctx.stroke();
+      ctx.shadowBlur = 0; // reset
+
+      // Draw Arm End Mirrors
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#00f3ff';
+      ctx.lineWidth = 1;
+
+      // Mirror 1
+      ctx.beginPath();
+      ctx.arc(activeArm1X, activeArm1Y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Mirror 2
+      ctx.beginPath();
+      ctx.arc(activeArm2X, activeArm2Y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Draw Central Beam Splitter Station (Detector head)
+      ctx.fillStyle = '#00f3ff';
+      ctx.shadowColor = '#00f3ff';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(detX, detY, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0; // reset
+
+      // Draw faint sensitivity antenna pattern circle
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.arc(detX, detY, L, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Telemetry and status displays
+    function drawTelemetryData() {
+      telPhase.textContent = state.phase.toUpperCase();
+      if (state.phase === 'merger' || state.phase === 'ringdown') {
+        telPhase.className = 'telemetry-value alert';
+      } else if (state.phase === 'merged') {
+        telPhase.className = 'telemetry-value ok';
+      } else {
+        telPhase.className = 'telemetry-value';
+      }
+
+      telSep.textContent = state.sep > 0 ? `${(state.sep * 4.2).toFixed(2)} km` : "0.00 km";
+      
+      const orbitFreq = state.omega * 12.5; // normalized Hz representation
+      telFreq.textContent = state.phase !== 'merged' ? `${orbitFreq.toFixed(1)} Hz` : "0.0 Hz";
+      telGWFreq.textContent = state.phase !== 'merged' ? `${(orbitFreq * 2).toFixed(1)} Hz` : "0.0 Hz";
+
+      telChirpMass.textContent = `${calculateChirpMass().toFixed(2)} M☉`;
+
+      // Energy loss rate = (32/5) * G^4 * eta^2 * M^5 / (c^5 * a^5)
+      const dE_dt = state.phase === 'inspiral' ? (3.2e45 * Math.pow(state.m1 * state.m2, 2) / Math.pow(state.sep, 5)) : 0;
+      telEnergy.textContent = dE_dt > 0 ? `${dE_dt.toExponential(2)} W` : "0.0 W";
+
+      const strain = calculateStrainAtDetector();
+      telStrain.textContent = `${(strain * 1e20).toFixed(4)} × 1e-21`;
+    }
+
+    // Update real-time plot canvases
+    function updatePlots() {
+      // 1. Oscilloscope Strain Tracing
+      const strain = calculateStrainAtDetector();
+      oscHistory.push(strain);
+      if (oscHistory.length > MAX_OSC_POINTS) {
+        oscHistory.shift();
+      }
+
+      // Draw Osc Canvas
+      oscCtx.fillStyle = '#010006';
+      oscCtx.fillRect(0, 0, oscCanvas.width, oscCanvas.height);
+      
+      // Center baseline
+      oscCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      oscCtx.lineWidth = 1;
+      oscCtx.beginPath();
+      oscCtx.moveTo(0, oscCanvas.height / 2);
+      oscCtx.lineTo(oscCanvas.width, oscCanvas.height / 2);
+      oscCtx.stroke();
+
+      oscCtx.strokeStyle = '#39ff14'; // neon green trace
+      oscCtx.lineWidth = 1.5;
+      oscCtx.beginPath();
+      for (let i = 0; i < oscHistory.length; i++) {
+        const x = (i / MAX_OSC_POINTS) * oscCanvas.width;
+        // scale height to fit screen
+        const y = (oscCanvas.height / 2) - (oscHistory[i] * oscCanvas.height * 2.0);
+        if (i === 0) {
+          oscCtx.moveTo(x, y);
+        } else {
+          oscCtx.lineTo(x, y);
+        }
+      }
+      oscCtx.stroke();
+
+      // 2. Frequency Spectrogram Tracing
+      const freq = state.phase !== 'merged' ? (state.omega * 12.5 * 2) : 0;
+      specHistory.push(freq);
+      if (specHistory.length > MAX_SPEC_POINTS) {
+        specHistory.shift();
+      }
+
+      // Draw Spec Canvas
+      specCtx.fillStyle = '#010006';
+      specCtx.fillRect(0, 0, specCanvas.width, specCanvas.height);
+
+      specCtx.strokeStyle = '#ff007f'; // neon magenta trace
+      specCtx.lineWidth = 2.0;
+      specCtx.beginPath();
+      for (let i = 0; i < specHistory.length; i++) {
+        const x = (i / MAX_SPEC_POINTS) * specCanvas.width;
+        // Map frequency representation to Y coordinate
+        const y = specCanvas.height - (specHistory[i] / 300) * specCanvas.height - 5;
+        if (i === 0) {
+          specCtx.moveTo(x, y);
+        } else {
+          specCtx.lineTo(x, y);
+        }
+      }
+      specCtx.stroke();
+    }
+
+    // Animation Loop
+    let lastTime = 0;
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      let dt = (timestamp - lastTime) / 1000;
+      
+      // Cap dt to prevent massive jumps when switching tabs
+      if (dt > 0.1) dt = 0.1;
+      
+      lastTime = timestamp;
+
+      if (!state.isPaused) {
+        // Step physics based on time constant
+        updatePhysics(dt * state.speedFactor);
+        updatePlots();
+        updateAudioEngine();
+      }
+
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Drag-and-drop detector code
+    let isDraggingDetector = false;
+    
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Check if clicked near the central station
+      const dist = Math.hypot(mouseX - state.detectorX, mouseY - state.detectorY);
+      if (dist < 15) {
+        isDraggingDetector = true;
+        initAudio(); // Resume or initialize audio context on click
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDraggingDetector) {
+        const rect = canvas.getBoundingClientRect();
+        state.detectorX = e.clientX - rect.left;
+        state.detectorY = e.clientY - rect.top;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingDetector = false;
+    });
+
+    // Touch support for dragging on mobile
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.touches[0].clientX - rect.left;
+        const touchY = e.touches[0].clientY - rect.top;
+        const dist = Math.hypot(touchX - state.detectorX, touchY - state.detectorY);
+        if (dist < 25) {
+          isDraggingDetector = true;
+          initAudio();
+          e.preventDefault();
+        }
+      }
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (isDraggingDetector && e.touches.length === 1) {
+        const rect = canvas.getBoundingClientRect();
+        state.detectorX = e.touches[0].clientX - rect.left;
+        state.detectorY = e.touches[0].clientY - rect.top;
+        e.preventDefault();
+      }
+    });
+
+    // Event listeners
+    mass1Slider.addEventListener('input', (e) => {
+      m1Val.textContent = `${e.target.value} M☉`;
+      resetSimulation();
+    });
+
+    mass2Slider.addEventListener('input', (e) => {
+      m2Val.textContent = `${e.target.value} M☉`;
+      resetSimulation();
+    });
+
+    separationSlider.addEventListener('input', (e) => {
+      sepVal.textContent = `${e.target.value} pixels`;
+      resetSimulation();
+    });
+
+    speedSlider.addEventListener('input', (e) => {
+      speedVal.textContent = `${parseFloat(e.target.value).toFixed(1)}x`;
+      state.speedFactor = parseFloat(e.target.value);
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+      volVal.textContent = `${e.target.value}%`;
+      updateAudioEngine();
+    });
+
+    playPauseBtn.addEventListener('click', () => {
+      initAudio();
+      state.isPaused = !state.isPaused;
+      playPauseBtn.textContent = state.isPaused ? "Play" : "Pause";
+      logTerm(state.isPaused ? "simulation paused." : "simulation resumed.");
+    });
+
+    resetBtn.addEventListener('click', () => {
+      resetSimulation();
+      logTerm("telemetry resets triggered.");
+    });
+
+    view2DBtn.addEventListener('click', () => {
+      viewMode = '2D';
+      view2DBtn.classList.add('active');
+      view3DBtn.classList.remove('active');
+    });
+
+    view3DBtn.addEventListener('click', () => {
+      viewMode = '3D';
+      view3DBtn.classList.add('active');
+      view2DBtn.classList.remove('active');
+    });
+
+    viewGridLinesBtn.addEventListener('click', () => {
+      showGridLines = !showGridLines;
+      viewGridLinesBtn.classList.toggle('active', showGridLines);
+    });
+
+    presetSelect.addEventListener('change', (e) => {
+      applyPreset(e.target.value);
+    });
+
+    audioModeSelect.addEventListener('change', () => {
+      initAudio();
+      updateAudioEngine();
+    });
+
+    // Handle Window Resizing
+    window.addEventListener('resize', resizeCanvases);
+
+    // Bootstrap
+    resizeCanvases();
+    resetSimulation();
+    requestAnimationFrame(loop);
+
+  </script>
+</body>
+</html>
