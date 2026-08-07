@@ -1,0 +1,2311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>flux-pinning: superconductor quantum levitation sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #07080d;
+      --panel-bg: rgba(13, 16, 27, 0.85);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #39ff14;
+      --neon-purple: #9d00ff;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-cyan);
+    }
+
+    header {
+      background: rgba(10, 11, 18, 0.9);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 55px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 8px rgba(0, 243, 255, 0.5);
+    }
+
+    .logo-sub {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      border-left: 1px solid var(--border-color);
+      padding-left: 10px;
+      margin-left: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .system-status {
+      display: flex;
+      gap: 15px;
+      font-size: 0.9rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .status-dot.normal {
+      background-color: var(--text-dim);
+      box-shadow: none;
+    }
+
+    .status-dot.meissner {
+      background-color: var(--neon-magenta);
+      box-shadow: 0 0 8px var(--neon-magenta);
+    }
+
+    .status-dot.pinned {
+      background-color: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .app-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 310px 1fr 340px;
+      height: calc(100vh - 55px);
+      background: radial-gradient(circle at center, #10121e 0%, #050609 100%);
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .panel.right {
+      border-right: none;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .panel-header {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border-color);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-color);
+      letter-spacing: 1px;
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-section {
+      padding: 15px;
+      border-bottom: 1px solid rgba(0, 243, 255, 0.08);
+    }
+
+    .panel-section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--neon-cyan);
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    /* UI Controls styling */
+    .control-group {
+      margin-bottom: 12px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .control-value {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    /* Custom range input */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type=range]:focus {
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      cursor: pointer;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      border: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      height: 14px;
+      width: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -5px;
+      box-shadow: 0 0 6px var(--neon-cyan);
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    input[type=range]:hover::-webkit-slider-thumb {
+      background: #ffffff;
+      box-shadow: 0 0 10px #ffffff;
+    }
+
+    /* Buttons styling */
+    .btn {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px 12px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 3px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+      color: #fff;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+    }
+
+    .btn-primary:hover {
+      background: var(--neon-cyan);
+      color: #000;
+      text-shadow: none;
+      box-shadow: 0 0 15px var(--neon-cyan);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 0, 127, 0.08);
+      border-color: rgba(255, 0, 127, 0.3);
+      color: var(--neon-magenta);
+    }
+
+    .btn-secondary:hover {
+      background: var(--neon-magenta);
+      border-color: var(--neon-magenta);
+      color: #000;
+      box-shadow: 0 0 15px var(--neon-magenta);
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    /* Select Dropdowns */
+    select {
+      width: 100%;
+      background: #0f111a;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    select:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    /* Toggle switches */
+    .toggle-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 18px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255,255,255,0.1);
+      transition: .2s;
+      border-radius: 9px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 10px;
+      width: 10px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-dim);
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(18px);
+      background-color: var(--neon-cyan);
+      box-shadow: 0 0 6px var(--neon-cyan);
+    }
+
+    /* Viewport Area */
+    .viewport-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #090a0f;
+    }
+
+    #viewport {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #viewport:active {
+      cursor: grabbing;
+    }
+
+    /* State display badges on viewport */
+    .viewport-overlay {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .badge {
+      background: rgba(10, 11, 18, 0.85);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .badge-state {
+      color: var(--text-dim);
+    }
+    
+    .badge-state.normal {
+      color: var(--text-dim);
+    }
+
+    .badge-state.meissner {
+      color: var(--neon-magenta);
+      text-shadow: 0 0 5px rgba(255, 0, 127, 0.5);
+    }
+
+    .badge-state.pinned {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+    }
+
+    .viewport-help {
+      position: absolute;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      background: rgba(10, 11, 18, 0.7);
+      padding: 5px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+
+    /* Diagnostics Column */
+    .chart-container {
+      width: 100%;
+      height: 150px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 3px;
+      margin-top: 5px;
+      position: relative;
+    }
+
+    #chartCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .readout-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .readout-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 3px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+
+    .readout-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .readout-value {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.1rem;
+      color: var(--text-color);
+    }
+
+    .readout-value.highlight {
+      color: var(--neon-cyan);
+    }
+
+    /* System Thermometer in Viewport */
+    .thermo-container {
+      position: absolute;
+      right: 15px;
+      top: 15px;
+      width: 45px;
+      height: 180px;
+      background: rgba(10, 11, 18, 0.85);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 10px 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .thermo-bar-wrapper {
+      flex: 1;
+      width: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      position: relative;
+      margin-bottom: 6px;
+    }
+
+    .thermo-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      border-radius: 3px;
+      background: linear-gradient(to top, var(--neon-cyan), var(--neon-purple), var(--neon-magenta));
+      transition: height 0.2s ease-out;
+    }
+
+    .thermo-marker {
+      position: absolute;
+      left: -2px;
+      width: 10px;
+      height: 2px;
+      background: #fff;
+    }
+
+    .thermo-marker-label {
+      position: absolute;
+      left: -28px;
+      transform: translateY(-50%);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--neon-magenta);
+      font-weight: 700;
+    }
+
+    .thermo-temp-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--neon-cyan);
+      font-weight: 700;
+    }
+
+    /* Console logs */
+    .console-log {
+      flex: 1;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 3px;
+      padding: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 180px;
+    }
+
+    .log-entry {
+      line-height: 1.3;
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      padding-bottom: 2px;
+    }
+
+    .log-time {
+      color: var(--text-dim);
+      margin-right: 5px;
+    }
+
+    .log-text.info { color: var(--text-color); }
+    .log-text.system { color: var(--neon-purple); }
+    .log-text.warning { color: var(--neon-magenta); }
+    .log-text.success { color: var(--neon-green); }
+    .log-text.action { color: var(--neon-cyan); }
+
+    /* Audio alert overlay styling */
+    .audio-alert {
+      position: absolute;
+      top: 15px;
+      right: 75px;
+      background: rgba(255, 0, 127, 0.2);
+      border: 1px solid var(--neon-magenta);
+      color: var(--neon-magenta);
+      padding: 6px 12px;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      animation: pulse 2s infinite;
+      backdrop-filter: blur(5px);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.7; box-shadow: 0 0 0 0 rgba(255, 0, 127, 0.4); }
+      70% { opacity: 1; box-shadow: 0 0 0 10px rgba(255, 0, 127, 0); }
+      100% { opacity: 0.7; box-shadow: 0 0 0 0 rgba(255, 0, 127, 0); }
+    }
+
+    @media (max-width: 1024px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow-y: auto;
+      }
+      .panel {
+        height: 400px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .panel.right {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        height: 500px;
+      }
+      .viewport-container {
+        height: 500px;
+      }
+      body {
+        overflow-y: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-container">
+      <div class="logo-text">FLUX-PINNING</div>
+      <div class="logo-sub">superconductor levitation sandbox</div>
+    </div>
+    <div class="system-status">
+      <div class="status-item">
+        <span id="systemStatusDot" class="status-dot normal"></span>
+        <span id="systemStatusText" style="text-transform: uppercase;">normal state</span>
+      </div>
+      <div class="status-item" style="color: var(--text-dim);">
+        TEMP: <span id="headerTemp" style="color: var(--neon-cyan); font-weight: bold;">120 K</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- Left Column: Controls -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>SIMULATION CONFIG</span>
+        <span style="font-size: 0.75rem; color: var(--text-dim);">v1.0.4</span>
+      </div>
+      
+      <!-- Track Configuration -->
+      <div class="panel-section">
+        <div class="panel-section-title">magnetic track setup</div>
+        <div class="control-group">
+          <label class="control-label">Track Geometry</label>
+          <select id="trackSelect">
+            <option value="circularSmooth">Circular Channel (Concentric N-S)</option>
+            <option value="circularBumpy">Bumpy Ring (Alternating N-S-N-S)</option>
+            <option value="linearSmooth">Linear Channel (Straight N-S)</option>
+            <option value="doubleDipole">Double Magnet Pair (Dipole)</option>
+            <option value="singleDipole">Single Magnet (Monopole-like)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Temperature controls -->
+      <div class="panel-section">
+        <div class="panel-section-title">thermal state</div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Superconductor Temp</span>
+            <span class="control-value" id="tempValue">120 K</span>
+          </div>
+          <input type="range" id="tempSlider" min="0" max="150" value="120">
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="warmUpBtn">Warm Up</button>
+          <button class="btn btn-primary" id="coolBtn">Field Cool (FC)</button>
+        </div>
+        <button class="btn" style="margin-top:10px;" id="coolZFCBtn">Zero-Field Cool (ZFC)</button>
+      </div>
+
+      <!-- Physics Adjustments -->
+      <div class="panel-section">
+        <div class="panel-section-title">forces & physics</div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Quantum Pinning Strength</span>
+            <span class="control-value" id="pinningValue">5.0</span>
+          </div>
+          <input type="range" id="pinningSlider" min="0" max="100" value="50" step="1">
+        </div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Meissner Repulsion</span>
+            <span class="control-value" id="meissnerValue">0.5</span>
+          </div>
+          <input type="range" id="meissnerSlider" min="0" max="20" value="5" step="1">
+        </div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Gravity Scale</span>
+            <span class="control-value" id="gravityValue">1.0 G</span>
+          </div>
+          <input type="range" id="gravitySlider" min="-50" max="200" value="100" step="10">
+        </div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Damping / Drag</span>
+            <span class="control-value" id="dampingValue">1.5</span>
+          </div>
+          <input type="range" id="dampingSlider" min="0" max="100" value="15" step="5">
+        </div>
+      </div>
+
+      <!-- Action items -->
+      <div class="panel-section">
+        <div class="panel-section-title">controls</div>
+        <div class="btn-group">
+          <button class="btn" id="playPauseBtn">Pause</button>
+          <button class="btn btn-primary" id="nudgeBtn">Nudge Track</button>
+        </div>
+        <button class="btn btn-secondary" style="margin-top: 10px;" id="resetPhysBtn">Wipe & Reset position</button>
+      </div>
+    </div>
+
+    <!-- Center Column: Main Canvas Viewport -->
+    <div class="viewport-container">
+      <canvas id="viewport"></canvas>
+
+      <!-- Viewport Overlays -->
+      <div class="viewport-overlay">
+        <div class="badge">
+          <span style="color: var(--text-dim);">STATE:</span>
+          <span id="badgeState" class="badge-state normal">NORMAL (NON-SUPERCONDUCTING)</span>
+        </div>
+        <div class="badge">
+          <span style="color: var(--text-dim);">DRAG MODE:</span>
+          <select id="dragModeSelect" style="padding: 2px 5px; font-size: 0.75rem; border: none; width: auto; font-family: 'Share Tech Mono';">
+            <option value="horizontal">Horizontal Plane (XZ)</option>
+            <option value="vertical">Vertical Plane (Height Y)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Audio Warning button -->
+      <button class="audio-alert" id="audioBtn">AUDIO INACTIVE (CLICK TO INITIALIZE)</button>
+
+      <!-- Thermometer inside Viewport -->
+      <div class="thermo-container">
+        <div class="thermo-bar-wrapper">
+          <div class="thermo-marker" style="bottom: 62%;">
+            <div class="thermo-marker-label">Tc</div>
+          </div>
+          <div id="thermoBar" class="thermo-bar" style="height: 80%;"></div>
+        </div>
+        <div id="thermoTempText" class="thermo-temp-text">120 K</div>
+      </div>
+
+      <div class="viewport-help">
+        [MOUSE DRAG] Rotate camera | [SCROLL] Zoom | [MOUSE DRAG ON CYAN BLOCK] Pull Superconductor
+      </div>
+    </div>
+
+    <!-- Right Column: Diagnostics & Info -->
+    <div class="panel right">
+      <div class="panel-header">
+        <span>DIAGNOSTICS BOARD</span>
+        <span id="fpsText" style="font-family:'Share Tech Mono'; color:var(--text-dim);">60 FPS</span>
+      </div>
+
+      <!-- Metrics readouts -->
+      <div class="panel-section">
+        <div class="panel-section-title">physics readouts</div>
+        <div class="readout-grid">
+          <div class="readout-card">
+            <div class="readout-label">Velocity</div>
+            <div class="readout-value highlight" id="readoutVelocity">0.00 m/s</div>
+          </div>
+          <div class="readout-card">
+            <div class="readout-label">Hover Height</div>
+            <div class="readout-value" id="readoutHeight">0.00 mm</div>
+          </div>
+          <div class="readout-card">
+            <div class="readout-label">Pinning Force</div>
+            <div class="readout-value highlight" id="readoutForce">0.00 N</div>
+          </div>
+          <div class="readout-card">
+            <div class="readout-label">Field Strength</div>
+            <div class="readout-value" id="readoutBField">0.00 T</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time Plotting -->
+      <div class="panel-section">
+        <div class="panel-section-title">mechanical energy trace</div>
+        <div class="chart-container">
+          <canvas id="chartCanvas"></canvas>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-dim); margin-top:5px; font-family:'Share Tech Mono';">
+          <span style="color: var(--neon-cyan);">● Kinetic Energy</span>
+          <span style="color: var(--neon-magenta);">● Pinning Force</span>
+        </div>
+      </div>
+
+      <!-- Event Log Console -->
+      <div class="panel-section" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+        <div class="panel-section-title">quantum events log</div>
+        <div id="consoleLog" class="console-log">
+          <div class="log-entry"><span class="log-time">[00:00:00]</span> <span class="log-text system">Superconductor sandbox initialized.</span></div>
+          <div class="log-entry"><span class="log-time">[00:00:00]</span> <span class="log-text info">Temp is above critical threshold (Tc = 93 K). Material is resistive.</span></div>
+        </div>
+      </div>
+
+      <!-- Quick Theory -->
+      <div class="panel-section" style="font-size:0.8rem; line-height:1.4; border-bottom:none; color:var(--text-dim);">
+        <div class="panel-section-title" style="color:var(--text-color); font-size:0.85rem;">quantum levitation theory</div>
+        <p style="margin-bottom:8px;">
+          Type-II superconductors cooled below their critical temperature ($T_c$) expel magnetic fields via the <strong>Meissner Effect</strong> (Zero-Field Cooled).
+        </p>
+        <p>
+          If cooled in an active magnetic field (Field Cooled), magnetic flux lines penetrate in discrete quantum threads called <strong>Abrikosov Vortices</strong>. The superconductor's defects lock these vortices, producing <strong>Flux Pinning</strong>. This resists any movement away from the frozen field lines, allowing it to lock in 3D space.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- VECTOR & MATH UTILITIES ---
+    class Vector3 {
+      constructor(x = 0, y = 0, z = 0) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+      }
+      add(v) { return new Vector3(this.x + v.x, this.y + v.y, this.z + v.z); }
+      sub(v) { return new Vector3(this.x - v.x, this.y - v.y, this.z - v.z); }
+      scale(s) { return new Vector3(this.x * s, this.y * s, this.z * s); }
+      dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
+      cross(v) {
+        return new Vector3(
+          this.y * v.z - this.z * v.y,
+          this.z * v.x - this.x * v.z,
+          this.x * v.y - this.y * v.x
+        );
+      }
+      length() { return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z); }
+      normalize() {
+        const len = this.length();
+        if (len === 0) return new Vector3(0, 0, 0);
+        return new Vector3(this.x / len, this.y / len, this.z / len);
+      }
+      clone() { return new Vector3(this.x, this.y, this.z); }
+    }
+
+    // --- SYSTEM PARAMETERS ---
+    const Tc = 93; // Critical temperature of YBCO in Kelvin
+    let SC_TEMP = 120; // Starts warm
+    let IS_PLAYING = true;
+    let PINNING_COEFF = 2.0;
+    let MEISSNER_COEFF = 0.5;
+    let GRAVITY_Y = -9.8;
+    let DAMPING = 0.15;
+    let ACTIVE_TRACK = "circularSmooth";
+    let DRAG_MODE = "horizontal"; // or 'vertical'
+
+    // --- SUPERCONDUCTOR RIGID BODY ---
+    const sc = {
+      com: new Vector3(0, 4.0, 0), // Position of Center of Mass
+      v: new Vector3(0, 0, 0),    // Linear Velocity
+      f: new Vector3(0, 0, 0),    // Force accumulator
+      
+      // Orientation represented by orthogonal unit vectors (axes) in world space
+      ux: new Vector3(1, 0, 0),
+      uy: new Vector3(0, 1, 0),
+      uz: new Vector3(0, 0, 1),
+      
+      omega: new Vector3(0, 0, 0), // Angular Velocity
+      torque: new Vector3(0, 0, 0), // Torque accumulator
+      
+      mass: 1.0,
+      inertia: 0.15, // Simple sphere/cube model
+      
+      size: new Vector3(1.2, 0.6, 1.2), // Dimensions
+      
+      // Pinning state
+      state: "normal", // "normal", "meissner", "pinned"
+      isFieldCooled: false,
+      
+      // Frozen pinning values
+      pinningOffsets: [], // Pinning center locations in body space
+      frozenFields: [],   // Trapped field vectors in body space
+      
+      reset: function() {
+        this.com = new Vector3(0, 2.5, 5.0); // Reset to above track channel
+        if (ACTIVE_TRACK === "singleDipole") this.com = new Vector3(0, 2.5, 0);
+        else if (ACTIVE_TRACK === "doubleDipole") this.com = new Vector3(0, 2.5, 0);
+        else if (ACTIVE_TRACK === "linearSmooth") this.com = new Vector3(0, 2.5, 0);
+        
+        this.v = new Vector3(0, 0, 0);
+        this.omega = new Vector3(0, 0, 0);
+        this.ux = new Vector3(1, 0, 0);
+        this.uy = new Vector3(0, 1, 0);
+        this.uz = new Vector3(0, 0, 1);
+        this.f = new Vector3(0, 0, 0);
+        this.torque = new Vector3(0, 0, 0);
+      }
+    };
+
+    // Setup local pinning centers in body coordinates
+    sc.pinningOffsets = [
+      new Vector3(0, 0, 0), // center
+      new Vector3(-0.6, -0.3, -0.6), // 4 bottom corners
+      new Vector3(0.6, -0.3, -0.6),
+      new Vector3(0.6, -0.3, 0.6),
+      new Vector3(-0.6, -0.3, 0.6),
+      new Vector3(-0.6, 0.3, -0.6), // 4 top corners
+      new Vector3(0.6, 0.3, -0.6),
+      new Vector3(0.6, 0.3, 0.6),
+      new Vector3(-0.6, 0.3, 0.6)
+    ];
+
+    // Initialize position
+    sc.reset();
+
+    // --- MAGNET DATA & DIPOLES ---
+    let activeMagnets = [];
+
+    function rebuildTrack() {
+      activeMagnets = [];
+      
+      if (ACTIVE_TRACK === "singleDipole") {
+        // One huge magnet at the center pointing up
+        activeMagnets.push({
+          pos: new Vector3(0, 0.25, 0),
+          moment: new Vector3(0, 150.0, 0),
+          radius: 1.2,
+          height: 0.5,
+          color: "red"
+        });
+      }
+      else if (ACTIVE_TRACK === "doubleDipole") {
+        // Two magnets next to each other, opposite poles
+        activeMagnets.push({
+          pos: new Vector3(-1.0, 0.25, 0),
+          moment: new Vector3(0, 100.0, 0),
+          radius: 0.8,
+          height: 0.5,
+          color: "red"
+        });
+        activeMagnets.push({
+          pos: new Vector3(1.0, 0.25, 0),
+          moment: new Vector3(0, -100.0, 0),
+          radius: 0.8,
+          height: 0.5,
+          color: "blue"
+        });
+      }
+      else if (ACTIVE_TRACK === "circularSmooth") {
+        // Concentric rings of opposing magnets: inner up (red), outer down (blue)
+        // This generates a stable, uniform circular channel of magnetic flux
+        const innerRadius = 4.2;
+        const outerRadius = 5.8;
+        const count = 48;
+        for (let i = 0; i < count; i++) {
+          const theta = (i / count) * Math.PI * 2;
+          const cos = Math.cos(theta);
+          const sin = Math.sin(theta);
+          
+          // Inner dipole (UP)
+          activeMagnets.push({
+            pos: new Vector3(innerRadius * cos, 0.25, innerRadius * sin),
+            moment: new Vector3(0, 45.0, 0),
+            radius: 0.3,
+            height: 0.5,
+            color: "red"
+          });
+          // Outer dipole (DOWN)
+          activeMagnets.push({
+            pos: new Vector3(outerRadius * cos, 0.25, outerRadius * sin),
+            moment: new Vector3(0, -45.0, 0),
+            radius: 0.3,
+            height: 0.5,
+            color: "blue"
+          });
+        }
+      }
+      else if (ACTIVE_TRACK === "circularBumpy") {
+        // A single ring of magnets with alternating poles.
+        // It creates strong longitudinal flux variations, locking the slider into discrete sites.
+        const radius = 5.0;
+        const count = 32;
+        for (let i = 0; i < count; i++) {
+          const theta = (i / count) * Math.PI * 2;
+          const isUp = (i % 2 === 0);
+          activeMagnets.push({
+            pos: new Vector3(radius * Math.cos(theta), 0.25, radius * Math.sin(theta)),
+            moment: new Vector3(0, isUp ? 80.0 : -80.0, 0),
+            radius: 0.45,
+            height: 0.5,
+            color: isUp ? "red" : "blue"
+          });
+        }
+      }
+      else if (ACTIVE_TRACK === "linearSmooth") {
+        // Two parallel lines of opposing magnets along the Z-axis
+        const count = 30;
+        const spacing = 0.6;
+        const innerX = -0.8;
+        const outerX = 0.8;
+        
+        for (let i = 0; i < count; i++) {
+          const z = (i - count/2) * spacing;
+          
+          // Inner line (UP)
+          activeMagnets.push({
+            pos: new Vector3(innerX, 0.25, z),
+            moment: new Vector3(0, 45.0, 0),
+            radius: 0.25,
+            height: 0.5,
+            color: "red"
+          });
+          // Outer line (DOWN)
+          activeMagnets.push({
+            pos: new Vector3(outerX, 0.25, z),
+            moment: new Vector3(0, -45.0, 0),
+            radius: 0.25,
+            height: 0.5,
+            color: "blue"
+          });
+        }
+      }
+      
+      logConsole(`Track rebuild completed: ${activeMagnets.length} dipoles generated.`, "system");
+    }
+
+    rebuildTrack();
+
+    // --- MAGNETIC FIELD MATHEMATICS ---
+    // Evaluates magnetic field vector B(pos) at any world coordinate using dipole equation
+    function getMagneticField(pos) {
+      let B = new Vector3(0, 0, 0);
+      for (let i = 0; i < activeMagnets.length; i++) {
+        const mag = activeMagnets[i];
+        const r = pos.sub(mag.pos);
+        const dist = r.length();
+        if (dist < 0.05) continue;
+        
+        const dot = mag.moment.dot(r);
+        const term1 = r.scale(3 * dot / Math.pow(dist, 5));
+        const term2 = mag.moment.scale(1 / Math.pow(dist, 3));
+        B = B.add(term1.sub(term2));
+      }
+      return B;
+    }
+
+    // Calculates gradient of B^2 at a point numerically for Meissner force calculations
+    function getB2Gradient(pos) {
+      const h = 0.04;
+      const getB2 = (p) => {
+        const B = getMagneticField(p);
+        return B.dot(B);
+      };
+      
+      const b2_0 = getB2(pos);
+      
+      const gx = (getB2(pos.add(new Vector3(h, 0, 0))) - getB2(pos.sub(new Vector3(h, 0, 0)))) / (2 * h);
+      const gy = (getB2(pos.add(new Vector3(0, h, 0))) - getB2(pos.sub(new Vector3(0, h, 0)))) / (2 * h);
+      const gz = (getB2(pos.add(new Vector3(0, 0, h))) - getB2(pos.sub(new Vector3(0, 0, h)))) / (2 * h);
+      
+      return new Vector3(gx, gy, gz);
+    }
+
+    // --- DRAG PHYSICS ---
+    let isDraggingSC = false;
+    let dragTargetWorld = new Vector3(0, 4, 0);
+
+    // --- AUDIO SYSTEM (SONIFICATION) ---
+    let audioCtx = null;
+    let magneticHumNode = null;
+    let velocitySynthNode = null;
+    let gainHum = null;
+    let gainVel = null;
+    let isAudioOn = false;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        
+        // 1. Magnetic Hum (Low frequencies)
+        magneticHumNode = audioCtx.createOscillator();
+        magneticHumNode.type = 'triangle';
+        magneticHumNode.frequency.setValueAtTime(60, audioCtx.currentTime);
+        
+        // Lowpass filter for hum
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(150, audioCtx.currentTime);
+        
+        gainHum = audioCtx.createGain();
+        gainHum.gain.setValueAtTime(0, audioCtx.currentTime);
+        
+        magneticHumNode.connect(filter);
+        filter.connect(gainHum);
+        gainHum.connect(audioCtx.destination);
+        magneticHumNode.start();
+
+        // 2. Velocity-based "whoosh" (Sine wave)
+        velocitySynthNode = audioCtx.createOscillator();
+        velocitySynthNode.type = 'sine';
+        velocitySynthNode.frequency.setValueAtTime(200, audioCtx.currentTime);
+        
+        gainVel = audioCtx.createGain();
+        gainVel.gain.setValueAtTime(0, audioCtx.currentTime);
+        
+        velocitySynthNode.connect(gainVel);
+        gainVel.connect(audioCtx.destination);
+        velocitySynthNode.start();
+
+        isAudioOn = true;
+        document.getElementById("audioBtn").innerText = "AUDIO ACTIVE (MUTED)";
+        document.getElementById("audioBtn").classList.add("btn-primary");
+        document.getElementById("audioBtn").style.animation = "none";
+        
+        logConsole("Web Audio Synthesizer online.", "success");
+      } catch (err) {
+        logConsole("AudioContext blocked or unsupported: " + err.message, "warning");
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        initAudio();
+        return;
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      isAudioOn = !isAudioOn;
+      const btn = document.getElementById("audioBtn");
+      if (isAudioOn) {
+        btn.innerText = "AUDIO STATE: ON";
+        btn.classList.add("btn-primary");
+        btn.classList.remove("btn-secondary");
+      } else {
+        btn.innerText = "AUDIO STATE: OFF";
+        btn.classList.add("btn-secondary");
+        btn.classList.remove("btn-primary");
+        if (gainHum) gainHum.gain.setValueAtTime(0, audioCtx.currentTime);
+        if (gainVel) gainVel.gain.setValueAtTime(0, audioCtx.currentTime);
+      }
+    }
+
+    // Plays a metallic click indicating quantum flux slip (pinning line snap)
+    function playFluxSlipSound() {
+      if (!isAudioOn || !audioCtx) return;
+      
+      const now = audioCtx.currentTime;
+      // High frequency beep decaying rapidly
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(now + 0.1);
+    }
+
+    // Plays a thud when physical collision occurs
+    function playCollisionSound(intensity) {
+      if (!isAudioOn || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(100, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
+      
+      const gain = audioCtx.createGain();
+      const vol = Math.min(0.2, intensity * 0.05);
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(now + 0.3);
+    }
+
+    function updateSynthesizer(velocity, bField) {
+      if (!isAudioOn || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      
+      // Update Hum based on B Field strength
+      const humFreq = 50 + bField * 200; // 50 to 250 Hz
+      magneticHumNode.frequency.setTargetAtTime(Math.min(300, humFreq), now, 0.1);
+      // Quiet background hum when near magnet
+      const humVolume = Math.min(0.08, bField * 0.04);
+      gainHum.gain.setTargetAtTime(humVolume, now, 0.1);
+      
+      // Update whoosh based on velocity
+      const speed = velocity.length();
+      const whooshFreq = 150 + speed * 40;
+      velocitySynthNode.frequency.setTargetAtTime(Math.min(800, whooshFreq), now, 0.15);
+      const whooshVol = Math.min(0.12, speed * 0.02);
+      gainVel.gain.setTargetAtTime(whooshVol, now, 0.15);
+    }
+
+    // --- CORE PHYSICS SIMULATOR ---
+    let totalPinningForceMag = 0.0;
+    let accumulatedBField = 0.0;
+    let totalFluxSlips = 0;
+
+    function getSuperconductingFraction() {
+      if (SC_TEMP >= Tc) return 0;
+      // Exponential transition close to experimental profile
+      return 1.0 - Math.pow(SC_TEMP / Tc, 4);
+    }
+
+    function stepPhysics(dt) {
+      // Clear forces
+      sc.f = new Vector3(0, 0, 0);
+      sc.torque = new Vector3(0, 0, 0);
+      
+      // 1. Gravity Force
+      sc.f = sc.f.add(new Vector3(0, GRAVITY_Y * sc.mass, 0));
+      
+      // Compute scaling based on temperature
+      const f_sc = getSuperconductingFraction();
+      
+      // Update structural state representation
+      if (SC_TEMP >= Tc) {
+        sc.state = "normal";
+        sc.isFieldCooled = false;
+      } else {
+        sc.state = sc.isFieldCooled ? "pinned" : "meissner";
+      }
+
+      totalPinningForceMag = 0;
+      let averageB = 0;
+
+      // 2. Quantum Magnetic Forces
+      if (f_sc > 0) {
+        if (sc.isFieldCooled) {
+          // FIELD COOLED (FC) STATE: Pinning force dominates
+          for (let j = 0; j < sc.pinningOffsets.length; j++) {
+            const offsetBody = sc.pinningOffsets[j];
+            // Center of mass to world space point offset
+            const pWorld = sc.com
+              .add(sc.ux.scale(offsetBody.x))
+              .add(sc.uy.scale(offsetBody.y))
+              .add(sc.uz.scale(offsetBody.z));
+              
+            const B_world = getMagneticField(pWorld);
+            averageB += B_world.length();
+            
+            // Reconstruct the trapped field in world coordinates using current rotation orientation
+            const B_body_frozen = sc.frozenFields[j];
+            const B_trap = sc.ux.scale(B_body_frozen.x)
+              .add(sc.uy.scale(B_body_frozen.y))
+              .add(sc.uz.scale(B_body_frozen.z));
+              
+            // Pinning force acts like a virtual magnetic spring
+            const pinningForce = B_world.sub(B_trap).scale(-PINNING_COEFF * f_sc);
+            
+            totalPinningForceMag += pinningForce.length();
+            
+            // Apply force
+            sc.f = sc.f.add(pinningForce);
+            
+            // Apply torque
+            const r_com = pWorld.sub(sc.com);
+            sc.torque = sc.torque.add(r_com.cross(pinningForce));
+
+            // Flux Slip Check (Plastic relaxation of pinning sites under excessive strain)
+            const strain = pinningForce.length();
+            const slipThreshold = 18.0; // Pinned line snapped
+            if (strain > slipThreshold) {
+              // The trapped vortex slips. Relax trapped field slightly towards current field
+              const relaxationRate = 0.15; // amount of slippage
+              const localWorldInBody = new Vector3(
+                B_world.dot(sc.ux),
+                B_world.dot(sc.uy),
+                B_world.dot(sc.uz)
+              );
+              sc.frozenFields[j] = sc.frozenFields[j].add(
+                localWorldInBody.sub(sc.frozenFields[j]).scale(relaxationRate)
+              );
+              
+              totalFluxSlips++;
+              playFluxSlipSound();
+              if (totalFluxSlips % 20 === 1) {
+                logConsole(`Flux slip creep! Locked field relaxed locally.`, "warning");
+              }
+            }
+          }
+          averageB /= sc.pinningOffsets.length;
+        } else {
+          // ZERO-FIELD COOLED (ZFC) STATE: Meissner expulsion repels from field lines
+          for (let j = 0; j < sc.pinningOffsets.length; j++) {
+            const offsetBody = sc.pinningOffsets[j];
+            const pWorld = sc.com
+              .add(sc.ux.scale(offsetBody.x))
+              .add(sc.uy.scale(offsetBody.y))
+              .add(sc.uz.scale(offsetBody.z));
+              
+            const B_world = getMagneticField(pWorld);
+            averageB += B_world.length();
+            
+            // Force points in direction of decreasing magnetic field strength (-grad(B^2))
+            const gradB2 = getB2Gradient(pWorld);
+            const meissnerForce = gradB2.scale(-MEISSNER_COEFF * f_sc);
+            
+            sc.f = sc.f.add(meissnerForce);
+            
+            // Apply torque
+            const r_com = pWorld.sub(sc.com);
+            sc.torque = sc.torque.add(r_com.cross(meissnerForce));
+          }
+          averageB /= sc.pinningOffsets.length;
+        }
+      } else {
+        // Normal state: read B field at center
+        averageB = getMagneticField(sc.com).length();
+      }
+
+      accumulatedBField = averageB;
+
+      // 3. User dragging spring
+      if (isDraggingSC) {
+        let springConstant = 80.0;
+        let dampingConstant = 12.0;
+        
+        let dragForce = dragTargetWorld.sub(sc.com).scale(springConstant);
+        // Add damping to drag
+        dragForce = dragForce.sub(sc.v.scale(dampingConstant));
+        
+        sc.f = sc.f.add(dragForce);
+      }
+
+      // 4. Integrate Equations of Motion (Linear)
+      const a = sc.f.scale(1.0 / sc.mass);
+      sc.v = sc.v.add(a.scale(dt));
+      // Linear damping
+      sc.v = sc.v.scale(Math.max(0, 1.0 - DAMPING * dt));
+      sc.com = sc.com.add(sc.v.scale(dt));
+
+      // 5. Integrate Equations of Motion (Angular)
+      const alpha = sc.torque.scale(1.0 / sc.inertia);
+      sc.omega = sc.omega.add(alpha.scale(dt));
+      // Angular damping
+      sc.omega = sc.omega.scale(Math.max(0, 1.0 - DAMPING * 1.5 * dt));
+      
+      // Update basis vectors ux, uy, uz using cross product rotation
+      sc.ux = sc.ux.add(sc.omega.cross(sc.ux).scale(dt));
+      sc.uy = sc.uy.add(sc.omega.cross(sc.uy).scale(dt));
+      sc.uz = sc.uz.add(sc.omega.cross(sc.uz).scale(dt));
+      
+      // Orthonormalize vectors to prevent cumulative numerical scaling drift
+      sc.ux = sc.ux.normalize();
+      const dot_xy = sc.uy.dot(sc.ux);
+      sc.uy = sc.uy.sub(sc.ux.scale(dot_xy)).normalize();
+      sc.uz = sc.ux.cross(sc.uy).normalize();
+
+      // 6. Floor & Magnet Contact Collisions
+      // We simulate magnets sitting on ground. The bounding box of the superconductor
+      // must bounce elastically off magnet tops and floor.
+      const floorLevel = 0.5;
+      const bounceK = 250.0;
+      const bounceDamp = 10.0;
+      
+      // Check collision on the 8 corners
+      let hasCollided = false;
+      let maxPenetration = 0;
+      for (let j = 0; j < sc.pinningOffsets.length; j++) {
+        const offsetBody = sc.pinningOffsets[j];
+        const pWorld = sc.com
+          .add(sc.ux.scale(offsetBody.x))
+          .add(sc.uy.scale(offsetBody.y))
+          .add(sc.uz.scale(offsetBody.z));
+          
+        if (pWorld.y < floorLevel) {
+          const penetration = floorLevel - pWorld.y;
+          if (penetration > maxPenetration) maxPenetration = penetration;
+          hasCollided = true;
+          
+          // Contact spring force pushing upwards
+          const localV = sc.v.add(sc.omega.cross(pWorld.sub(sc.com)));
+          const fContactY = penetration * bounceK - localV.y * bounceDamp;
+          
+          if (fContactY > 0) {
+            const fContactVec = new Vector3(0, fContactY, 0);
+            sc.f = sc.f.add(fContactVec);
+            
+            const r_com = pWorld.sub(sc.com);
+            sc.torque = sc.torque.add(r_com.cross(fContactVec));
+            
+            // Apply linear friction along floor
+            const lateralV = new Vector3(localV.x, 0, localV.z);
+            const frictionForce = lateralV.scale(-4.0);
+            sc.f = sc.f.add(frictionForce);
+          }
+        }
+      }
+
+      // If collision occurred, integrate the resolved forces
+      if (hasCollided) {
+        sc.v = sc.v.add(sc.f.scale(1.0 / sc.mass).scale(dt * 0.2)); // damping resolve
+        sc.omega = sc.omega.add(sc.torque.scale(1.0 / sc.inertia).scale(dt * 0.2));
+        
+        if (sc.v.y > 0.5 && maxPenetration > 0.05) {
+          playCollisionSound(sc.v.y);
+        }
+      }
+    }
+
+    // Perform cooling operation (Zero-Field Cooled or Field Cooled)
+    function coolSuperconductor(fieldCooled) {
+      if (SC_TEMP >= Tc) {
+        // Automatically drop temperature slider to 10K
+        document.getElementById("tempSlider").value = 10;
+        updateTemp(10);
+      }
+      
+      sc.isFieldCooled = fieldCooled;
+      
+      if (fieldCooled) {
+        // FIELD COOLED: Trap magnetic field vectors at current body pinning center points
+        sc.frozenFields = [];
+        for (let j = 0; j < sc.pinningOffsets.length; j++) {
+          const offsetBody = sc.pinningOffsets[j];
+          // World point
+          const pWorld = sc.com
+            .add(sc.ux.scale(offsetBody.x))
+            .add(sc.uy.scale(offsetBody.y))
+            .add(sc.uz.scale(offsetBody.z));
+            
+          const B_world = getMagneticField(pWorld);
+          
+          // Project world B field vector onto the superconductor's current local coordinate axes
+          const B_body = new Vector3(
+            B_world.dot(sc.ux),
+            B_world.dot(sc.uy),
+            B_world.dot(sc.uz)
+          );
+          sc.frozenFields.push(B_body);
+        }
+        sc.state = "pinned";
+        logConsole(`Field cooled to 10 K. Frozen field vectors mapped into matrix. Levitation locked.`, "success");
+      } else {
+        // ZERO-FIELD COOLED: Expels all field. Pinned state disabled.
+        sc.frozenFields = [];
+        sc.state = "meissner";
+        logConsole(`Zero-Field cooled to 10 K. Meissner state activated. Material acts as diamagnet.`, "success");
+      }
+    }
+
+    function warmUpSuperconductor() {
+      // Warm to room temp
+      document.getElementById("tempSlider").value = 120;
+      updateTemp(120);
+      sc.isFieldCooled = false;
+      sc.frozenFields = [];
+      sc.state = "normal";
+      logConsole(`Warmed to 120 K. Superconducting properties lost. Material resistive.`, "info");
+    }
+
+    // --- 3D RENDERING SYSTEM (VANILLA PERSPECTIVE PROJECTOR) ---
+    const canvas = document.getElementById("viewport");
+    const ctx = canvas.getContext("2d");
+
+    let cameraYaw = 1.0;
+    let cameraPitch = 0.35;
+    let cameraDistance = 14.0;
+    const fov = 400; // focal length
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // Project 3D vector to 2D screen coordinate
+    function project(p) {
+      const cosP = Math.cos(cameraPitch);
+      const sinP = Math.sin(cameraPitch);
+      const cosY = Math.cos(cameraYaw);
+      const sinY = Math.sin(cameraYaw);
+
+      // Camera position
+      const camX = cameraDistance * cosP * sinY;
+      const camY = cameraDistance * sinP;
+      const camZ = cameraDistance * cosP * cosY;
+
+      // Coordinate axes vectors relative to camera looking at center (0,0,0)
+      const fwd = new Vector3(-camX, -camY, -camZ).normalize();
+      const upApprox = new Vector3(0, 1, 0);
+      let right = fwd.cross(upApprox);
+      if (right.length() < 0.001) right = new Vector3(1, 0, 0);
+      else right = right.normalize();
+      const up = right.cross(fwd).normalize();
+
+      const relative = p.sub(new Vector3(camX, camY, camZ));
+
+      const xCam = relative.dot(right);
+      const yCam = relative.dot(up);
+      const zCam = relative.dot(fwd);
+
+      if (zCam <= 0.1) return null;
+
+      const scale = fov / zCam;
+      return {
+        x: canvas.width / 2 + xCam * scale,
+        y: canvas.height / 2 - yCam * scale,
+        z: zCam
+      };
+    }
+
+    // Generate dynamic trace path of magnetic field lines
+    let fieldLinePaths = [];
+    function rebuildFieldLines() {
+      fieldLinePaths = [];
+      // Choose a subset of magnets to seed field lines (so it's not too cluttered)
+      // Pick up to 16 magnets
+      const seedMagnets = activeMagnets.filter((m, i) => {
+        if (ACTIVE_TRACK.startsWith("circular")) return i % 6 === 0;
+        return true;
+      });
+
+      for (const mag of seedMagnets) {
+        if (mag.color !== "red") continue; // Seed from North poles
+        
+        // Circular ring of seed points around the top of the magnet
+        const seedCount = 6;
+        for (let j = 0; j < seedCount; j++) {
+          const phi = (j / seedCount) * Math.PI * 2;
+          const r_seed = mag.radius * 0.5;
+          let seedPos = mag.pos.add(new Vector3(
+            r_seed * Math.cos(phi),
+            mag.height * 0.6,
+            r_seed * Math.sin(phi)
+          ));
+          
+          let path = [seedPos];
+          let currentPos = seedPos.clone();
+          const stepSize = 0.2;
+          const maxSteps = 45;
+          
+          for (let step = 0; step < maxSteps; step++) {
+            const B = getMagneticField(currentPos);
+            const B_len = B.length();
+            if (B_len < 0.005) break;
+            
+            // Follow field lines: x_new = x_old + step * B/|B|
+            currentPos = currentPos.add(B.scale(stepSize / B_len));
+            path.push(currentPos);
+            
+            // If we hit ground or get too close to a South pole magnet, terminate path
+            if (currentPos.y < 0.1) break;
+            
+            // Check if we hit any south magnet
+            let hitSouth = false;
+            for (const otherMag of activeMagnets) {
+              if (otherMag.color === "blue") {
+                if (currentPos.sub(otherMag.pos).length() < otherMag.radius) {
+                  hitSouth = true;
+                  break;
+                }
+              }
+            }
+            if (hitSouth) break;
+          }
+          if (path.length > 2) {
+            fieldLinePaths.push(path);
+          }
+        }
+      }
+    }
+
+    // Rebuild line geometries when track is changed
+    rebuildFieldLines();
+
+    // Animated particles flowing along the field lines
+    let fieldParticles = [];
+    function updateFieldParticles() {
+      // Spawn new particles
+      if (fieldParticles.length < 60 && fieldLinePaths.length > 0) {
+        const lineIdx = Math.floor(Math.random() * fieldLinePaths.length);
+        const path = fieldLinePaths[lineIdx];
+        fieldParticles.push({
+          path: path,
+          progress: Math.random() // Start at random point
+        });
+      }
+
+      // Move existing particles
+      for (let i = fieldParticles.length - 1; i >= 0; i--) {
+        const p = fieldParticles[i];
+        p.progress += 0.008; // speed
+        if (p.progress >= 1.0) {
+          fieldParticles.splice(i, 1);
+        }
+      }
+    }
+
+    // Renders the viewport
+    function drawScene() {
+      // Clear viewport
+      ctx.fillStyle = "#07080d";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw grid floor (perspective projected)
+      ctx.strokeStyle = "rgba(100, 50, 200, 0.08)";
+      ctx.lineWidth = 1;
+      const gridCount = 20;
+      const gridSpacing = 1.0;
+      
+      // Draw floor grid lines
+      for (let i = -gridCount; i <= gridCount; i++) {
+        // Horizontal lines along Z
+        const p1 = project(new Vector3(i * gridSpacing, 0, -gridCount * gridSpacing));
+        const p2 = project(new Vector3(i * gridSpacing, 0, gridCount * gridSpacing));
+        if (p1 && p2) {
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+        
+        // Vertical lines along X
+        const p3 = project(new Vector3(-gridCount * gridSpacing, 0, i * gridSpacing));
+        const p4 = project(new Vector3(gridCount * gridSpacing, 0, i * gridSpacing));
+        if (p3 && p4) {
+          ctx.beginPath();
+          ctx.moveTo(p3.x, p3.y);
+          ctx.lineTo(p4.x, p4.y);
+          ctx.stroke();
+        }
+      }
+
+      // Collect all 3D solid face elements to render using Painter's algorithm depth sorting
+      const renderQueue = [];
+
+      // 1. Add active magnets to render queue
+      for (let mIdx = 0; mIdx < activeMagnets.length; mIdx++) {
+        const mag = activeMagnets[mIdx];
+        // Approximate cylindrical geometry using 8 sided prism
+        const sides = 8;
+        const topPts = [];
+        const botPts = [];
+        for (let s = 0; s < sides; s++) {
+          const phi = (s / sides) * Math.PI * 2;
+          const x = mag.pos.x + mag.radius * Math.cos(phi);
+          const z = mag.pos.z + mag.radius * Math.sin(phi);
+          topPts.push(new Vector3(x, mag.height, z));
+          botPts.push(new Vector3(x, 0, z));
+        }
+        
+        const topScreen = topPts.map(p => project(p));
+        const botScreen = botPts.map(p => project(p));
+        
+        // Top Cap Face
+        const topCapVertices = [];
+        let avgZ = 0;
+        let visibleCount = 0;
+        for (const pt of topScreen) {
+          if (pt) {
+            topCapVertices.push(pt);
+            avgZ += pt.z;
+            visibleCount++;
+          }
+        }
+        if (visibleCount === sides) {
+          renderQueue.push({
+            type: "poly",
+            vertices: topCapVertices,
+            z: avgZ / sides,
+            fill: mag.color === "red" ? "rgba(220, 20, 60, 0.4)" : "rgba(30, 144, 255, 0.4)",
+            stroke: mag.color === "red" ? "rgba(255, 0, 0, 0.8)" : "rgba(0, 191, 255, 0.8)",
+            lineWidth: 1.5
+          });
+        }
+        
+        // Side Faces
+        for (let s = 0; s < sides; s++) {
+          const next = (s + 1) % sides;
+          const p1 = topScreen[s];
+          const p2 = topScreen[next];
+          const p3 = botScreen[next];
+          const p4 = botScreen[s];
+          
+          if (p1 && p2 && p3 && p4) {
+            const sideZ = (p1.z + p2.z + p3.z + p4.z) / 4;
+            renderQueue.push({
+              type: "poly",
+              vertices: [p1, p2, p3, p4],
+              z: sideZ,
+              fill: mag.color === "red" ? "rgba(180, 20, 40, 0.25)" : "rgba(20, 100, 200, 0.25)",
+              stroke: mag.color === "red" ? "rgba(255, 0, 0, 0.3)" : "rgba(0, 191, 255, 0.3)",
+              lineWidth: 1
+            });
+          }
+        }
+      }
+
+      // 2. Add Superconductor solid faces
+      const verticesBody = sc.pinningOffsets.slice(1, 9); // Corner offsets are indices 1-8
+      const scVerticesWorld = verticesBody.map(offset => {
+        return sc.com
+          .add(sc.ux.scale(offset.x))
+          .add(sc.uy.scale(offset.y))
+          .add(sc.uz.scale(offset.z));
+      });
+      const scScreen = scVerticesWorld.map(p => project(p));
+
+      const scFaces = [
+        { idx: [0, 1, 2, 3], name: "bottom" },
+        { idx: [4, 5, 6, 7], name: "top" },
+        { idx: [0, 1, 5, 4], name: "back" },
+        { idx: [2, 3, 7, 6], name: "front" },
+        { idx: [0, 3, 7, 4], name: "left" },
+        { idx: [1, 2, 6, 5], name: "right" }
+      ];
+
+      // Styling parameters based on temperature state
+      const isSuperconducting = SC_TEMP < Tc;
+      let scFillColor = "rgba(100, 110, 120, 0.4)";
+      let scStrokeColor = "rgba(150, 160, 170, 0.85)";
+      let scLineWidth = 2.0;
+
+      if (isSuperconducting) {
+        if (sc.isFieldCooled) {
+          scFillColor = "rgba(0, 243, 255, 0.18)"; // Cyan glow
+          scStrokeColor = "rgba(0, 243, 255, 0.9)";
+        } else {
+          scFillColor = "rgba(255, 0, 127, 0.15)"; // Magenta glow
+          scStrokeColor = "rgba(255, 0, 127, 0.9)";
+        }
+      }
+
+      for (const face of scFaces) {
+        const p1 = scScreen[face.idx[0]];
+        const p2 = scScreen[face.idx[1]];
+        const p3 = scScreen[face.idx[2]];
+        const p4 = scScreen[face.idx[3]];
+        
+        if (p1 && p2 && p3 && p4) {
+          const faceZ = (p1.z + p2.z + p3.z + p4.z) / 4;
+          renderQueue.push({
+            type: "poly",
+            vertices: [p1, p2, p3, p4],
+            z: faceZ,
+            fill: scFillColor,
+            stroke: scStrokeColor,
+            lineWidth: scLineWidth,
+            isSC: true // flag to draw overlay details
+          });
+        }
+      }
+
+      // 3. Add drag line to render queue (if active)
+      if (isDraggingSC) {
+        const pSC = project(sc.com);
+        const pDrag = project(dragTargetWorld);
+        if (pSC && pDrag) {
+          renderQueue.push({
+            type: "line",
+            x1: pSC.x,
+            y1: pSC.y,
+            x2: pDrag.x,
+            y2: pDrag.y,
+            z: (pSC.z + pDrag.z) / 2,
+            stroke: "rgba(255, 255, 255, 0.8)",
+            dash: [4, 4],
+            lineWidth: 1.5
+          });
+        }
+      }
+
+      // 4. Add Pinning Force lines (FC) showing spring anchoring
+      if (isSuperconducting && sc.isFieldCooled) {
+        for (let j = 0; j < sc.pinningOffsets.length; j++) {
+          const offsetBody = sc.pinningOffsets[j];
+          const pWorld = sc.com
+            .add(sc.ux.scale(offsetBody.x))
+            .add(sc.uy.scale(offsetBody.y))
+            .add(sc.uz.scale(offsetBody.z));
+            
+          const B_body_frozen = sc.frozenFields[j];
+          
+          // Compute where the flux tube wants to sit
+          const B_trap = sc.ux.scale(B_body_frozen.x)
+            .add(sc.uy.scale(B_body_frozen.y))
+            .add(sc.uz.scale(B_body_frozen.z));
+            
+          const B_world = getMagneticField(pWorld);
+          
+          // Render a small glowing red/cyan force vector line
+          const forceVec = B_world.sub(B_trap).scale(0.8);
+          const pEnd = pWorld.add(forceVec);
+          
+          const pStartProj = project(pWorld);
+          const pEndProj = project(pEnd);
+          
+          if (pStartProj && pEndProj) {
+            renderQueue.push({
+              type: "line",
+              x1: pStartProj.x,
+              y1: pStartProj.y,
+              x2: pEndProj.x,
+              y2: pEndProj.y,
+              z: pStartProj.z - 0.05, // Render slightly in front
+              stroke: "var(--neon-green)",
+              lineWidth: 1
+            });
+          }
+        }
+      }
+
+      // Sort the queue by depth (z descending: highest depth first)
+      renderQueue.sort((a, b) => b.z - a.z);
+
+      // Draw background magnetic field lines
+      ctx.lineWidth = 1.0;
+      for (const path of fieldLinePaths) {
+        ctx.beginPath();
+        let first = true;
+        for (const pt of path) {
+          const scr = project(pt);
+          if (!scr) continue;
+          if (first) {
+            ctx.moveTo(scr.x, scr.y);
+            first = false;
+          } else {
+            ctx.lineTo(scr.x, scr.y);
+          }
+        }
+        ctx.strokeStyle = "rgba(0, 243, 255, 0.09)";
+        ctx.stroke();
+      }
+
+      // Draw flowing field line particles
+      ctx.fillStyle = "rgba(0, 243, 255, 0.4)";
+      for (const particle of fieldParticles) {
+        const path = particle.path;
+        const stepCount = path.length;
+        const exactIdx = particle.progress * (stepCount - 1);
+        const idxLow = Math.floor(exactIdx);
+        const idxHigh = Math.min(stepCount - 1, idxLow + 1);
+        const frac = exactIdx - idxLow;
+        
+        const pt = path[idxLow].scale(1 - frac).add(path[idxHigh].scale(frac));
+        const scr = project(pt);
+        if (scr) {
+          ctx.beginPath();
+          ctx.arc(scr.x, scr.y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Execute rendering queue (Drawing solid geometry)
+      for (const item of renderQueue) {
+        if (item.type === "poly") {
+          ctx.beginPath();
+          ctx.moveTo(item.vertices[0].x, item.vertices[0].y);
+          for (let i = 1; i < item.vertices.length; i++) {
+            ctx.lineTo(item.vertices[i].x, item.vertices[i].y);
+          }
+          ctx.closePath();
+          ctx.fillStyle = item.fill;
+          ctx.fill();
+          ctx.strokeStyle = item.stroke;
+          ctx.lineWidth = item.lineWidth;
+          ctx.stroke();
+          
+          // Draw details on superconductor faces
+          if (item.isSC && isSuperconducting) {
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo((item.vertices[0].x + item.vertices[1].x)/2, (item.vertices[0].y + item.vertices[1].y)/2);
+            ctx.lineTo((item.vertices[2].x + item.vertices[3].x)/2, (item.vertices[2].y + item.vertices[3].y)/2);
+            ctx.moveTo((item.vertices[1].x + item.vertices[2].x)/2, (item.vertices[1].y + item.vertices[2].y)/2);
+            ctx.lineTo((item.vertices[3].x + item.vertices[0].x)/2, (item.vertices[3].y + item.vertices[0].y)/2);
+            ctx.stroke();
+          }
+        } 
+        else if (item.type === "line") {
+          ctx.beginPath();
+          ctx.moveTo(item.x1, item.y1);
+          ctx.lineTo(item.x2, item.y2);
+          ctx.strokeStyle = item.stroke;
+          ctx.lineWidth = item.lineWidth;
+          if (item.dash) ctx.setLineDash(item.dash);
+          ctx.stroke();
+          ctx.setLineDash([]); // Reset dash
+        }
+      }
+
+      // Render glowing green vertical flux pinning lines (representing trapped vortex columns)
+      if (isSuperconducting && sc.isFieldCooled) {
+        ctx.strokeStyle = "rgba(57, 255, 20, 0.35)";
+        ctx.lineWidth = 1.5;
+        
+        for (let j = 0; j < sc.pinningOffsets.length; j += 2) {
+          const offsetBody = sc.pinningOffsets[j];
+          const pSC_top = sc.com
+            .add(sc.ux.scale(offsetBody.x))
+            .add(sc.uy.scale(offsetBody.y + 0.3)) // extend past top cap
+            .add(sc.uz.scale(offsetBody.z));
+            
+          const pSC_bot = sc.com
+            .add(sc.ux.scale(offsetBody.x))
+            .add(sc.uy.scale(offsetBody.y - 0.9)) // extend down towards magnets
+            .add(sc.uz.scale(offsetBody.z));
+            
+          const scrTop = project(pSC_top);
+          const scrBot = project(pSC_bot);
+          
+          if (scrTop && scrBot) {
+            ctx.beginPath();
+            ctx.moveTo(scrTop.x, scrTop.y);
+            ctx.lineTo(scrBot.x, scrBot.y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // Helper to extract CSS variable colors
+    function varColor(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+    }
+
+    // --- REALTIME CHART DIAGNOSTICS (CANVAS DRAWN) ---
+    const chartCanvas = document.getElementById("chartCanvas");
+    const chartCtx = chartCanvas.getContext("2d");
+    const chartHistory = {
+      ke: new Array(100).fill(0),
+      force: new Array(100).fill(0)
+    };
+
+    function updateChart() {
+      chartHistory.ke.shift();
+      const speed = sc.v.length();
+      const ke = 0.5 * sc.mass * speed * speed;
+      chartHistory.ke.push(ke);
+
+      chartHistory.force.shift();
+      chartHistory.force.push(totalPinningForceMag);
+
+      // Redraw chart
+      chartCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+      
+      const width = chartCanvas.width;
+      const height = chartCanvas.height;
+
+      // Draw background grid lines
+      chartCtx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+      chartCtx.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        const y = (i / 4) * height;
+        chartCtx.beginPath();
+        chartCtx.moveTo(0, y);
+        chartCtx.lineTo(width, y);
+        chartCtx.stroke();
+      }
+
+      const maxKE = Math.max(...chartHistory.ke, 1.0);
+      const maxForce = Math.max(...chartHistory.force, 1.0);
+
+      // Plot kinetic energy (Cyan)
+      chartCtx.strokeStyle = varColor("neon-cyan");
+      chartCtx.lineWidth = 2;
+      chartCtx.beginPath();
+      for (let i = 0; i < 100; i++) {
+        const x = (i / 99) * width;
+        const y = height - (chartHistory.ke[i] / maxKE) * (height - 10) - 5;
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+      }
+      chartCtx.stroke();
+
+      // Plot Pinning Force (Magenta)
+      chartCtx.strokeStyle = varColor("neon-magenta");
+      chartCtx.lineWidth = 1.5;
+      chartCtx.beginPath();
+      for (let i = 0; i < 100; i++) {
+        const x = (i / 99) * width;
+        const y = height - (chartHistory.force[i] / maxForce) * (height - 10) - 5;
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+      }
+      chartCtx.stroke();
+    }
+
+    function resizeChart() {
+      chartCanvas.width = chartCanvas.parentElement.clientWidth;
+      chartCanvas.height = chartCanvas.parentElement.clientHeight;
+    }
+    resizeChart();
+    window.addEventListener("resize", resizeChart);
+
+    // --- INTERACTIVE EVENT LOG ---
+    function logConsole(text, type = "info") {
+      const consoleNode = document.getElementById("consoleLog");
+      const timeStr = new Date().toISOString().slice(11, 19);
+      
+      const entry = document.createElement("div");
+      entry.className = "log-entry";
+      entry.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="log-text ${type}">${text}</span>`;
+      
+      consoleNode.appendChild(entry);
+      consoleNode.scrollTop = consoleNode.scrollHeight;
+    }
+
+    // --- USER EVENT HANDLERS ---
+    let isRightDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    canvas.addEventListener("mousedown", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const pSC = project(sc.com);
+      if (pSC) {
+        const dist = Math.hypot(x - pSC.x, y - pSC.y);
+        if (dist < 40) {
+          isDraggingSC = true;
+          dragTargetWorld = sc.com.clone();
+          canvas.style.cursor = "grabbing";
+          return;
+        }
+      }
+      
+      isRightDragging = true;
+      lastMouseX = x;
+      lastMouseY = y;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (isRightDragging) {
+        const dx = x - lastMouseX;
+        const dy = y - lastMouseY;
+        
+        cameraYaw -= dx * 0.006;
+        cameraPitch += dy * 0.006;
+        cameraPitch = Math.max(0.05, Math.min(Math.PI/2 - 0.05, cameraPitch));
+        
+        lastMouseX = x;
+        lastMouseY = y;
+      } 
+      else if (isDraggingSC) {
+        const cosP = Math.cos(cameraPitch);
+        const sinP = Math.sin(cameraPitch);
+        const cosY = Math.cos(cameraYaw);
+        const sinY = Math.sin(cameraYaw);
+
+        const camPos = new Vector3(
+          cameraDistance * cosP * sinY,
+          cameraDistance * sinP,
+          cameraDistance * cosP * cosY
+        );
+
+        const fwd = new Vector3(-camPos.x, -camPos.y, -camPos.z).normalize();
+        const upApprox = new Vector3(0, 1, 0);
+        let right = fwd.cross(upApprox);
+        if (right.length() < 0.001) right = new Vector3(1, 0, 0);
+        else right = right.normalize();
+        const up = right.cross(fwd).normalize();
+
+        const dx = (x - canvas.width / 2) / fov;
+        const dy = -(y - canvas.height / 2) / fov;
+
+        const rayDir = fwd.add(right.scale(dx)).add(up.scale(dy)).normalize();
+
+        if (DRAG_MODE === "horizontal") {
+          const targetY = dragTargetWorld.y;
+          if (Math.abs(rayDir.y) > 0.001) {
+            const t = (targetY - camPos.y) / rayDir.y;
+            if (t > 0) {
+              const hit = camPos.add(rayDir.scale(t));
+              dragTargetWorld.x = Math.max(-10, Math.min(10, hit.x));
+              dragTargetWorld.z = Math.max(-10, Math.min(10, hit.z));
+            }
+          }
+        } else {
+          const planeNormal = new Vector3(fwd.x, 0, fwd.z).normalize();
+          const denom = rayDir.dot(planeNormal);
+          if (Math.abs(denom) > 0.001) {
+            const t = (sc.com.sub(camPos)).dot(planeNormal) / denom;
+            if (t > 0) {
+              const hit = camPos.add(rayDir.scale(t));
+              dragTargetWorld.y = Math.max(0.6, Math.min(8.0, hit.y));
+            }
+          }
+        }
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      isRightDragging = false;
+      if (isDraggingSC) {
+        isDraggingSC = false;
+        canvas.style.cursor = "grab";
+        logConsole(`Mouse drag released. Velocity vector: ${sc.v.length().toFixed(2)} m/s.`, "action");
+      }
+    });
+
+    canvas.addEventListener("wheel", (e) => {
+      cameraDistance += e.deltaY * 0.01;
+      cameraDistance = Math.max(4.0, Math.min(25.0, cameraDistance));
+      e.preventDefault();
+    });
+
+    // --- UI COMPONENT BINDINGS ---
+    function updateTemp(val) {
+      SC_TEMP = val;
+      document.getElementById("tempValue").innerText = `${val} K`;
+      document.getElementById("headerTemp").innerText = `${val} K`;
+      document.getElementById("thermoTempText").innerText = `${val} K`;
+      
+      const pct = (val / 150) * 100;
+      document.getElementById("thermoBar").style.height = `${pct}%`;
+      
+      const badge = document.getElementById("badgeState");
+      const dot = document.getElementById("systemStatusDot");
+      const statusText = document.getElementById("systemStatusText");
+      
+      const scFrac = getSuperconductingFraction();
+
+      if (SC_TEMP >= Tc) {
+        badge.innerText = "NORMAL (NON-SUPERCONDUCTING)";
+        badge.className = "badge-state normal";
+        dot.className = "status-dot normal";
+        statusText.innerText = "normal state";
+      } else {
+        if (sc.isFieldCooled) {
+          badge.innerText = `QUANTUM PINNED (FC: ${(scFrac * 100).toFixed(0)}%)`;
+          badge.className = "badge-state pinned";
+          dot.className = "status-dot pinned";
+          statusText.innerText = "pinned state (fc)";
+        } else {
+          badge.innerText = `MEISSNER EXPULSION (ZFC: ${(scFrac * 100).toFixed(0)}%)`;
+          badge.className = "badge-state meissner";
+          dot.className = "status-dot meissner";
+          statusText.innerText = "diamagnetic (zfc)";
+        }
+      }
+    }
+
+    document.getElementById("tempSlider").addEventListener("input", (e) => {
+      const val = parseInt(e.target.value);
+      updateTemp(val);
+    });
+
+    document.getElementById("warmUpBtn").addEventListener("click", warmUpSuperconductor);
+    document.getElementById("coolBtn").addEventListener("click", () => coolSuperconductor(true));
+    document.getElementById("coolZFCBtn").addEventListener("click", () => coolSuperconductor(false));
+    
+    document.getElementById("playPauseBtn").addEventListener("click", () => {
+      IS_PLAYING = !IS_PLAYING;
+      document.getElementById("playPauseBtn").innerText = IS_PLAYING ? "Pause" : "Resume";
+      logConsole(IS_PLAYING ? "Simulation resumed." : "Simulation paused.", "action");
+    });
+
+    document.getElementById("resetPhysBtn").addEventListener("click", () => {
+      sc.reset();
+      logConsole("Physics variables and coordinates wiped.", "system");
+    });
+
+    document.getElementById("nudgeBtn").addEventListener("click", () => {
+      if (ACTIVE_TRACK.startsWith("circular")) {
+        const r_vec = new Vector3(sc.com.x, 0, sc.com.z);
+        const tangent = new Vector3(-r_vec.z, 0, r_vec.x).normalize();
+        sc.v = sc.v.add(tangent.scale(2.5));
+      } else {
+        sc.v = sc.v.add(new Vector3(0, 0, 2.5));
+      }
+      logConsole("Impulse nudge delivered to superconductor.", "action");
+    });
+
+    document.getElementById("trackSelect").addEventListener("change", (e) => {
+      ACTIVE_TRACK = e.target.value;
+      rebuildTrack();
+      rebuildFieldLines();
+      sc.reset();
+    });
+
+    document.getElementById("dragModeSelect").addEventListener("change", (e) => {
+      DRAG_MODE = e.target.value;
+    });
+
+    document.getElementById("pinningSlider").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value) / 10;
+      PINNING_COEFF = val;
+      document.getElementById("pinningValue").innerText = val.toFixed(1);
+    });
+
+    document.getElementById("meissnerSlider").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value) / 10;
+      MEISSNER_COEFF = val;
+      document.getElementById("meissnerValue").innerText = val.toFixed(1);
+    });
+
+    document.getElementById("gravitySlider").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value) / 100;
+      GRAVITY_Y = -9.8 * val;
+      document.getElementById("gravityValue").innerText = `${val.toFixed(1)} G`;
+    });
+
+    document.getElementById("dampingSlider").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value) / 100;
+      DAMPING = val;
+      document.getElementById("dampingValue").innerText = (val * 10).toFixed(1);
+    });
+
+    document.getElementById("audioBtn").addEventListener("click", toggleAudio);
+
+    updateTemp(120);
+
+    // --- MAIN TICK LOOPS ---
+    let lastTime = performance.now();
+    let fpsFrames = 0;
+    let fpsLastTime = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const now = performance.now();
+      const elapsed = (now - lastTime) / 1000.0;
+      lastTime = now;
+
+      fpsFrames++;
+      if (now - fpsLastTime >= 1000) {
+        document.getElementById("fpsText").innerText = `${fpsFrames} FPS`;
+        fpsFrames = 0;
+        fpsLastTime = now;
+      }
+
+      if (IS_PLAYING && elapsed > 0) {
+        const simStep = Math.min(0.03, elapsed);
+        const subSteps = 6;
+        const dt = simStep / subSteps;
+        for (let i = 0; i < subSteps; i++) {
+          stepPhysics(dt);
+        }
+      }
+
+      updateFieldParticles();
+      updateSynthesizer(sc.v, accumulatedBField);
+      drawScene();
+      updateChart();
+
+      document.getElementById("readoutVelocity").innerText = `${sc.v.length().toFixed(2)} m/s`;
+      document.getElementById("readoutHeight").innerText = `${((sc.com.y - 0.5) * 10).toFixed(1)} mm`;
+      document.getElementById("readoutForce").innerText = `${totalPinningForceMag.toFixed(2)} N`;
+      document.getElementById("readoutBField").innerText = `${accumulatedBField.toFixed(2)} T`;
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
