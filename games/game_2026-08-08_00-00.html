@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>spacetime-warp: alcubierre warp drive metric & lensing sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #05060a;
+      --bg-space: #07080f;
+      --panel-bg: rgba(10, 12, 22, 0.85);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --border-glowing: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-amber: #ffaa00;
+      --neon-green: #39ff14;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(8, 9, 15, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+    }
+
+    .logo-sub {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      border-left: 1px solid var(--border-color);
+      padding-left: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .system-status {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-label {
+      color: var(--text-dim);
+    }
+
+    .status-value {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .status-dot.warn {
+      background-color: var(--neon-amber);
+      box-shadow: 0 0 8px var(--neon-amber);
+    }
+
+    .status-dot.danger {
+      background-color: var(--neon-magenta);
+      box-shadow: 0 0 8px var(--neon-magenta);
+    }
+
+    .app-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      height: calc(100vh - 60px);
+      background: radial-gradient(circle at center, #0f111d 0%, #030406 100%);
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+      backdrop-filter: blur(12px);
+      z-index: 5;
+    }
+
+    .panel.right {
+      border-right: none;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .panel-section {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .panel-section:last-child {
+      border-bottom: none;
+    }
+
+    h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 15px;
+      color: var(--neon-cyan);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h2 span {
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+    }
+
+    .control-group {
+      margin-bottom: 16px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .slider-label {
+      color: var(--text-color);
+    }
+
+    .slider-value {
+      color: var(--neon-cyan);
+    }
+
+    .slider-value.magenta {
+      color: var(--neon-magenta);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      outline: none;
+      transition: background 0.3s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="range"].range-magenta::-webkit-slider-thumb {
+      background: var(--neon-magenta);
+      box-shadow: 0 0 10px var(--neon-magenta);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .btn {
+      flex: 1;
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 10px 15px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+      color: #fff;
+    }
+
+    .btn.active {
+      background: rgba(0, 243, 255, 0.25);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+      color: #fff;
+    }
+
+    .btn.danger {
+      background: rgba(255, 0, 127, 0.05);
+      border-color: rgba(255, 0, 127, 0.2);
+    }
+
+    .btn.danger:hover {
+      background: rgba(255, 0, 127, 0.15);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+    }
+
+    .btn.danger.active {
+      background: rgba(255, 0, 127, 0.25);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 12px rgba(255, 0, 127, 0.4);
+    }
+
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preset-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.85rem;
+    }
+
+    .preset-item:hover {
+      background: rgba(0, 243, 255, 0.05);
+      border-color: rgba(0, 243, 255, 0.3);
+    }
+
+    .preset-item.active {
+      background: rgba(0, 243, 255, 0.08);
+      border-color: var(--neon-cyan);
+      box-shadow: inset 0 0 5px rgba(0, 243, 255, 0.1);
+    }
+
+    .preset-title {
+      font-weight: 700;
+      color: var(--neon-cyan);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    .preset-desc {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      line-height: 1.2;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-space);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas#simCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nav-tip {
+      background: rgba(10, 12, 22, 0.8);
+      border: 1px solid var(--border-color);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-color);
+      pointer-events: auto;
+    }
+
+    .nav-tip span {
+      color: var(--neon-magenta);
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 130px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      position: relative;
+      margin-top: 10px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    canvas.sidebar-chart {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.85rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .telemetry-row:last-child {
+      border-bottom: none;
+    }
+
+    .telemetry-label {
+      color: var(--text-dim);
+    }
+
+    .telemetry-val {
+      color: #fff;
+    }
+
+    .telemetry-val.highlight {
+      color: var(--neon-cyan);
+    }
+
+    .telemetry-val.alert {
+      color: var(--neon-magenta);
+      text-shadow: 0 0 5px rgba(255, 0, 127, 0.5);
+    }
+
+    .log-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      height: 130px;
+      overflow-y: auto;
+      padding: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      scroll-behavior: smooth;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 8px;
+      line-height: 1.3;
+    }
+
+    .log-time {
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: var(--text-color);
+    }
+
+    .log-msg.system {
+      color: var(--neon-cyan);
+    }
+
+    .log-msg.warn {
+      color: var(--neon-amber);
+    }
+
+    .log-msg.critical {
+      color: var(--neon-magenta);
+    }
+
+    .audio-notice {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(10, 12, 22, 0.9);
+      border: 1px solid var(--neon-cyan);
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+      padding: 12px 18px;
+      border-radius: 6px;
+      z-index: 100;
+      max-width: 320px;
+      pointer-events: auto;
+      animation: pulseBorder 2s infinite alternate;
+    }
+
+    @keyframes pulseBorder {
+      0% { border-color: rgba(0, 243, 255, 0.3); }
+      100% { border-color: rgba(0, 243, 255, 0.8); }
+    }
+
+    .audio-notice-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      color: var(--neon-cyan);
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .audio-notice-body {
+      font-size: 0.8rem;
+      color: var(--text-color);
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .audio-notice-btn {
+      background: var(--neon-cyan);
+      border: none;
+      color: #000;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .audio-notice-btn:hover {
+      background: #fff;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-cyan);
+    }
+
+    @media (max-width: 1024px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+        height: auto;
+        overflow-y: auto;
+      }
+      .panel {
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .panel.right {
+        border-left: none;
+      }
+      .canvas-container {
+        height: 50vh;
+        min-height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-text">SPACETIME-WARP</div>
+      <div class="logo-sub">Alcubierre Warp Metric Sandbox</div>
+    </div>
+    <div class="system-status">
+      <div class="status-item">
+        <span class="status-label">WARP COHESION:</span>
+        <span id="status-cohesion" class="status-value">100.0%</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">METRIC STATE:</span>
+        <span id="status-metric" class="status-value">STABLE</span>
+      </div>
+      <div class="status-item">
+        <div id="status-led" class="status-dot"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- LEFT PANEL: CONTROLS -->
+    <div class="panel">
+      <div class="panel-section">
+        <h2>Bubble Parameters <span>(METRICS)</span></h2>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Warp Velocity (v/c)</span>
+            <span id="val-velocity" class="slider-value">0.00c</span>
+          </div>
+          <input type="range" id="param-velocity" min="-2.0" max="2.0" step="0.01" value="0.0">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Bubble Radius (R)</span>
+            <span id="val-radius" class="slider-value">80</span>
+          </div>
+          <input type="range" id="param-radius" min="40" max="150" step="1" value="80">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Wall Thickness (σ)</span>
+            <span id="val-sigma" class="slider-value">8.0</span>
+          </div>
+          <input type="range" id="param-sigma" min="2.0" max="20.0" step="0.5" value="8.0">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Interactive Injectors</h2>
+        <div class="control-group">
+          <label style="font-size: 0.85rem; margin-bottom: 6px; display: block; color: var(--text-dim);">Simulation Mode:</label>
+          <div class="btn-row">
+            <button id="btn-mode-grid" class="btn active">Metric Grid</button>
+            <button id="btn-mode-lens" class="btn">Lensing</button>
+          </div>
+        </div>
+
+        <div class="control-group" style="margin-top: 10px;">
+          <div class="btn-row">
+            <button id="btn-shoot-laser" class="btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+              Pulse Laser
+            </button>
+            <button id="btn-toggle-audio" class="btn danger">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              Audio Off
+            </button>
+          </div>
+        </div>
+
+        <div class="control-group" style="margin-top: 15px;">
+          <div class="btn-row">
+            <button id="btn-toggle-play" class="btn">Pause</button>
+            <button id="btn-reset" class="btn danger">Reset Fields</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Spacetime Presets</h2>
+        <div class="preset-list">
+          <div class="preset-item active" data-preset="subluminal">
+            <div class="preset-title">Subluminal Cruise (0.50c)</div>
+            <div class="preset-desc">Sub-light warp bubble. Gentle spacetime warping, minimal energy distortion.</div>
+          </div>
+          <div class="preset-item" data-preset="superluminal">
+            <div class="preset-title">Superluminal Warp (1.50c)</div>
+            <div class="preset-desc">FTL travel. Creates a causality event horizon at the forward boundary. Stars lens dramatically.</div>
+          </div>
+          <div class="preset-item" data-preset="barrier">
+            <div class="preset-title">Causality Threshold (1.00c)</div>
+            <div class="preset-desc">Exactly speed of light. Metric stability fluctuates, generating strong acoustic waves.</div>
+          </div>
+          <div class="preset-item" data-preset="collimation">
+            <div class="preset-title">Gravity Lens Focus</div>
+            <div class="preset-desc">Thick bubble wall, high curvature. Optimized for visual background lensing deflection.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER PANEL: INTERACTIVE CANVAS -->
+    <div class="canvas-container">
+      <canvas id="simCanvas"></canvas>
+      
+      <div class="canvas-overlay">
+        <div class="nav-tip">
+          Drag <span>Warp Bubble</span> to move it in spacetime.<br>
+          Click empty canvas to deploy <span>Laser Sources</span>.
+        </div>
+      </div>
+
+      <div id="audio-overlay" class="audio-notice">
+        <div class="audio-notice-title">Sonification System</div>
+        <div class="audio-notice-body">
+          This simulation sonifies metric curvature and frame-dragging via low-frequency oscillators. Activate audio to enable?
+        </div>
+        <button id="audio-notice-btn" class="audio-notice-btn">Initialize Audio</button>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: DIAGNOSTICS & TELEMETRY -->
+    <div class="panel right">
+      <div class="panel-section">
+        <h2>Energy Density <span>T₀₀</span></h2>
+        <div class="chart-container">
+          <canvas id="chart-energy" class="sidebar-chart"></canvas>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 5px; text-align: center; font-family: 'Share Tech Mono', monospace;">
+          Radial Negative Energy Profile (Exotic Matter Ring)
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Metric Telemetry</h2>
+        
+        <div class="telemetry-row">
+          <span class="telemetry-label">Coordinate Warp Velocity:</span>
+          <span id="tel-v" class="telemetry-val">0.00 c</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Negative Energy Cost:</span>
+          <span id="tel-energy" class="telemetry-val highlight">0.00 M_earth</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Max Spacetime Expansion:</span>
+          <span id="tel-expansion" class="telemetry-val highlight">0.00 s⁻¹</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Max Spacetime Contraction:</span>
+          <span id="tel-contraction" class="telemetry-val highlight">0.00 s⁻¹</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Causality Horizon Status:</span>
+          <span id="tel-horizon" class="telemetry-val">INACTIVE</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Warp Bubble Radius:</span>
+          <span id="tel-radius" class="telemetry-val">80.00 pixels</span>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Event Console <span>(LOG)</span></h2>
+        <div id="log-box" class="log-box">
+          <div class="log-line">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-msg system">System initialized. Metric metrics online.</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-msg">Standing by. Drag warp bubble to perturb spacetime.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System log function
+    const logBox = document.getElementById('log-box');
+    function addLog(msg, type = 'normal') {
+      const time = new Date().toUTCString().split(' ')[4];
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      
+      let msgClass = '';
+      if (type === 'system') msgClass = 'system';
+      else if (type === 'warn') msgClass = 'warn';
+      else if (type === 'critical') msgClass = 'critical';
+
+      line.innerHTML = `
+        <span class="log-time">[${time}]</span>
+        <span class="log-msg ${msgClass}">${msg}</span>
+      `;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // Audio Context Setup
+    let audioCtx = null;
+    let mainGain = null;
+    let engineOsc = null;
+    let distortionOsc = null;
+    let filterNode = null;
+    let audioEnabled = false;
+
+    const btnToggleAudio = document.getElementById('btn-toggle-audio');
+    const audioOverlay = document.getElementById('audio-overlay');
+    const audioNoticeBtn = document.getElementById('audio-notice-btn');
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        mainGain = audioCtx.createGain();
+        mainGain.gain.setValueAtTime(0.0, audioCtx.currentTime); // start silent
+
+        filterNode = audioCtx.createBiquadFilter();
+        filterNode.type = 'lowpass';
+        filterNode.frequency.setValueAtTime(300, audioCtx.currentTime);
+        filterNode.Q.setValueAtTime(2.0, audioCtx.currentTime);
+
+        // Core engine warp engine pitch
+        engineOsc = audioCtx.createOscillator();
+        engineOsc.type = 'sawtooth';
+        engineOsc.frequency.setValueAtTime(60, audioCtx.currentTime);
+
+        // Space metric distortion rumble
+        distortionOsc = audioCtx.createOscillator();
+        distortionOsc.type = 'triangle';
+        distortionOsc.frequency.setValueAtTime(45, audioCtx.currentTime);
+
+        // Low frequency oscillator for rumbling modulation
+        const lfo = audioCtx.createOscillator();
+        lfo.frequency.setValueAtTime(6.0, audioCtx.currentTime); // 6 Hz rumble
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.setValueAtTime(15.0, audioCtx.currentTime);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(distortionOsc.frequency); // modulate frequency of rumble
+
+        // Connect engine synth
+        engineOsc.connect(filterNode);
+        distortionOsc.connect(filterNode);
+        filterNode.connect(mainGain);
+        mainGain.connect(audioCtx.destination);
+
+        // Start Oscillators
+        engineOsc.start(0);
+        distortionOsc.start(0);
+        lfo.start(0);
+
+        audioEnabled = true;
+        btnToggleAudio.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          Audio On
+        `;
+        btnToggleAudio.classList.remove('danger');
+        audioOverlay.style.display = 'none';
+        addLog("Web Audio metric synthesizer initialized.", "system");
+
+        // Set initial sound profile based on UI values
+        updateAudioParameters(parseFloat(document.getElementById('param-velocity').value));
+      } catch (e) {
+        console.error("Audio Context Init Failed", e);
+        addLog("Audio initialization failed: " + e.message, "critical");
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        initAudio();
+        return;
+      }
+
+      if (audioEnabled) {
+        mainGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.1);
+        audioEnabled = false;
+        btnToggleAudio.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+          Audio Off
+        `;
+        btnToggleAudio.classList.add('danger');
+        addLog("Sonification synth offline.");
+      } else {
+        audioCtx.resume().then(() => {
+          mainGain.gain.setTargetAtTime(0.2, audioCtx.currentTime, 0.1);
+          audioEnabled = true;
+          btnToggleAudio.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            Audio On
+          `;
+          btnToggleAudio.classList.remove('danger');
+          addLog("Sonification synth online.");
+        });
+      }
+    }
+
+    function updateAudioParameters(velocity) {
+      if (!audioEnabled || !audioCtx) return;
+      const absV = Math.abs(velocity);
+      
+      // Engine pitch rises with velocity
+      const targetEnginePitch = 50 + (absV * 120);
+      engineOsc.frequency.setTargetAtTime(targetEnginePitch, audioCtx.currentTime, 0.1);
+
+      // Low rumble volume scales with warp factor
+      const targetRumblePitch = 35 + (absV * 25);
+      distortionOsc.frequency.setTargetAtTime(targetRumblePitch, audioCtx.currentTime, 0.2);
+
+      // Gain adjustments based on warp factor
+      const mainVolume = 0.05 + (absV * 0.12);
+      mainGain.gain.setTargetAtTime(mainVolume, audioCtx.currentTime, 0.1);
+
+      // Lowpass cutoff rises with speed to show higher energy
+      const targetCutoff = 150 + (absV * 400);
+      filterNode.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.15);
+    }
+
+    function playCausalityCrack() {
+      if (!audioEnabled || !audioCtx) return;
+      // Synthesize a spatial shockwave crack (Cherenkov burst)
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
+
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(0);
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    audioNoticeBtn.addEventListener('click', initAudio);
+    btnToggleAudio.addEventListener('click', toggleAudio);
+
+    // Setup Canvas and Engine variables
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Make canvas responsive
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Simulation Engine Parameters
+    let isPlaying = true;
+    let simMode = 'grid'; // 'grid' | 'lens'
+
+    // Warp Bubble Object
+    const bubble = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      targetX: canvas.width / 2,
+      targetY: canvas.height / 2,
+      vx: 0, // coordinate speed
+      vy: 0,
+      v: 0.0,  // user parameter speed (-2.0 to 2.0 c)
+      R: 80,
+      sigma: 8.0,
+      dragged: false
+    };
+
+    // Particles representing space dust
+    const particles = [];
+    const NUM_PARTICLES = 150;
+    
+    // Star field for background lensing simulation
+    const stars = [];
+    const NUM_STARS = 200;
+
+    // Photons shot from lasers
+    const photons = [];
+
+    // Setup entities
+    function initEntities() {
+      // Space Dust
+      particles.length = 0;
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: -1.5 - Math.random() * 1.5, // background movement
+          size: 1 + Math.random() * 1.5,
+          color: 'rgba(255, 255, 255, 0.4)'
+        });
+      }
+
+      // Background stars for lensing
+      stars.length = 0;
+      for (let i = 0; i < NUM_STARS; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          baseX: 0,
+          baseY: 0,
+          size: 1.0 + Math.random() * 2.0,
+          color: `hsl(${200 + Math.random() * 60}, 100%, ${80 + Math.random() * 20}%)`
+        });
+        stars[i].baseX = stars[i].x;
+        stars[i].baseY = stars[i].y;
+      }
+    }
+    initEntities();
+
+    // Alcubierre Warp Field calculation functions
+    // Shape function f(r_s) describing bubble transition shell
+    function warpFactor(rs, R, sigma) {
+      const top = Math.tanh(sigma * (rs + R)) - Math.tanh(sigma * (rs - R));
+      const bottom = 2 * Math.tanh(sigma * R);
+      return top / bottom;
+    }
+
+    // Derivative of warp shape function wrt r_s
+    function warpFactorDerivative(rs, R, sigma) {
+      const sechSqPlus = 1.0 / Math.pow(Math.cosh(sigma * (rs + R)), 2);
+      const sechSqMinus = 1.0 / Math.pow(Math.cosh(sigma * (rs - R)), 2);
+      const bottom = 2.0 * Math.tanh(sigma * R);
+      return (sigma * (sechSqPlus - sechSqMinus)) / bottom;
+    }
+
+    // Physics constants (arbitrary units scaled for canvas)
+    const c = 6.0; // speed of light in pixels per step
+
+    // Euler Geodesic Solver for Photons
+    function updatePhotons() {
+      for (let i = photons.length - 1; i >= 0; i--) {
+        const p = photons[i];
+        
+        // Compute relative coordinates from bubble center
+        const dx = p.x - bubble.x;
+        const dy = p.y - bubble.y;
+        const rs = Math.sqrt(dx * dx + dy * dy);
+        
+        // Alcubierre Shift Vector: beta^x = -v_s * f(rs), beta^y = 0
+        // We evaluate bubble's current velocity in pixels per frame
+        const bubbleSpeed = bubble.v * c;
+        const f = warpFactor(rs, bubble.R, bubble.sigma);
+        const shiftX = bubbleSpeed * f;
+
+        // Bending force from metric gradient (approximate geodesic bending)
+        // Refraction due to spatial metric stretch
+        if (rs > 0.1) {
+          const df_dr = warpFactorDerivative(rs, bubble.R, bubble.sigma);
+          
+          // Gradient of shift vector wrt x and y
+          const dbeta_dx = bubbleSpeed * df_dr * (dx / rs);
+          const dbeta_dy = bubbleSpeed * df_dr * (dy / rs);
+
+          // Approximate spatial trajectory deflection:
+          // The gradient of the metric acts as a coordinate refraction index
+          p.vx += -dbeta_dx * 0.15;
+          p.vy += -dbeta_dy * 0.15;
+        }
+
+        // Normalize photon speed to c, then superimpose the space warp shift vector
+        const rawSpeed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        if (rawSpeed > 0) {
+          p.vx = (p.vx / rawSpeed) * c;
+          p.vy = (p.vy / rawSpeed) * c;
+        }
+
+        // Move photon: coordinate speed = isotropic speed + shift vector
+        p.x += p.vx + shiftX;
+        p.y += p.vy;
+
+        p.life--;
+        p.path.push({x: p.x, y: p.y});
+        if (p.path.length > 30) p.path.shift();
+
+        // Kill photons outside bounds or dead
+        if (p.x < -100 || p.x > canvas.width + 100 || p.y < -100 || p.y > canvas.height + 100 || p.life <= 0) {
+          photons.splice(i, 1);
+        }
+      }
+    }
+
+    // Shoot a new photon pulse
+    function shootPhotonPulse(startX, startY, dirX, dirY) {
+      const mag = Math.sqrt(dirX*dirX + dirY*dirY);
+      const vx = (dirX / mag) * c;
+      const vy = (dirY / mag) * c;
+
+      // Deploy a pack of parallel photons to show curvature clearly
+      const offsets = [-20, -10, 0, 10, 20];
+      const perpX = -vy;
+      const perpY = vx;
+      const perpMag = Math.sqrt(perpX*perpX + perpY*perpY);
+      const px = perpX / perpMag;
+      const py = perpY / perpMag;
+
+      offsets.forEach(offset => {
+        photons.push({
+          x: startX + px * offset,
+          y: startY + py * offset,
+          vx: vx,
+          vy: vy,
+          life: 220,
+          path: []
+        });
+      });
+      addLog("Deployed multi-channel photon laser pulse.");
+    }
+
+    // Drag Space Dust Particles based on space warp
+    function updateParticles() {
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // Relative coordinates from bubble center
+        const dx = p.x - bubble.x;
+        const dy = p.y - bubble.y;
+        const rs = Math.sqrt(dx * dx + dy * dy);
+
+        // Apply space distortion shift vector
+        const bubbleSpeed = bubble.v * c;
+        const f = warpFactor(rs, bubble.R, bubble.sigma);
+        const shiftX = bubbleSpeed * f;
+
+        // Standard coordinate drifting (space dust speed) + shift dragging
+        p.x += p.vx + shiftX;
+        
+        // Re-wrap particles that drift off canvas
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+      }
+    }
+
+    // Relativistic Gravitational Lensing of background stars
+    // We compute how light moving to the viewer is distorted by Alcubierre metric
+    function renderLensedStars() {
+      ctx.fillStyle = '#fff';
+      
+      for (let i = 0; i < stars.length; i++) {
+        const star = stars[i];
+        
+        // Vector from star to bubble center
+        const dx = star.baseX - bubble.x;
+        const dy = star.baseY - bubble.y;
+        const rs = Math.sqrt(dx * dx + dy * dy);
+
+        // Lensing shift
+        let lensedX = star.baseX;
+        let lensedY = star.baseY;
+
+        // If close to warp bubble, refract coordinate positions
+        if (rs < bubble.R * 4) {
+          const f = warpFactor(rs, bubble.R, bubble.sigma);
+          
+          // Warp bubble expands space behind and contracts space in front.
+          // Frame dragging shifts apparent star positions along velocity direction.
+          const dragMagnitude = 55.0 * bubble.v * f;
+          
+          // Spatial lens magnification / deflection
+          // Deflect around bubble core due to extreme curvature (aberration)
+          const df_dr = warpFactorDerivative(rs, bubble.R, bubble.sigma);
+          const lensDeflect = -150.0 * df_dr;
+
+          lensedX += (dx / (rs + 1)) * lensDeflect + dragMagnitude;
+          lensedY += (dy / (rs + 1)) * lensDeflect;
+        }
+
+        // Draw distorted star
+        ctx.fillStyle = star.color;
+        ctx.shadowBlur = star.size > 2.0 ? 8 : 0;
+        ctx.shadowColor = star.color;
+        ctx.beginPath();
+        ctx.arc(lensedX, lensedY, star.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0; // reset
+    }
+
+    // Render Spacetime Coordinate Grid showing compression / expansion
+    function renderSpacetimeGrid() {
+      const gridSpacing = 26;
+      const bubbleSpeed = bubble.v * c;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1.0;
+
+      // Draw grid intersections displaced by the metric deformation
+      for (let y = 0; y < canvas.height; y += gridSpacing) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += 10) {
+          const dx = x - bubble.x;
+          const dy = y - bubble.y;
+          const rs = Math.sqrt(dx * dx + dy * dy);
+
+          const f = warpFactor(rs, bubble.R, bubble.sigma);
+          const shiftX = bubble.v * 35.0 * f;
+
+          // Compute volume expansion (theta) to color-code grid
+          // theta = v * df/dx = v * (df/drs) * (dx / rs)
+          let theta = 0;
+          if (rs > 0.1) {
+            const df_dr = warpFactorDerivative(rs, bubble.R, bubble.sigma);
+            theta = bubble.v * df_dr * (dx / rs);
+          }
+
+          // Distorted position
+          const gx = x + shiftX;
+          const gy = y;
+
+          if (x === 0) ctx.moveTo(gx, gy);
+          else ctx.lineTo(gx, gy);
+        }
+        ctx.stroke();
+      }
+
+      for (let x = 0; x < canvas.width; x += gridSpacing) {
+        ctx.beginPath();
+        for (let y = 0; y < canvas.height; y += 10) {
+          const dx = x - bubble.x;
+          const dy = y - bubble.y;
+          const rs = Math.sqrt(dx * dx + dy * dy);
+
+          const f = warpFactor(rs, bubble.R, bubble.sigma);
+          const shiftX = bubble.v * 35.0 * f;
+
+          const gx = x + shiftX;
+          const gy = y;
+
+          if (y === 0) ctx.moveTo(gx, gy);
+          else ctx.lineTo(gx, gy);
+        }
+        ctx.stroke();
+      }
+
+      // Draw color-coded curvature overlay (Heatmap)
+      // Pink/Magenta = Space Expansion (behind), Cyan = Space Contraction (in front)
+      if (Math.abs(bubble.v) > 0.02) {
+        const dX = 12;
+        for (let x = bubble.x - bubble.R * 2.5; x < bubble.x + bubble.R * 2.5; x += dX) {
+          for (let y = bubble.y - bubble.R * 2.5; y < bubble.y + bubble.R * 2.5; y += dX) {
+            const dx = x - bubble.x;
+            const dy = y - bubble.y;
+            const rs = Math.sqrt(dx * dx + dy * dy);
+
+            if (rs < bubble.R * 2.2) {
+              const df_dr = warpFactorDerivative(rs, bubble.R, bubble.sigma);
+              const theta = bubble.v * df_dr * (dx / rs) * 5.0; // expand/contract coefficient
+
+              if (Math.abs(theta) > 0.005) {
+                ctx.fillStyle = theta > 0 
+                  ? `rgba(255, 0, 127, ${Math.min(0.25, theta * 1.5)})` // Expansion (magenta)
+                  : `rgba(0, 243, 255, ${Math.min(0.25, Math.abs(theta) * 1.5)})`; // Contraction (cyan)
+                
+                ctx.fillRect(x - dX/2, y - dX/2, dX, dX);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Render Warp Bubble boundary shell
+    function renderWarpBubble() {
+      // Glow shell (exotic energy ring)
+      const grad = ctx.createRadialGradient(bubble.x, bubble.y, bubble.R - 25, bubble.x, bubble.y, bubble.R + 25);
+      
+      // Dynamic colors based on velocity direction
+      const glowColor = bubble.v >= 0 ? '0, 243, 255' : '255, 0, 127';
+      
+      grad.addColorStop(0, 'rgba(' + glowColor + ', 0.0)');
+      grad.addColorStop(0.3, 'rgba(' + glowColor + ', 0.15)');
+      // peak energy density at bubble wall boundary
+      grad.addColorStop(0.7, 'rgba(' + glowColor + ', 0.7)');
+      grad.addColorStop(0.85, 'rgba(157, 0, 255, 0.4)'); // edge transition
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0.0)');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.R + 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw central bubble horizon flat spacetime inner cabin
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = 'rgba(' + glowColor + ', 0.5)';
+      ctx.strokeStyle = 'rgba(' + glowColor + ', 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.R - 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0; // reset
+
+      // Inner space traveler icon (coordinate grid marker)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, 4, 0, Math.PI*2);
+      ctx.fill();
+
+      // If FTL (v > c), draw causal event horizon boundaries
+      if (Math.abs(bubble.v) > 1.0) {
+        ctx.strokeStyle = 'rgba(255, 0, 127, 0.8)';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'var(--neon-magenta)';
+        
+        // Draw forward event horizon arc
+        ctx.beginPath();
+        // arc in direction of velocity
+        const angleOffset = bubble.v > 0 ? 0 : Math.PI;
+        ctx.arc(bubble.x, bubble.y, bubble.R, angleOffset - Math.PI/3, angleOffset + Math.PI/3);
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'var(--neon-magenta)';
+        ctx.font = '9px "Share Tech Mono"';
+        ctx.fillText("CAUSAL HORIZON", bubble.v > 0 ? bubble.x + bubble.R + 10 : bubble.x - bubble.R - 100, bubble.y - 10);
+      }
+    }
+
+    // Render Laser pulse lines
+    function renderPhotons() {
+      ctx.lineWidth = 2.0;
+      for (let i = 0; i < photons.length; i++) {
+        const p = photons[i];
+        if (p.path.length < 2) continue;
+        
+        ctx.beginPath();
+        ctx.moveTo(p.path[0].x, p.path[0].y);
+        for (let j = 1; j < p.path.length; j++) {
+          ctx.lineTo(p.path[j].x, p.path[j].y);
+        }
+        
+        // create glowing effect
+        ctx.strokeStyle = 'rgba(57, 255, 20, 0.9)'; // Neon Green Lasers
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = 'var(--neon-green)';
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0; // reset
+    }
+
+    // Render system particles
+    function renderParticles() {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // calculate speed-based tail length
+        const dx = p.x - bubble.x;
+        const dy = p.y - bubble.y;
+        const rs = Math.sqrt(dx * dx + dy * dy);
+        const f = warpFactor(rs, bubble.R, bubble.sigma);
+        const speedMultiplier = Math.abs(bubble.v * 15 * f);
+
+        ctx.fillRect(p.x, p.y, p.size + speedMultiplier, p.size);
+      }
+    }
+
+    // Primary Render Loop
+    function loop() {
+      // Clear background
+      ctx.fillStyle = 'rgba(5, 6, 10, 0.9)'; // trail fade
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Bubble position easing towards mouse/target
+      if (bubble.dragged) {
+        bubble.x += (bubble.targetX - bubble.x) * 0.15;
+        bubble.y += (bubble.targetY - bubble.y) * 0.15;
+      }
+
+      if (isPlaying) {
+        updateParticles();
+        updatePhotons();
+      }
+
+      // Draw layers
+      if (simMode === 'grid') {
+        renderSpacetimeGrid();
+      } else {
+        renderLensedStars();
+      }
+
+      renderParticles();
+      renderPhotons();
+      renderWarpBubble();
+
+      updateTelemetry();
+
+      requestAnimationFrame(loop);
+    }
+
+    // Sidebar Diagnostic Chart: Exotic Negative Energy Curve
+    const energyCanvas = document.getElementById('chart-energy');
+    const energyCtx = energyCanvas.getContext('2d');
+    
+    function resizeEnergyChart() {
+      energyCanvas.width = energyCanvas.parentElement.clientWidth;
+      energyCanvas.height = energyCanvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeEnergyChart);
+    resizeEnergyChart();
+
+    function renderEnergyChart() {
+      energyCtx.fillStyle = '#0a0c16';
+      energyCtx.fillRect(0, 0, energyCanvas.width, energyCanvas.height);
+
+      const w = energyCanvas.width;
+      const h = energyCanvas.height;
+      const halfH = h / 2;
+
+      // Draw zero axis line
+      energyCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      energyCtx.lineWidth = 1;
+      energyCtx.beginPath();
+      energyCtx.moveTo(0, halfH);
+      energyCtx.lineTo(w, halfH);
+      energyCtx.stroke();
+
+      // Plot energy curve
+      // T_00 = - (v^2 * rs^2 * (df/drs)^2)
+      energyCtx.strokeStyle = 'var(--neon-magenta)';
+      energyCtx.lineWidth = 2;
+      energyCtx.beginPath();
+
+      const absV = Math.abs(bubble.v);
+      
+      for (let x = 0; x < w; x++) {
+        // map x [0, w] to rs coordinate relative to bubble radius
+        const rs = (x - w/2) * 1.5;
+        const absRs = Math.abs(rs);
+
+        const f_prime = warpFactorDerivative(absRs, bubble.R * 0.7, bubble.sigma);
+        
+        // Alcubierre energy density is strictly negative
+        // Energy cost scales with velocity squared
+        const t00 = -5.0 * (absV * absV) * Math.pow(f_prime * 40.0, 2);
+
+        const plotY = halfH - t00; // negative density plotted downwards
+
+        if (x === 0) energyCtx.moveTo(x, plotY);
+        else energyCtx.lineTo(x, plotY);
+      }
+      energyCtx.stroke();
+
+      // Labels
+      energyCtx.fillStyle = 'var(--text-dim)';
+      energyCtx.font = '8px "Share Tech Mono"';
+      energyCtx.fillText("+E (Standard Matter)", 10, 15);
+      energyCtx.fillText("-E (Exotic matter shell)", 10, h - 10);
+    }
+    // Update chart periodically
+    setInterval(renderEnergyChart, 100);
+
+    // Diagnostics Data readouts update
+    const statusCohesion = document.getElementById('status-cohesion');
+    const statusMetric = document.getElementById('status-metric');
+    const statusLED = document.getElementById('status-led');
+
+    const telV = document.getElementById('tel-v');
+    const telEnergy = document.getElementById('tel-energy');
+    const telExpansion = document.getElementById('tel-expansion');
+    const telContraction = document.getElementById('tel-contraction');
+    const telHorizon = document.getElementById('tel-horizon');
+    const telRadiusReadout = document.getElementById('tel-radius');
+
+    function updateTelemetry() {
+      telV.innerText = bubble.v.toFixed(2) + " c";
+      
+      // Energy cost scales with bubble radius squared and thickness
+      // E ~ - (v_s^2 * R^2) / sigma
+      const absV = Math.abs(bubble.v);
+      const estimatedMass = (absV * absV * Math.pow(bubble.R, 2)) / (bubble.sigma * 400.0);
+      telEnergy.innerText = "-" + estimatedMass.toFixed(3) + " M_earth";
+
+      // Compute peak expansion/contraction
+      // theta = v * df/drs.
+      // Peak value occurs roughly at rs = R
+      const df_dr_peak = warpFactorDerivative(bubble.R, bubble.R, bubble.sigma);
+      const thetaPeak = absV * df_dr_peak * 100; // scaled metric
+
+      telExpansion.innerText = "+" + thetaPeak.toFixed(2) + " s⁻¹";
+      telContraction.innerText = "-" + thetaPeak.toFixed(2) + " s⁻¹";
+
+      if (absV > 1.0) {
+        telHorizon.innerText = "CRITICAL (FTL)";
+        telHorizon.className = "telemetry-val alert";
+        statusMetric.innerText = "FTL WARP MODE";
+        statusMetric.style.color = "var(--neon-magenta)";
+        statusLED.className = "status-dot danger";
+        
+        // Cohesion decays slightly at FTL
+        const cohesion = 100 - (absV - 1.0) * 10.0;
+        statusCohesion.innerText = cohesion.toFixed(1) + "%";
+      } else if (absV === 1.0) {
+        telHorizon.innerText = "THRESHOLD FLUX";
+        telHorizon.className = "telemetry-val alert";
+        statusMetric.innerText = "CAUSALITY LIMIT";
+        statusMetric.style.color = "var(--neon-amber)";
+        statusLED.className = "status-dot warn";
+        statusCohesion.innerText = "99.2%";
+      } else {
+        telHorizon.innerText = "INACTIVE (SUB-LIGHT)";
+        telHorizon.className = "telemetry-val highlight";
+        statusMetric.innerText = "STABLE";
+        statusMetric.style.color = "var(--neon-cyan)";
+        statusLED.className = "status-dot";
+        statusCohesion.innerText = "100.0%";
+      }
+
+      telRadiusReadout.innerText = bubble.R.toFixed(2) + " px";
+    }
+
+    // UI Event Listeners
+    const paramVelocity = document.getElementById('param-velocity');
+    const paramRadius = document.getElementById('param-radius');
+    const paramSigma = document.getElementById('param-sigma');
+
+    const valVelocity = document.getElementById('val-velocity');
+    const valRadius = document.getElementById('val-radius');
+    const valSigma = document.getElementById('val-sigma');
+
+    paramVelocity.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      bubble.v = v;
+      valVelocity.innerText = v.toFixed(2) + "c";
+      updateAudioParameters(v);
+
+      if (v === 1.0 || v === -1.0) {
+        addLog("Approaching Causality Threshold. Metric turbulence detected.", "warn");
+        playCausalityCrack();
+      } else if (Math.abs(v) > 1.0 && Math.abs(bubble.v) <= 1.0) {
+        addLog("Superluminal transition active. Spacetime causal horizon established.", "critical");
+        playCausalityCrack();
+      }
+    });
+
+    paramRadius.addEventListener('input', (e) => {
+      const r = parseInt(e.target.value);
+      bubble.R = r;
+      valRadius.innerText = r;
+      addLog(`Resized warp cabin boundary. Radius: ${r}m.`);
+    });
+
+    paramSigma.addEventListener('input', (e) => {
+      const s = parseFloat(e.target.value);
+      bubble.sigma = s;
+      valSigma.innerText = s.toFixed(1);
+      addLog(`Modulated transition shell density. Sigma: ${s.toFixed(1)}.`);
+    });
+
+    // Toggle Modes
+    const btnModeGrid = document.getElementById('btn-mode-grid');
+    const btnModeLens = document.getElementById('btn-mode-lens');
+
+    btnModeGrid.addEventListener('click', () => {
+      simMode = 'grid';
+      btnModeGrid.classList.add('active');
+      btnModeLens.classList.remove('active');
+      addLog("Display mode: Coordinate grid deformation metric.");
+    });
+
+    btnModeLens.addEventListener('click', () => {
+      simMode = 'lens';
+      btnModeLens.classList.add('active');
+      btnModeGrid.classList.remove('active');
+      addLog("Display mode: Background stellar general lensing.");
+    });
+
+    // Action buttons
+    const btnShootLaser = document.getElementById('btn-shoot-laser');
+    btnShootLaser.addEventListener('click', () => {
+      // Shoot laser from left boundary through center
+      shootPhotonPulse(50, canvas.height/2, 1, 0);
+    });
+
+    const btnTogglePlay = document.getElementById('btn-toggle-play');
+    btnTogglePlay.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      btnTogglePlay.innerText = isPlaying ? "Pause" : "Resume";
+      addLog(isPlaying ? "Simulation resumed." : "Simulation paused.");
+    });
+
+    const btnReset = document.getElementById('btn-reset');
+    btnReset.addEventListener('click', () => {
+      bubble.v = 0;
+      bubble.x = canvas.width / 2;
+      bubble.y = canvas.height / 2;
+      bubble.targetX = canvas.width / 2;
+      bubble.targetY = canvas.height / 2;
+      paramVelocity.value = 0.0;
+      valVelocity.innerText = "0.00c";
+      photons.length = 0;
+      initEntities();
+      updateAudioParameters(0.0);
+      addLog("Metric field configurations reset to vacuum ground state.", "system");
+    });
+
+    // Preset configurations
+    const presets = {
+      subluminal: { v: 0.50, R: 75, sigma: 7.0 },
+      superluminal: { v: 1.50, R: 85, sigma: 10.0 },
+      barrier: { v: 1.00, R: 80, sigma: 8.0 },
+      collimation: { v: 0.0, R: 105, sigma: 18.0 }
+    };
+
+    document.querySelectorAll('.preset-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.preset-item').forEach(p => p.classList.remove('active'));
+        item.classList.add('active');
+        
+        const presetKey = item.dataset.preset;
+        const config = presets[presetKey];
+        if (config) {
+          bubble.v = config.v;
+          bubble.R = config.R;
+          bubble.sigma = config.sigma;
+
+          paramVelocity.value = config.v;
+          valVelocity.innerText = config.v.toFixed(2) + "c";
+          
+          paramRadius.value = config.R;
+          valRadius.innerText = config.R;
+
+          paramSigma.value = config.sigma;
+          valSigma.innerText = config.sigma.toFixed(1);
+
+          updateAudioParameters(config.v);
+          addLog(`Activated preset: ${item.querySelector('.preset-title').innerText}`, "system");
+
+          if (config.v === 1.0 || Math.abs(config.v) > 1.0) {
+            playCausalityCrack();
+          }
+        }
+      });
+    });
+
+    // Mouse drag handlers to move warp bubble
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pos = getMousePos(e);
+      const dx = pos.x - bubble.x;
+      const dy = pos.y - bubble.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < bubble.R + 20) {
+        bubble.dragged = true;
+        bubble.targetX = pos.x;
+        bubble.targetY = pos.y;
+        addLog("Frame dragging active. Relocating metric singularity.");
+      } else {
+        // Shoot laser pulse from that location pointing to bubble
+        const dirX = bubble.x - pos.x;
+        const dirY = bubble.y - pos.y;
+        shootPhotonPulse(pos.x, pos.y, dirX, dirY);
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!bubble.dragged) return;
+      const pos = getMousePos(e);
+      bubble.targetX = pos.x;
+      bubble.targetY = pos.y;
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (bubble.dragged) {
+        bubble.dragged = false;
+        addLog("Frame lock stabilized.");
+      }
+    });
+
+    // Touch support for tablets/phones
+    canvas.addEventListener('touchstart', (e) => {
+      const pos = getMousePos(e);
+      const dx = pos.x - bubble.x;
+      const dy = pos.y - bubble.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < bubble.R + 20) {
+        bubble.dragged = true;
+        bubble.targetX = pos.x;
+        bubble.targetY = pos.y;
+        e.preventDefault();
+      }
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!bubble.dragged) return;
+      const pos = getMousePos(e);
+      bubble.targetX = pos.x;
+      bubble.targetY = pos.y;
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('touchend', () => {
+      bubble.dragged = false;
+    });
+
+    // Start Simulation Loop
+    loop();
+  </script>
+</body>
+</html>
