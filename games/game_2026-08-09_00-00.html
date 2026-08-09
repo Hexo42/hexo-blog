@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>casimir-flow: quantum vacuum & dynamical casimir sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #030408;
+      --bg-space: #05060b;
+      --panel-bg: rgba(6, 8, 14, 0.9);
+      --border-color: rgba(255, 0, 127, 0.2);
+      --border-glowing: rgba(255, 0, 127, 0.4);
+      --neon-magenta: #ff007f;
+      --neon-cyan: #00f3ff;
+      --neon-amber: #ffaa00;
+      --neon-green: #39ff14;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(255, 0, 127, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(4, 5, 8, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--neon-magenta);
+      text-shadow: 0 0 10px rgba(255, 0, 127, 0.6);
+    }
+
+    .logo-sub {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      border-left: 1px solid var(--border-color);
+      padding-left: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .system-status {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-label {
+      color: var(--text-dim);
+    }
+
+    .status-value {
+      color: var(--neon-magenta);
+      text-shadow: 0 0 5px rgba(255, 0, 127, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .status-dot.active {
+      animation: blink 1s infinite alternate;
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    .app-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      height: calc(100vh - 60px);
+      background: radial-gradient(circle at center, #0b0d16 0%, #020305 100%);
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+      backdrop-filter: blur(12px);
+      z-index: 5;
+    }
+
+    .panel.right {
+      border-right: none;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .panel-section {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .panel-section:last-child {
+      border-bottom: none;
+    }
+
+    h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 15px;
+      color: var(--neon-magenta);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h2 span {
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+    }
+
+    .control-group {
+      margin-bottom: 16px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .slider-label {
+      color: var(--text-color);
+    }
+
+    .slider-value {
+      color: var(--neon-magenta);
+    }
+
+    .slider-value.cyan {
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      outline: none;
+      transition: background 0.3s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--neon-magenta);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--neon-magenta);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="range"].range-cyan::-webkit-slider-thumb {
+      background: var(--neon-cyan);
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      background: rgba(255, 0, 127, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 10px 15px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 0, 127, 0.15);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+      color: #fff;
+    }
+
+    .btn.active {
+      background: rgba(255, 0, 127, 0.25);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 12px rgba(255, 0, 127, 0.4);
+      color: #fff;
+    }
+
+    .btn.cyan-theme {
+      background: rgba(0, 243, 255, 0.05);
+      border-color: rgba(0, 243, 255, 0.2);
+    }
+
+    .btn.cyan-theme:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+    }
+
+    .btn.cyan-theme.active {
+      background: rgba(0, 243, 255, 0.25);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+    }
+
+    .btn.danger {
+      background: rgba(255, 170, 0, 0.05);
+      border-color: rgba(255, 170, 0, 0.2);
+    }
+
+    .btn.danger:hover {
+      background: rgba(255, 170, 0, 0.15);
+      border-color: var(--neon-amber);
+      box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+    }
+
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preset-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.85rem;
+    }
+
+    .preset-item:hover {
+      background: rgba(255, 0, 127, 0.05);
+      border-color: rgba(255, 0, 127, 0.3);
+    }
+
+    .preset-item.active {
+      background: rgba(255, 0, 127, 0.08);
+      border-color: var(--neon-magenta);
+      box-shadow: inset 0 0 5px rgba(255, 0, 127, 0.1);
+    }
+
+    .preset-title {
+      font-weight: 700;
+      color: var(--neon-magenta);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    .preset-desc {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      line-height: 1.2;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-space);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas#simCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nav-tip {
+      background: rgba(6, 8, 14, 0.8);
+      border: 1px solid var(--border-color);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-color);
+      pointer-events: auto;
+    }
+
+    .nav-tip span {
+      color: var(--neon-cyan);
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 130px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      position: relative;
+      margin-top: 10px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    canvas.sidebar-chart {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.85rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .telemetry-row:last-child {
+      border-bottom: none;
+    }
+
+    .telemetry-label {
+      color: var(--text-dim);
+    }
+
+    .telemetry-val {
+      color: #fff;
+    }
+
+    .telemetry-val.highlight {
+      color: var(--neon-magenta);
+    }
+
+    .telemetry-val.cyan-highlight {
+      color: var(--neon-cyan);
+    }
+
+    .telemetry-val.alert {
+      color: var(--neon-amber);
+      text-shadow: 0 0 5px rgba(255, 170, 0, 0.5);
+    }
+
+    .log-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      height: 130px;
+      overflow-y: auto;
+      padding: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      scroll-behavior: smooth;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 8px;
+      line-height: 1.3;
+    }
+
+    .log-time {
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: var(--text-color);
+    }
+
+    .log-msg.system {
+      color: var(--neon-cyan);
+    }
+
+    .log-msg.warn {
+      color: var(--neon-amber);
+    }
+
+    .log-msg.critical {
+      color: var(--neon-magenta);
+    }
+
+    .audio-notice {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(6, 8, 14, 0.9);
+      border: 1px solid var(--neon-magenta);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+      padding: 12px 18px;
+      border-radius: 6px;
+      z-index: 100;
+      max-width: 320px;
+      pointer-events: auto;
+      animation: pulseBorder 2s infinite alternate;
+    }
+
+    @keyframes pulseBorder {
+      0% { border-color: rgba(255, 0, 127, 0.3); }
+      100% { border-color: rgba(255, 0, 127, 0.8); }
+    }
+
+    .audio-notice-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      color: var(--neon-magenta);
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .audio-notice-body {
+      font-size: 0.8rem;
+      color: var(--text-color);
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .audio-notice-btn {
+      background: var(--neon-magenta);
+      border: none;
+      color: #000;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+
+    .audio-notice-btn:hover {
+      background: #fff;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-magenta);
+    }
+
+    @media (max-width: 1024px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+        height: auto;
+        overflow-y: auto;
+      }
+      .panel {
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .panel.right {
+        border-left: none;
+      }
+      .canvas-container {
+        height: 50vh;
+        min-height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-text">CASIMIR-FLOW</div>
+      <div class="logo-sub">Quantum Vacuum & Mirror Acceleration Sandbox</div>
+    </div>
+    <div class="system-status">
+      <div class="status-item">
+        <span class="status-label">VACUUM PRESSURE:</span>
+        <span id="status-pressure" class="status-value">-12.45 kPa</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">EXCITATION:</span>
+        <span id="status-state" class="status-value">UNSTABLE</span>
+      </div>
+      <div class="status-item">
+        <div id="status-led" class="status-dot active"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- LEFT PANEL: CONTROLS -->
+    <div class="panel">
+      <div class="panel-section">
+        <h2>Cavity Geometry <span>(METRICS)</span></h2>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Mirror Separation (L)</span>
+            <span id="val-width" class="slider-value">160 pm</span>
+          </div>
+          <input type="range" id="param-width" min="40" max="300" step="1" value="160">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Reflector Voltage</span>
+            <span id="val-voltage" class="slider-value cyan">0 V</span>
+          </div>
+          <input type="range" id="param-voltage" class="range-cyan" min="-200" max="200" step="5" value="0">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Mirror Oscillation</h2>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Drive Frequency (f)</span>
+            <span id="val-frequency" class="slider-value">2.40 GHz</span>
+          </div>
+          <input type="range" id="param-frequency" min="0.0" max="10.0" step="0.05" value="2.4">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Oscillation Amp (A)</span>
+            <span id="val-amplitude" class="slider-value">15 pm</span>
+          </div>
+          <input type="range" id="param-amplitude" min="0" max="50" step="1" value="15">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Simulation Settings</h2>
+        
+        <div class="control-group">
+          <label style="font-size: 0.85rem; margin-bottom: 6px; display: block; color: var(--text-dim);">Visualization Mode:</label>
+          <div class="btn-row">
+            <button id="btn-mode-wave" class="btn active">Vacuum Modes</button>
+            <button id="btn-mode-pair" class="btn">Virtual Pairs</button>
+          </div>
+        </div>
+
+        <div class="control-group" style="margin-top: 10px;">
+          <div class="btn-row">
+            <button id="btn-toggle-audio" class="btn cyan-theme">Audio Off</button>
+            <button id="btn-toggle-play" class="btn">Pause</button>
+          </div>
+        </div>
+
+        <div class="control-group" style="margin-top: 10px;">
+          <button id="btn-reset" class="btn danger" style="width: 100%;">Reset Fields</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Quantum Presets</h2>
+        <div class="preset-list">
+          <div class="preset-item active" data-preset="rest">
+            <div class="preset-title">Static Casimir State</div>
+            <div class="preset-desc">No mirror drive. Focuses on spatial mode exclusion and steady-state negative vacuum pressure.</div>
+          </div>
+          <div class="preset-item" data-preset="resonance">
+            <div class="preset-title">Parametric Resonance</div>
+            <div class="preset-desc">Drives mirror vibration at exactly twice the fundamental mode. Maximum virtual photon amplification.</div>
+          </div>
+          <div class="preset-item" data-preset="schwinger">
+            <div class="preset-title">Schwinger Field Deflection</div>
+            <div class="preset-desc">Applies high voltage to polarize vacuum fluctuations and rip virtual pairs into real electrons.</div>
+          </div>
+          <div class="preset-item" data-preset="compression">
+            <div class="preset-title">Extreme Squeeze</div>
+            <div class="preset-desc">Squeezes cavity width to minimum. Low-frequency vacuum noise is completely suppressed.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER PANEL: INTERACTIVE CANVAS -->
+    <div class="canvas-container">
+      <canvas id="simCanvas"></canvas>
+      
+      <div class="canvas-overlay">
+        <div class="nav-tip">
+          Drag <span>Mirror Plates</span> to adjust cavity bounds.<br>
+          Click inside cavity to place <span>Charge Probes</span>.
+        </div>
+      </div>
+
+      <div id="audio-overlay" class="audio-notice">
+        <div class="audio-notice-title">Sonification Active</div>
+        <div class="audio-notice-body">
+          This system translates quantum vacuum density, mirror oscillations, and Dynamical Casimir particle creation into acoustic audio. Initialize audio context?
+        </div>
+        <button id="audio-notice-btn" class="audio-notice-btn">Initialize Synthesizers</button>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: DIAGNOSTICS & TELEMETRY -->
+    <div class="panel right">
+      <div class="panel-section">
+        <h2>Casimir Force Curve <span>F_c</span></h2>
+        <div class="chart-container">
+          <canvas id="chart-casimir" class="sidebar-chart"></canvas>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 5px; text-align: center; font-family: 'Share Tech Mono', monospace;">
+          Force vs Separation (d⁻⁴ dependence)
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Quantum Metrics</h2>
+        
+        <div class="telemetry-row">
+          <span class="telemetry-label">Fund. Wavelength (λ₀):</span>
+          <span id="tel-lambda" class="telemetry-val cyan-highlight">320 pm</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Active Cavity Modes:</span>
+          <span id="tel-modes" class="telemetry-val">4</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Max Mirror Acceleration:</span>
+          <span id="tel-acceleration" class="telemetry-val highlight">0.00 g</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Schwinger Polarizability:</span>
+          <span id="tel-polar" class="telemetry-val">0.00%</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">DCE Photon Emission:</span>
+          <span id="tel-photon-rate" class="telemetry-val alert">0 / sec</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Vacuum Squeezing Factor:</span>
+          <span id="tel-squeeze" class="telemetry-val cyan-highlight">0.00 dB</span>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Event Console <span>(LOG)</span></h2>
+        <div id="log-box" class="log-box">
+          <div class="log-line">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-msg system">Vacuum containment system initialized.</span>
+          </div>
+          <div class="log-line">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-msg">Zero-point energy fluctuating at 0.5 Kelvin.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System log
+    const logBox = document.getElementById('log-box');
+    function addLog(msg, type = 'normal') {
+      const time = new Date().toUTCString().split(' ')[4];
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      
+      let msgClass = '';
+      if (type === 'system') msgClass = 'system';
+      else if (type === 'warn') msgClass = 'warn';
+      else if (type === 'critical') msgClass = 'critical';
+
+      line.innerHTML = `
+        <span class="log-time">[${time}]</span>
+        <span class="log-msg ${msgClass}">${msg}</span>
+      `;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // Audio Context Setup
+    let audioCtx = null;
+    let mainGain = null;
+    let noiseFilter = null;
+    let noiseSource = null;
+    let mirrorOsc = null;
+    let mirrorGain = null;
+    let audioEnabled = false;
+
+    const btnToggleAudio = document.getElementById('btn-toggle-audio');
+    const audioOverlay = document.getElementById('audio-overlay');
+    const audioNoticeBtn = document.getElementById('audio-notice-btn');
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        mainGain = audioCtx.createGain();
+        mainGain.gain.setValueAtTime(0.0, audioCtx.currentTime); // start silent
+
+        // 1. Quantum noise generator
+        const bufferSize = 2 * audioCtx.sampleRate;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+
+        noiseSource = audioCtx.createBufferSource();
+        noiseSource.buffer = noiseBuffer;
+        noiseSource.loop = true;
+
+        noiseFilter = audioCtx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.Q.setValueAtTime(3.0, audioCtx.currentTime);
+        noiseFilter.frequency.setValueAtTime(500, audioCtx.currentTime);
+
+        const noiseGain = audioCtx.createGain();
+        noiseGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+
+        noiseSource.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(mainGain);
+        noiseSource.start();
+
+        // 2. Mirror vibration hum
+        mirrorOsc = audioCtx.createOscillator();
+        mirrorOsc.type = 'triangle';
+        mirrorOsc.frequency.setValueAtTime(50, audioCtx.currentTime);
+
+        mirrorGain = audioCtx.createGain();
+        mirrorGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+
+        mirrorOsc.connect(mirrorGain);
+        mirrorGain.connect(mainGain);
+        mirrorOsc.start();
+
+        mainGain.connect(audioCtx.destination);
+        addLog("Sonification engine active.", "system");
+      } catch (e) {
+        console.error("Failed to initialize audio:", e);
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        initAudio();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        mainGain.gain.exponentialRampToValueAtTime(0.8, audioCtx.currentTime + 0.1);
+        btnToggleAudio.textContent = "Audio On";
+        btnToggleAudio.classList.add('active');
+        audioOverlay.style.display = 'none';
+      } else {
+        mainGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+        btnToggleAudio.textContent = "Audio Off";
+        btnToggleAudio.classList.remove('active');
+      }
+    }
+
+    btnToggleAudio.addEventListener('click', toggleAudio);
+    audioNoticeBtn.addEventListener('click', () => {
+      toggleAudio();
+    });
+
+    function playDCEPhotonChirp(freq) {
+      if (!audioEnabled || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.8, audioCtx.currentTime + 0.08);
+        
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.08);
+        
+        osc.connect(gain);
+        gain.connect(mainGain);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+      } catch(e) {}
+    }
+
+    // Canvas Simulation variables
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let simWidth = 160;
+    let voltage = 0;
+    let driveFreq = 2.4;
+    let driveAmp = 15;
+    let simMode = 'wave'; // 'wave' or 'pair'
+    let isPlaying = true;
+    let time = 0;
+
+    // Elements
+    const sliderWidth = document.getElementById('param-width');
+    const valWidth = document.getElementById('val-width');
+    const sliderVoltage = document.getElementById('param-voltage');
+    const valVoltage = document.getElementById('val-voltage');
+    const sliderFrequency = document.getElementById('param-frequency');
+    const valFrequency = document.getElementById('val-frequency');
+    const sliderAmplitude = document.getElementById('param-amplitude');
+    const valAmplitude = document.getElementById('val-amplitude');
+
+    const btnModeWave = document.getElementById('btn-mode-wave');
+    const btnModePair = document.getElementById('btn-mode-pair');
+    const btnTogglePlay = document.getElementById('btn-toggle-play');
+    const btnReset = document.getElementById('btn-reset');
+
+    const statusPressure = document.getElementById('status-pressure');
+    const statusState = document.getElementById('status-state');
+    const statusLed = document.getElementById('status-led');
+
+    // Telemetry display elements
+    const telLambda = document.getElementById('tel-lambda');
+    const telModes = document.getElementById('tel-modes');
+    const telAcceleration = document.getElementById('tel-acceleration');
+    const telPolar = document.getElementById('tel-polar');
+    const telPhotonRate = document.getElementById('tel-photon-rate');
+    const telSqueeze = document.getElementById('tel-squeeze');
+
+    // Charge Probes placed by user
+    let chargeProbes = [];
+
+    // Particle arrays
+    let virtualPairs = [];
+    let realPhotons = [];
+    let dcePhotonCounter = 0;
+    let lastPhotonRateUpdate = 0;
+    let currentPhotonRate = 0;
+
+    // Setup Canvas Resolution
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Mouse interactions
+    let isDraggingLeft = false;
+    let isDraggingRight = false;
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      const xLeft = rect.width / 2 - simWidth / 2;
+      const xRight = rect.width / 2 + simWidth / 2 + getOscillationOffset();
+
+      // Check plate drag
+      if (Math.abs(mx - xLeft) < 15) {
+        isDraggingLeft = true;
+      } else if (Math.abs(mx - xRight) < 15) {
+        isDraggingRight = true;
+      } else {
+        // Place a charge probe
+        chargeProbes.push({
+          x: mx,
+          y: my,
+          q: Math.random() > 0.5 ? 1 : -1,
+          pulse: 20
+        });
+        addLog(`Charge probe deployed at [x:${Math.round(mx)}, y:${Math.round(my)}].`, 'normal');
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const xLeft = rect.width / 2 - simWidth / 2;
+      const xRight = rect.width / 2 + simWidth / 2 + getOscillationOffset();
+
+      if (isDraggingLeft) {
+        const dW = (rect.width / 2 - mx) * 2;
+        simWidth = Math.max(40, Math.min(300, Math.round(dW)));
+        sliderWidth.value = simWidth;
+        valWidth.textContent = `${simWidth} pm`;
+      } else if (isDraggingRight) {
+        const dW = (mx - rect.width / 2) * 2;
+        simWidth = Math.max(40, Math.min(300, Math.round(dW)));
+        sliderWidth.value = simWidth;
+        valWidth.textContent = `${simWidth} pm`;
+      }
+
+      // Hover styles
+      if (Math.abs(mx - xLeft) < 15 || Math.abs(mx - xRight) < 15) {
+        canvas.style.cursor = 'ew-resize';
+      } else {
+        canvas.style.cursor = 'crosshair';
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingLeft = false;
+      isDraggingRight = false;
+    });
+
+    // Control Listeners
+    sliderWidth.addEventListener('input', () => {
+      simWidth = parseInt(sliderWidth.value);
+      valWidth.textContent = `${simWidth} pm`;
+    });
+
+    sliderVoltage.addEventListener('input', () => {
+      voltage = parseInt(sliderVoltage.value);
+      valVoltage.textContent = `${voltage} V`;
+      addLog(`Reflector voltage modified: ${voltage} V`, 'system');
+    });
+
+    sliderFrequency.addEventListener('input', () => {
+      driveFreq = parseFloat(sliderFrequency.value);
+      valFrequency.textContent = `${driveFreq.toFixed(2)} GHz`;
+    });
+
+    sliderAmplitude.addEventListener('input', () => {
+      driveAmp = parseInt(sliderAmplitude.value);
+      valAmplitude.textContent = `${driveAmp} pm`;
+    });
+
+    btnModeWave.addEventListener('click', () => {
+      simMode = 'wave';
+      btnModeWave.classList.add('active');
+      btnModePair.classList.remove('active');
+    });
+
+    btnModePair.addEventListener('click', () => {
+      simMode = 'pair';
+      btnModePair.classList.add('active');
+      btnModeWave.classList.remove('active');
+    });
+
+    btnTogglePlay.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      btnTogglePlay.textContent = isPlaying ? "Pause" : "Resume";
+      if (isPlaying) btnTogglePlay.classList.remove('active');
+      else btnTogglePlay.classList.add('active');
+    });
+
+    btnReset.addEventListener('click', () => {
+      simWidth = 160;
+      voltage = 0;
+      driveFreq = 2.4;
+      driveAmp = 15;
+      simMode = 'wave';
+      chargeProbes = [];
+      virtualPairs = [];
+      realPhotons = [];
+      
+      sliderWidth.value = 160;
+      valWidth.textContent = "160 pm";
+      sliderVoltage.value = 0;
+      valVoltage.textContent = "0 V";
+      sliderFrequency.value = 2.4;
+      valFrequency.textContent = "2.40 GHz";
+      sliderAmplitude.value = 15;
+      valAmplitude.textContent = "15 pm";
+      
+      btnModeWave.classList.add('active');
+      btnModePair.classList.remove('active');
+      
+      addLog("System parameters reset to initial state.", "warn");
+    });
+
+    // Presets
+    const presets = {
+      rest: { width: 160, voltage: 0, freq: 0, amp: 0, mode: 'wave' },
+      resonance: { width: 125, voltage: 0, freq: 4.8, amp: 22, mode: 'pair' },
+      schwinger: { width: 220, voltage: 200, freq: 1.5, amp: 5, mode: 'pair' },
+      compression: { width: 40, voltage: 0, freq: 6.0, amp: 20, mode: 'wave' }
+    };
+
+    document.querySelectorAll('.preset-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.preset-item').forEach(p => p.classList.remove('active'));
+        item.classList.add('active');
+        
+        const presetKey = item.dataset.preset;
+        const p = presets[presetKey];
+        if (p) {
+          simWidth = p.width;
+          voltage = p.voltage;
+          driveFreq = p.freq;
+          driveAmp = p.amp;
+          simMode = p.mode;
+          
+          sliderWidth.value = p.width;
+          valWidth.textContent = `${p.width} pm`;
+          sliderVoltage.value = p.voltage;
+          valVoltage.textContent = `${p.voltage} V`;
+          sliderFrequency.value = p.freq.toFixed(2);
+          valFrequency.textContent = `${p.freq.toFixed(2)} GHz`;
+          sliderAmplitude.value = p.amp;
+          valAmplitude.textContent = `${p.amp} pm`;
+
+          if (p.mode === 'wave') {
+            btnModeWave.classList.add('active');
+            btnModePair.classList.remove('active');
+          } else {
+            btnModePair.classList.add('active');
+            btnModeWave.classList.remove('active');
+          }
+
+          addLog(`Preset applied: ${item.querySelector('.preset-title').textContent}`, 'system');
+        }
+      });
+    });
+
+    // Casimir Sidebar Chart Setup
+    const chartCanvas = document.getElementById('chart-casimir');
+    const chartCtx = chartCanvas.getContext('2d');
+    
+    function drawCasimirChart() {
+      const w = chartCanvas.width;
+      const h = chartCanvas.height;
+      chartCtx.clearRect(0, 0, w, h);
+
+      // Draw Grid
+      chartCtx.strokeStyle = 'rgba(255, 0, 127, 0.05)';
+      chartCtx.lineWidth = 1;
+      for (let x = 0; x < w; x += 30) {
+        chartCtx.beginPath();
+        chartCtx.moveTo(x, 0);
+        chartCtx.lineTo(x, h);
+        chartCtx.stroke();
+      }
+      for (let y = 0; y < h; y += 30) {
+        chartCtx.beginPath();
+        chartCtx.moveTo(0, y);
+        chartCtx.lineTo(w, y);
+        chartCtx.stroke();
+      }
+
+      // Draw Curve (Force ~ 1/d^4)
+      chartCtx.beginPath();
+      chartCtx.strokeStyle = 'var(--neon-magenta)';
+      chartCtx.lineWidth = 2;
+      
+      const padding = 15;
+      const curveStart = padding;
+      const curveEnd = w - padding;
+
+      for (let x = curveStart; x < curveEnd; x++) {
+        const d = (x - curveStart) / (curveEnd - curveStart) * (300 - 40) + 40;
+        const force = -1.2 * Math.pow(100 / d, 4);
+        const y = h / 2 - force * 60;
+        
+        if (x === curveStart) {
+          chartCtx.moveTo(x, Math.max(2, Math.min(h - 2, y)));
+        } else {
+          chartCtx.lineTo(x, Math.max(2, Math.min(h - 2, y)));
+        }
+      }
+      chartCtx.stroke();
+
+      // Draw Zero Axis
+      chartCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+      chartCtx.setLineDash([4, 4]);
+      chartCtx.beginPath();
+      chartCtx.moveTo(0, h / 2);
+      chartCtx.lineTo(w, h / 2);
+      chartCtx.stroke();
+      chartCtx.setLineDash([]);
+
+      // Draw Current point indicator
+      const currentX = padding + (simWidth - 40) / (300 - 40) * (w - padding * 2);
+      const currentForce = -1.2 * Math.pow(100 / simWidth, 4);
+      const currentY = h / 2 - currentForce * 60;
+
+      chartCtx.beginPath();
+      chartCtx.fillStyle = 'var(--neon-cyan)';
+      chartCtx.shadowColor = 'var(--neon-cyan)';
+      chartCtx.shadowBlur = 8;
+      chartCtx.arc(currentX, Math.max(2, Math.min(h - 2, currentY)), 5, 0, Math.PI * 2);
+      chartCtx.fill();
+      chartCtx.shadowBlur = 0;
+    }
+
+    // Helper: calculate mirror displacement based on oscillation
+    function getOscillationOffset() {
+      if (driveFreq === 0 || driveAmp === 0) return 0;
+      return driveAmp * Math.sin(time * driveFreq * 0.2);
+    }
+
+    // Helper: calculate mirror velocity
+    function getMirrorVelocity() {
+      if (driveFreq === 0 || driveAmp === 0) return 0;
+      return driveAmp * driveFreq * 0.2 * Math.cos(time * driveFreq * 0.2);
+    }
+
+    // Physics Engine Loop
+    function updatePhysics(rect) {
+      if (!isPlaying) return;
+
+      time += 0.05;
+
+      const xLeft = rect.width / 2 - simWidth / 2;
+      const xRight = rect.width / 2 + simWidth / 2 + getOscillationOffset();
+      const vRight = getMirrorVelocity();
+
+      // Audio frequency updates
+      if (audioEnabled && audioCtx) {
+        const centerFreq = 300 + (300 - simWidth) * 5; 
+        noiseFilter.frequency.setValueAtTime(centerFreq, audioCtx.currentTime);
+
+        if (driveFreq > 0 && driveAmp > 0) {
+          mirrorGain.gain.linearRampToValueAtTime(driveAmp / 120, audioCtx.currentTime + 0.05);
+          mirrorOsc.frequency.setValueAtTime(45 + driveFreq * 15, audioCtx.currentTime + 0.05);
+        } else {
+          mirrorGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
+        }
+      }
+
+      // Check parametric resonance
+      const f0 = 3e8 / (2 * simWidth * 1e-12) / 1e20;
+      const isResonant = Math.abs(driveFreq - 2 * f0) < 0.8 && driveAmp > 10;
+      
+      // Update LED status color
+      if (isResonant) {
+        statusState.textContent = "RESONANT EXCITE";
+        statusState.style.color = "var(--neon-green)";
+        statusLed.style.backgroundColor = "var(--neon-green)";
+        statusLed.style.boxShadow = "0 0 10px var(--neon-green)";
+      } else if (driveAmp > 15 && driveFreq > 4) {
+        statusState.textContent = "STRONG ACCEL";
+        statusState.style.color = "var(--neon-magenta)";
+        statusLed.style.backgroundColor = "var(--neon-magenta)";
+        statusLed.style.boxShadow = "0 0 10px var(--neon-magenta)";
+      } else {
+        statusState.textContent = "CONTAINED";
+        statusState.style.color = "var(--neon-cyan)";
+        statusLed.style.backgroundColor = "var(--neon-cyan)";
+        statusLed.style.boxShadow = "0 0 10px var(--neon-cyan)";
+      }
+
+      // Spawn virtual particles
+      const spawnChance = simMode === 'pair' ? 0.35 : 0.05;
+      if (Math.random() < spawnChance) {
+        const px = xLeft + Math.random() * (xRight - xLeft);
+        const py = Math.random() * rect.height;
+        
+        virtualPairs.push({
+          x: px,
+          y: py,
+          theta: Math.random() * Math.PI * 2,
+          dist: 1,
+          life: 0,
+          maxLife: 20 + Math.random() * 30,
+          ripped: false
+        });
+      }
+
+      // Update virtual particles
+      for (let i = virtualPairs.length - 1; i >= 0; i--) {
+        const p = virtualPairs[i];
+        p.life += 1;
+
+        if (p.ripped) {
+          p.x1 += p.vx1;
+          p.y1 += p.vy1;
+          p.x2 += p.vx2;
+          p.y2 += p.vy2;
+          
+          if (p.x1 < xLeft || p.x1 > xRight || p.x2 < xLeft || p.x2 > xRight || p.life > p.maxLife * 1.5) {
+            virtualPairs.splice(i, 1);
+            continue;
+          }
+        } else {
+          p.dist = Math.sin((p.life / p.maxLife) * Math.PI) * 16;
+          
+          let fieldForceX = 0;
+          let fieldForceY = 0;
+          
+          const cavityField = (voltage / simWidth) * 0.05;
+          fieldForceX += cavityField;
+
+          chargeProbes.forEach(probe => {
+            const dx1 = p.x - probe.x;
+            const dy1 = p.y - probe.y;
+            const r2 = dx1*dx1 + dy1*dy1 + 100;
+            const force = (probe.q * 80) / r2;
+            fieldForceX += (dx1 / Math.sqrt(r2)) * force;
+            fieldForceY += (dy1 / Math.sqrt(r2)) * force;
+          });
+
+          p.theta += fieldForceX * 0.1;
+          p.x += fieldForceX * 0.3;
+          p.y += fieldForceY * 0.3;
+
+          const totalFieldStrength = Math.abs(fieldForceX) + Math.abs(cavityField * 3);
+          if (totalFieldStrength > 3.0 && p.life > 10 && p.life < p.maxLife - 10) {
+            p.ripped = true;
+            p.x1 = p.x + Math.cos(p.theta) * p.dist;
+            p.y1 = p.y + Math.sin(p.theta) * p.dist;
+            p.x2 = p.x - Math.cos(p.theta) * p.dist;
+            p.y2 = p.y - Math.sin(p.theta) * p.dist;
+            
+            const speed = 2.0;
+            p.vx1 = Math.cos(p.theta) * speed + fieldForceX;
+            p.vy1 = Math.sin(p.theta) * speed + fieldForceY;
+            p.vx2 = -Math.cos(p.theta) * speed - fieldForceX;
+            p.vy2 = -Math.sin(p.theta) * speed - fieldForceY;
+
+            addLog("Schwinger boundary reached. Virtual pair split into real particles.", "warn");
+          }
+
+          if (Math.abs(vRight) > 3.0 && Math.abs(p.x - xRight) < 10) {
+            const promotionProb = (Math.abs(vRight) - 3.0) * 0.08;
+            if (Math.random() < promotionProb && !p.ripped) {
+              const speed = 4;
+              realPhotons.push({
+                x: p.x,
+                y: p.y,
+                vx: -speed,
+                vy: (Math.random() - 0.5) * 2,
+                color: 'var(--neon-green)',
+                bounces: 0
+              });
+              dcePhotonCounter++;
+              playDCEPhotonChirp(1000 + Math.random() * 400);
+              addLog("Dynamical Casimir Effect: virtual vacuum mode promoted to real photon.", "critical");
+              virtualPairs.splice(i, 1);
+              continue;
+            }
+          }
+
+          if (p.life >= p.maxLife) {
+            virtualPairs.splice(i, 1);
+          }
+        }
+      }
+
+      if (isResonant && Math.random() < 0.1) {
+        const speed = 5;
+        realPhotons.push({
+          x: xRight - 15,
+          y: Math.random() * rect.height,
+          vx: -speed,
+          vy: (Math.random() - 0.5) * 3,
+          color: 'var(--neon-magenta)',
+          bounces: 0
+        });
+        dcePhotonCounter++;
+        playDCEPhotonChirp(800 + Math.random() * 300);
+      }
+
+      for (let i = realPhotons.length - 1; i >= 0; i--) {
+        const ph = realPhotons[i];
+        ph.x += ph.vx;
+        ph.y += ph.vy;
+
+        if (ph.x <= xLeft) {
+          ph.vx = -ph.vx;
+          ph.x = xLeft + 2;
+          ph.bounces++;
+          ph.color = 'var(--neon-cyan)';
+          playDCEPhotonChirp(1600);
+        } else if (ph.x >= xRight) {
+          ph.vx = -ph.vx;
+          ph.x = xRight - 2;
+          ph.bounces++;
+          
+          if (vRight < 0) {
+            ph.color = 'var(--neon-magenta)';
+            playDCEPhotonChirp(2000);
+          } else {
+            ph.color = 'var(--neon-amber)';
+            playDCEPhotonChirp(1200);
+          }
+        }
+
+        if (ph.y <= 0 || ph.y >= rect.height) {
+          ph.vy = -ph.vy;
+        }
+
+        if (ph.bounces > 15) {
+          realPhotons.splice(i, 1);
+        }
+      }
+
+      chargeProbes.forEach(probe => {
+        if (probe.pulse > 0) probe.pulse -= 0.5;
+      });
+
+      const now = performance.now();
+      if (now - lastPhotonRateUpdate > 1000) {
+        currentPhotonRate = dcePhotonCounter;
+        dcePhotonCounter = 0;
+        lastPhotonRateUpdate = now;
+      }
+    }
+
+    // Render Canvas Loop
+    function drawSimulation() {
+      const rect = canvas.getBoundingClientRect();
+      const xLeft = rect.width / 2 - simWidth / 2;
+      const xRight = rect.width / 2 + simWidth / 2 + getOscillationOffset();
+      
+      updatePhysics(rect);
+
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      if (Math.abs(voltage) > 10) {
+        const grd = ctx.createLinearGradient(xLeft, 0, xRight, 0);
+        if (voltage > 0) {
+          grd.addColorStop(0, 'rgba(0, 243, 255, 0.05)');
+          grd.addColorStop(1, 'rgba(255, 0, 127, 0.02)');
+        } else {
+          grd.addColorStop(0, 'rgba(255, 0, 127, 0.02)');
+          grd.addColorStop(1, 'rgba(0, 243, 255, 0.05)');
+        }
+        ctx.fillStyle = grd;
+        ctx.fillRect(xLeft, 0, xRight - xLeft, rect.height);
+      }
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctx.lineWidth = 1;
+      const cols = 10;
+      const spacing = (xRight - xLeft) / cols;
+      for (let i = 1; i < cols; i++) {
+        ctx.beginPath();
+        ctx.moveTo(xLeft + i * spacing, 0);
+        ctx.lineTo(xLeft + i * spacing, rect.height);
+        ctx.stroke();
+      }
+
+      chargeProbes.forEach(probe => {
+        ctx.beginPath();
+        ctx.arc(probe.x, probe.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = probe.q > 0 ? 'var(--neon-cyan)' : 'var(--neon-magenta)';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(probe.q > 0 ? '+' : '-', probe.x, probe.y);
+
+        if (probe.pulse > 0) {
+          ctx.strokeStyle = probe.q > 0 ? 'rgba(0, 243, 255, 0.3)' : 'rgba(255, 0, 127, 0.3)';
+          ctx.beginPath();
+          ctx.arc(probe.x, probe.y, 8 + (20 - probe.pulse) * 1.5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+
+      if (simMode === 'wave') {
+        const numHarmonics = Math.min(6, Math.floor(simWidth / 30));
+        
+        for (let h = 1; h <= numHarmonics; h++) {
+          ctx.beginPath();
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = h % 2 === 0 ? 'rgba(0, 243, 255, 0.35)' : 'rgba(255, 0, 127, 0.35)';
+          
+          const amp = (25 / h) * (1.0 + 0.3 * Math.sin(time * h * 1.5)) * Math.cos(time * 0.8 + h * Math.PI/3);
+
+          for (let y = 0; y < rect.height; y += 4) {
+            const normX = Math.sin((y / rect.height) * Math.PI * 2 * h + time * h * 0.2);
+            const xOffset = normX * amp;
+            const x = xLeft + ((xRight - xLeft) / 2) + xOffset;
+
+            if (y === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      }
+
+      virtualPairs.forEach(p => {
+        if (p.ripped) {
+          ctx.beginPath();
+          ctx.arc(p.x1, p.y1, 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'var(--neon-cyan)';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(p.x2, p.y2, 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'var(--neon-magenta)';
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(p.x1, p.y1);
+          ctx.lineTo(p.x2, p.y2);
+          ctx.stroke();
+        } else {
+          const alpha = Math.sin((p.life / p.maxLife) * Math.PI);
+          const x1 = p.x + Math.cos(p.theta) * p.dist;
+          const y1 = p.y + Math.sin(p.theta) * p.dist;
+          const x2 = p.x - Math.cos(p.theta) * p.dist;
+          const y2 = p.y - Math.sin(p.theta) * p.dist;
+
+          ctx.fillStyle = `rgba(0, 243, 255, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(x1, y1, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = `rgba(255, 0, 127, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(x2, y2, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.12})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+      });
+
+      realPhotons.forEach(ph => {
+        ctx.beginPath();
+        ctx.arc(ph.x, ph.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = ph.color;
+        ctx.shadowColor = ph.color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = ph.color;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.moveTo(ph.x - ph.vx * 3, ph.y - ph.vy * 3);
+        ctx.lineTo(ph.x, ph.y);
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+      });
+
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 10;
+
+      ctx.strokeStyle = 'var(--neon-cyan)';
+      ctx.shadowColor = 'var(--neon-cyan)';
+      ctx.beginPath();
+      ctx.moveTo(xLeft, 10);
+      ctx.lineTo(xLeft, rect.height - 10);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 0;
+      for (let y = 20; y < rect.height - 20; y += 15) {
+        ctx.beginPath();
+        ctx.moveTo(xLeft, y);
+        ctx.lineTo(xLeft - 10, y + 10);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = 'var(--neon-magenta)';
+      ctx.shadowColor = 'var(--neon-magenta)';
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(xRight, 10);
+      ctx.lineTo(xRight, rect.height - 10);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 0, 127, 0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 0;
+      for (let y = 20; y < rect.height - 20; y += 15) {
+        ctx.beginPath();
+        ctx.moveTo(xRight, y);
+        ctx.lineTo(xRight + 10, y - 10);
+        ctx.stroke();
+      }
+
+      ctx.font = '10px "Share Tech Mono", monospace';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.textAlign = 'left';
+      ctx.fillText(`L_left: ${Math.round(xLeft)}px`, xLeft - 10, rect.height - 2);
+      ctx.fillText(`L_right: ${Math.round(xRight)}px`, xRight - 45, rect.height - 2);
+
+      drawCasimirChart();
+
+      const wLength = simWidth * 2;
+      const numModes = Math.max(1, Math.floor(simWidth / 30));
+      const acc = driveFreq === 0 ? 0.0 : (driveAmp * Math.pow(driveFreq * 2 * Math.PI, 2) * 1e12) / 9.8; 
+      const polarization = Math.abs(voltage) / 2.0;
+
+      telLambda.textContent = `${wLength} pm`;
+      telModes.textContent = `${numModes}`;
+      telAcceleration.textContent = acc > 1e6 ? `${(acc / 1e12).toFixed(2)} x 10¹² g` : `${acc.toFixed(1)} g`;
+      telPolar.textContent = `${polarization.toFixed(1)} %`;
+      telPhotonRate.textContent = `${currentPhotonRate} / sec`;
+      
+      const squeezeValue = driveAmp * driveFreq * 0.15;
+      telSqueeze.textContent = `${squeezeValue.toFixed(2)} dB`;
+
+      const pressureVal = -0.013 * Math.pow(100 / simWidth, 4);
+      statusPressure.textContent = `${pressureVal.toFixed(2)} kPa`;
+
+      requestAnimationFrame(drawSimulation);
+    }
+
+    drawSimulation();
+  </script>
+</body>
+</html>
