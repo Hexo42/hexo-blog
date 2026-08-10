@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>kerr-orbit: relativistic accretion & frame-dragging sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #020205;
+      --bg-panel: rgba(6, 7, 15, 0.9);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --border-glowing: rgba(0, 243, 255, 0.4);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-amber: #ffaa00;
+      --neon-green: #39ff14;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(3, 4, 8, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .back-link {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.85rem;
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .back-link:hover {
+      color: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      box-shadow: var(--glow-shadow);
+    }
+
+    .logo-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+    }
+
+    .logo-sub {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      border-left: 1px solid var(--border-color);
+      padding-left: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .system-status {
+      display: flex;
+      gap: 20px;
+      font-size: 0.9rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-label {
+      color: var(--text-dim);
+    }
+
+    .status-value {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--text-dim);
+      display: inline-block;
+    }
+
+    .status-dot.active {
+      background-color: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+
+    .app-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr 300px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 5;
+    }
+
+    .panel.right {
+      border-right: none;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .panel-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(2, 2, 5, 0.4);
+    }
+
+    .panel-header h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 1.5px;
+      color: #fff;
+    }
+
+    .panel-section {
+      padding: 20px;
+      border-bottom: 1px solid rgba(0, 243, 255, 0.05);
+    }
+
+    .panel-section h3 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--neon-cyan);
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-section h3 span {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .control-group {
+      margin-bottom: 18px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .slider-label {
+      color: var(--text-color);
+    }
+
+    .slider-value {
+      color: var(--neon-cyan);
+    }
+
+    .slider-value.magenta { color: var(--neon-magenta); }
+    .slider-value.amber { color: var(--neon-amber); }
+
+    input[type="range"] {
+      width: 100%;
+      background: #111424;
+      border: 1px solid #1c233a;
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      border: 2px solid #000;
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="range"].range-magenta::-webkit-slider-thumb {
+      background: var(--neon-magenta);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+    }
+
+    input[type="range"].range-amber::-webkit-slider-thumb {
+      background: var(--neon-amber);
+      box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      background: rgba(16, 20, 36, 0.6);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .btn:hover {
+      border-color: var(--neon-cyan);
+      color: #fff;
+      box-shadow: var(--glow-shadow);
+    }
+
+    .btn.active {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      font-weight: bold;
+      text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+    }
+
+    .btn.magenta-theme:hover {
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.25);
+    }
+
+    .btn.magenta-theme.active {
+      background: rgba(255, 0, 127, 0.15);
+      border-color: var(--neon-magenta);
+      color: var(--neon-magenta);
+      text-shadow: 0 0 5px rgba(255, 0, 127, 0.5);
+    }
+
+    .canvas-container {
+      position: relative;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    .viewport-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.4);
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .viewport-overlay span {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 3px 8px;
+      border-left: 2px solid var(--neon-cyan);
+      border-radius: 0 4px 4px 0;
+    }
+
+    .telemetry-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .telemetry-row:last-child {
+      border-bottom: none;
+    }
+
+    .telemetry-label {
+      color: var(--text-dim);
+    }
+
+    .telemetry-val {
+      color: #fff;
+    }
+
+    .telemetry-val.highlight {
+      color: var(--neon-cyan);
+    }
+
+    .telemetry-val.magenta-highlight {
+      color: var(--neon-magenta);
+    }
+
+    .log-box {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      height: 160px;
+      overflow-y: auto;
+      padding: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      scroll-behavior: smooth;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 8px;
+      line-height: 1.3;
+    }
+
+    .log-time {
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: var(--text-color);
+    }
+
+    .log-msg.system {
+      color: var(--neon-cyan);
+    }
+
+    .log-msg.warn {
+      color: var(--neon-amber);
+    }
+
+    .log-msg.critical {
+      color: var(--neon-magenta);
+    }
+
+    .audio-notice {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(6, 7, 15, 0.95);
+      border: 1px solid var(--neon-cyan);
+      padding: 12px 18px;
+      border-radius: 4px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      max-width: 280px;
+      animation: alertGlow 2s infinite alternate;
+    }
+
+    @keyframes alertGlow {
+      from { box-shadow: 0 0 5px rgba(0, 243, 255, 0.2); }
+      to { box-shadow: 0 0 15px rgba(0, 243, 255, 0.6); }
+    }
+
+    .audio-notice button {
+      background: var(--neon-cyan);
+      color: #000;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-weight: bold;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+
+    .audio-notice button:hover {
+      background: #fff;
+      box-shadow: 0 0 10px #fff;
+    }
+
+    @media (max-width: 900px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+        height: auto;
+        overflow-y: auto;
+      }
+      .panel {
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .panel.right {
+        border-left: none;
+      }
+      .canvas-container {
+        height: 60vh;
+        min-height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <a href="../index.html" class="back-link">&larr; BACK TO BLOG</a>
+      <div class="logo-text">KERR-ORBIT</div>
+      <div class="logo-sub">Accretion Disk & Frame-Dragging Sandbox</div>
+    </div>
+    <div class="system-status">
+      <div class="status-item">
+        <span class="status-label">HORIZON STATE:</span>
+        <span id="status-horizon" class="status-value">STABLE</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">METRIC TENSION:</span>
+        <span id="status-tension" class="status-value">NORMAL</span>
+      </div>
+      <div class="status-item">
+        <div id="status-led" class="status-dot active"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- LEFT PANEL: CONTROLS -->
+    <div class="panel">
+      <div class="panel-header">
+        <h2>SIMULATION MODULE</h2>
+      </div>
+
+      <div class="panel-section">
+        <h3>Black Hole Metric <span>(SPACETIME)</span></h3>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">BH Mass (M)</span>
+            <span id="val-mass" class="slider-value">1.00 M₀</span>
+          </div>
+          <input type="range" id="param-mass" min="0.4" max="2.0" step="0.05" value="1.0">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Kerr Spin (a)</span>
+            <span id="val-spin" class="slider-value magenta">0.00 M</span>
+          </div>
+          <input type="range" id="param-spin" class="range-magenta" min="-0.99" max="0.99" step="0.02" value="0.0">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Accretion Disk <span>(GEOMETRY)</span></h3>
+        
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Inner Radius (r_in)</span>
+            <span id="val-inner" class="slider-value">6.00 M</span>
+          </div>
+          <input type="range" id="param-inner" min="2.0" max="12.0" step="0.1" value="6.0">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Outer Radius (r_out)</span>
+            <span id="val-outer" class="slider-value">22.00 M</span>
+          </div>
+          <input type="range" id="param-outer" min="12.0" max="35.0" step="0.5" value="22.0">
+        </div>
+
+        <div class="control-group">
+          <div class="slider-header">
+            <span class="slider-label">Doppler Beaming</span>
+            <span id="val-beaming" class="slider-value amber">3.50</span>
+          </div>
+          <input type="range" id="param-beaming" class="range-amber" min="0.0" max="6.0" step="0.1" value="3.5">
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>Rendering & Style</h3>
+        
+        <div class="control-group">
+          <label style="font-size: 0.85rem; margin-bottom: 6px; display: block; color: var(--text-dim); font-family: 'Share Tech Mono', monospace;">COLOR SPECTRUM:</label>
+          <div class="btn-row" style="margin-bottom: 8px;">
+            <button id="btn-style-orange" class="btn active">Blackbody</button>
+            <button id="btn-style-neon" class="btn">Quantum</button>
+          </div>
+          <div class="btn-row">
+            <button id="btn-style-green" class="btn">Aether</button>
+            <button id="btn-style-chrono" class="btn">Chrono</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label style="font-size: 0.85rem; margin-bottom: 6px; display: block; color: var(--text-dim); font-family: 'Share Tech Mono', monospace;">VIEWPORT SCALE:</label>
+          <div class="btn-row">
+            <button id="btn-res-low" class="btn">0.5x</button>
+            <button id="btn-res-med" class="btn active">0.75x</button>
+            <button id="btn-res-high" class="btn">1.0x</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER VIEWPORT: CANVAS -->
+    <div class="canvas-container">
+      <canvas id="raytracer-canvas"></canvas>
+      
+      <div class="viewport-overlay">
+        <span id="overlay-camera">CAMERA: INCLINED ORBIT</span>
+        <span id="overlay-resolution">VIEWPORT: 600 x 600</span>
+        <span id="overlay-click-hint">CLICK CANVAS TO SPAWN PLASMA FLARE</span>
+        <span id="overlay-drag-hint">DRAG TO ROTATE ACCRETION ANGLE</span>
+      </div>
+
+      <!-- Audio activation notice -->
+      <div id="audio-notice" class="audio-notice">
+        <div><strong>SONIFY QUANTUM ORBITS?</strong><br>synthesizes cosmic hums and gravitational doppler frequency sweeps.</div>
+        <button id="btn-enable-audio">ENABLE SYNTHESIZER</button>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: TELEMETRY & LOGS -->
+    <div class="panel right">
+      <div class="panel-header">
+        <h2>TELEMETRY CONSOLE</h2>
+      </div>
+
+      <div class="panel-section">
+        <h3>Space Metrics <span>(REAL-TIME)</span></h3>
+        <table class="telemetry-table">
+          <tr class="telemetry-row">
+            <td class="telemetry-label">Horizon Radius (r_h)</td>
+            <td id="tel-horizon" class="telemetry-val highlight">2.00 M</td>
+          </tr>
+          <tr class="telemetry-row">
+            <td class="telemetry-label">Ergosphere Limit</td>
+            <td id="tel-ergosphere" class="telemetry-val highlight">2.00 M</td>
+          </tr>
+          <tr class="telemetry-row">
+            <td class="telemetry-label">ISCO Limit (r_isco)</td>
+            <td id="tel-isco" class="telemetry-val magenta-highlight">6.00 M</td>
+          </tr>
+          <tr class="telemetry-row">
+            <td class="telemetry-label">Inner Disk Velocity</td>
+            <td id="tel-speed" class="telemetry-val">0.41 c</td>
+          </tr>
+          <tr class="telemetry-row">
+            <td class="telemetry-label">Grav Redshift (inner)</td>
+            <td id="tel-redshift" class="telemetry-val">0.82 z</td>
+          </tr>
+          <tr class="telemetry-row">
+            <td class="telemetry-label">Max Beaming Factor</td>
+            <td id="tel-beaming-factor" class="telemetry-val">3.85x</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="panel-section">
+        <h3>Audio Control</h3>
+        <div class="control-group">
+          <div class="btn-row">
+            <button id="btn-toggle-sound" class="btn magenta-theme" disabled>AUDIO DISABLED</button>
+            <button id="btn-trigger-flare" class="btn">TRIGGER FLARE</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section" style="flex: 1; border-bottom: none; display: flex; flex-direction: column;">
+        <h3>Telemetry Log <span>(LIVEFEED)</span></h3>
+        <div id="log-box" class="log-box">
+          <div class="log-line">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-msg system">System initialized. Kerr singularity online.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fragment Shader Code -->
+  <script id="fs-raytrace" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    uniform vec2 u_resolution;
+    uniform float u_time;
+    uniform vec3 u_cameraPos;
+    uniform vec3 u_cameraDir;
+    uniform vec3 u_cameraRight;
+    uniform vec3 u_cameraUp;
+    uniform float u_fov;
+    uniform float u_spin;
+    uniform float u_mass;
+    uniform float u_diskInner;
+    uniform float u_diskOuter;
+    uniform float u_beaming;
+    uniform int u_style;
+
+    // Hotspot states (r, phi, size, active)
+    uniform vec4 u_hotspot0;
+    uniform vec4 u_hotspot1;
+    uniform vec4 u_hotspot2;
+    uniform vec4 u_hotspot3;
+
+    // Fast hash function for stars
+    float hash(vec3 p) {
+      p = fract(p * vec3(443.8975, 397.2973, 491.1871));
+      p += dot(p.xyz, p.yzx + 19.19);
+      return fract(p.x * p.y * p.z);
+    }
+
+    // 3D Noise for nebula clouds
+    float noise(vec3 p) {
+      vec3 i = floor(p);
+      vec3 f = fract(p);
+      f = f*f*(3.0-2.0*f);
+      
+      #define H(x,y,z) hash(i + vec3(x,y,z))
+      return mix(
+        mix(mix(H(0.0,0.0,0.0), H(1.0,0.0,0.0), f.x), mix(H(0.0,1.0,0.0), H(1.0,1.0,0.0), f.x), f.y),
+        mix(mix(H(0.0,0.0,1.0), H(1.0,0.0,1.0), f.x), mix(H(0.0,1.0,1.0), H(1.0,1.0,1.0), f.x), f.y),
+        f.z
+      );
+    }
+
+    // Procedural starry space background with nebula
+    vec3 getBackground(vec3 dir) {
+      float theta = u_time * 0.003;
+      mat3 rot = mat3(
+        cos(theta), 0.0, sin(theta),
+        0.0, 1.0, 0.0,
+        -sin(theta), 0.0, cos(theta)
+      );
+      vec3 rd = rot * dir;
+      
+      float n = noise(rd * 2.5) * 0.5 + noise(rd * 5.0) * 0.25;
+      vec3 nebula = vec3(0.0);
+      
+      if (u_style == 0) { // Orange
+        nebula = mix(vec3(0.01, 0.0, 0.02), vec3(0.08, 0.02, 0.005), n);
+      } else if (u_style == 1) { // Neon
+        nebula = mix(vec3(0.0, 0.01, 0.02), vec3(0.06, 0.0, 0.09), n);
+      } else if (u_style == 2) { // Aether
+        nebula = mix(vec3(0.0, 0.01, 0.005), vec3(0.005, 0.06, 0.02), n);
+      } else { // Chrono
+        nebula = mix(vec3(0.01, 0.0, 0.02), vec3(0.06, 0.04, 0.005), n);
+      }
+      
+      // Star grains
+      float starVal = hash(floor(rd * 350.0));
+      if (starVal > 0.997) {
+        float intensity = hash(floor(rd * 350.0) + vec3(1.0));
+        nebula += vec3(intensity * (0.5 + 0.5 * sin(u_time * 2.0 + starVal * 50.0)));
+      }
+      
+      return nebula;
+    }
+
+    // Disk spiral structure
+    float getDiskPattern(vec2 pos, float r) {
+      float phi = atan(pos.y, pos.x);
+      float omega = sqrt(u_mass / (r * r * r));
+      float phi_rot = phi - u_time * omega * 2.2;
+      
+      float spiral = cos(3.0 * phi_rot - 2.8 * log(r));
+      vec3 p = vec3(pos.x * 2.0, pos.y * 2.0, u_time * 0.4);
+      float turbulence = noise(p) * 0.35 + noise(p * 3.5) * 0.15;
+      
+      return clamp((spiral * 0.5 + 0.5) * 0.7 + turbulence * 0.3, 0.0, 1.0);
+    }
+
+    // Calculate a hotspot's glow contribution
+    float getHotspotContribution(vec2 pos, float r, vec4 hotspot) {
+      if (hotspot.w < 0.5) return 0.0;
+      float hs_r = hotspot.x;
+      float hs_phi = hotspot.y;
+      float hs_size = hotspot.z;
+      
+      float phi = atan(pos.y, pos.x);
+      float d_phi = mod(phi - hs_phi + 3.14159265, 6.2831853) - 3.14159265;
+      float dist2 = (r - hs_r)*(r - hs_r) + hs_r * hs_r * d_phi * d_phi;
+      
+      return exp(-dist2 / (hs_size * hs_size * 1.5));
+    }
+
+    // Color accretion disk at intersection point
+    vec3 getDiskColor(vec2 pos, float r, vec3 dirIn, float M) {
+      float pattern = getDiskPattern(pos, r);
+      
+      float hotspotVal = 0.0;
+      hotspotVal += getHotspotContribution(pos, r, u_hotspot0);
+      hotspotVal += getHotspotContribution(pos, r, u_hotspot1);
+      hotspotVal += getHotspotContribution(pos, r, u_hotspot2);
+      hotspotVal += getHotspotContribution(pos, r, u_hotspot3);
+      
+      pattern = clamp(pattern + hotspotVal * 2.0, 0.0, 3.0);
+      
+      float T = pow(u_diskInner / r, 0.75) * (1.0 + hotspotVal * 0.6);
+      
+      vec3 col = vec3(0.0);
+      if (u_style == 0) { // Orange
+        vec3 col_cool = vec3(0.8, 0.22, 0.01);
+        vec3 col_hot = vec3(1.0, 0.95, 0.7);
+        col = mix(col_cool, col_hot, T);
+      } else if (u_style == 1) { // Neon
+        vec3 col_cool = vec3(0.95, 0.0, 0.45);
+        vec3 col_hot = vec3(0.0, 0.95, 0.95);
+        col = mix(col_cool, col_hot, T);
+      } else if (u_style == 2) { // Aether
+        vec3 col_cool = vec3(0.02, 0.75, 0.22);
+        vec3 col_hot = vec3(0.95, 0.95, 0.1);
+        col = mix(col_cool, col_hot, T);
+      } else { // Chrono
+        vec3 col_cool = vec3(0.45, 0.0, 0.9);
+        vec3 col_hot = vec3(1.0, 0.78, 0.1);
+        col = mix(col_cool, col_hot, T);
+      }
+      
+      col *= (0.15 + 0.85 * pattern);
+      
+      // Keplerian velocity in Schwarzschild metric
+      float beta = sqrt(M / r);
+      
+      // Frame dragging modification on orbital velocity
+      // Prograde spin slightly speeds up orbits close in, retrograde slows them down
+      beta *= (1.0 + u_spin * 0.15 * (M / r));
+      beta = clamp(beta, 0.0, 0.7); // Cap physical speed to prevent singularity divergence
+      
+      vec2 v_dir = normalize(vec2(-pos.y, pos.x));
+      vec3 v_disk = vec3(v_dir.x, 0.0, v_dir.y) * beta;
+      
+      // Relativistic beaming dot product (cos alpha)
+      float cos_alpha = dot(normalize(v_disk), normalize(dirIn));
+      float gamma = 1.0 / sqrt(1.0 - beta * beta);
+      float g = 1.0 / (gamma * (1.0 - beta * cos_alpha));
+      
+      // Gravitational Redshift factor
+      float g_grav = sqrt(1.0 - 2.0 * M / r);
+      float g_total = g * g_grav;
+      
+      // Relativistic intensity shifting
+      col *= pow(g_total, u_beaming);
+      
+      // Spectrum Doppler shifting
+      col.r *= g_total;
+      col.g *= pow(g_total, 1.25);
+      col.b *= pow(g_total, 1.5);
+      
+      return clamp(col, 0.0, 2.0);
+    }
+
+    void main() {
+      // Coordinate mapping from center
+      vec2 uv = (gl_FragCoord.xy / u_resolution - 0.5) * 2.0;
+      uv.x *= u_resolution.x / u_resolution.y;
+      
+      vec3 cameraPos = u_cameraPos;
+      vec3 rayDir = normalize(u_cameraDir + uv.x * u_cameraRight * u_fov + uv.y * u_cameraUp * u_fov);
+      
+      vec3 p = cameraPos;
+      vec3 v = rayDir;
+      
+      float M = u_mass;
+      float dt = 0.25;
+      
+      bool hitDisk = false;
+      vec3 color = vec3(0.0);
+      float r_horizon = 2.0 * M;
+      
+      // Geodesic integration loop
+      for (int i = 0; i < 90; i++) {
+        float r2 = dot(p, p);
+        float r = sqrt(r2);
+        
+        // Absorbed by Singularity
+        if (r < r_horizon) {
+          color = vec3(0.0);
+          hitDisk = false;
+          break;
+        }
+        
+        // Escaped metric
+        if (r > 24.0 * M) {
+          color = getBackground(v);
+          break;
+        }
+        
+        // Schwarzschild metric deflection acceleration
+        vec3 h = cross(p, v);
+        float h2 = dot(h, h);
+        vec3 a = -3.0 * M * h2 / (r2 * r2 * r) * p;
+        
+        // Kerr Frame-Dragging vector approximation
+        // Torque drags photon in direction of black hole spin
+        vec3 omega_drag = vec3(0.0, 1.8 * u_spin * M / (r2 * r), 0.0);
+        vec3 a_drag = cross(omega_drag, v);
+        
+        // Euler update
+        v += (a + a_drag) * dt;
+        v = normalize(v); // Photons move at c
+        
+        float prev_y = p.y;
+        p += v * dt;
+        
+        // Equatorial Plane intersection check
+        if (prev_y * p.y < 0.0) {
+          float t = -prev_y / (p.y - prev_y);
+          vec3 intersect = p - v * dt * (1.0 - t);
+          float r_disk = length(intersect.xz);
+          
+          if (r_disk >= u_diskInner && r_disk <= u_diskOuter) {
+            hitDisk = true;
+            color = getDiskColor(intersect.xz, r_disk, v, M);
+            break;
+          }
+        }
+      }
+      
+      // Gravitational lensing photon ring glow
+      float r_final = length(p);
+      if (r_final < 2.2 * M && !hitDisk) {
+        float factor = pow((2.2 * M - r_final) / (0.2 * M), 2.5);
+        vec3 glowCol = vec3(0.0);
+        if (u_style == 0) glowCol = vec3(1.0, 0.45, 0.1);
+        else if (u_style == 1) glowCol = vec3(0.0, 0.8, 1.0);
+        else if (u_style == 2) glowCol = vec3(0.1, 0.9, 0.3);
+        else glowCol = vec3(0.9, 0.5, 1.0);
+        
+        color += glowCol * 0.35 * factor;
+      }
+      
+      gl_FragColor = vec4(color, 1.0);
+    }
+  </script>
+
+  <!-- Script containing logic, WebGL renderer and audio synthesizer -->
+  <script>
+    // System telemetry logging helper
+    const logBox = document.getElementById('log-box');
+    function logEvent(msg, type = 'system') {
+      const date = new Date();
+      const timeStr = date.toTimeString().split(' ')[0];
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="log-msg ${type}">${msg}</span>`;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // State Variables
+    let mass = 1.0;
+    let spin = 0.0;
+    let innerRadius = 6.0;
+    let outerRadius = 22.0;
+    let beaming = 3.5;
+    let styleIndex = 0; // 0: Orange, 1: Neon, 2: Aether, 3: Chrono
+    let resolutionScale = 0.75;
+    let fov = 1.2;
+    let isPlaying = true;
+
+    // Camera Variables
+    let cameraDistance = 15.0;
+    let cameraAngleX = 0.0; // Rotation around Y
+    let cameraAngleY = 0.4; // Inclination angle
+
+    // Hotspot State
+    const hotspots = [
+      { r: 0.0, phi: 0.0, size: 0.0, active: 0 },
+      { r: 0.0, phi: 0.0, size: 0.0, active: 0 },
+      { r: 0.0, phi: 0.0, size: 0.0, active: 0 },
+      { r: 0.0, phi: 0.0, size: 0.0, active: 0 }
+    ];
+
+    // WebGL setup
+    const canvas = document.getElementById('raytracer-canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    let program;
+
+    if (!gl) {
+      alert("WebGL not supported by your browser/hardware. Singularity collapse imminent.");
+      logEvent("Critical error: WebGL failed to initialize.", "critical");
+    }
+
+    // Compile Shader Function
+    function compileShader(source, type) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("Shader compiler error: ", gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    // Setup WebGL Pipeline
+    const vsSource = `
+      attribute vec2 position;
+      varying vec2 v_texCoord;
+      void main() {
+        v_texCoord = position * 0.5 + 0.5;
+        gl_Position = vec4(position, 0.0, 1.0);
+      }
+    `;
+    const fsSource = document.getElementById('fs-raytrace').textContent;
+
+    const vs = compileShader(vsSource, gl.VERTEX_SHADER);
+    const fs = compileShader(fsSource, gl.FRAGMENT_SHADER);
+    
+    if (vs && fs) {
+      program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error("Program linker error: ", gl.getProgramInfoLog(program));
+      }
+      gl.useProgram(program);
+    }
+
+    // Create a full screen quad buffer
+    const vertices = new Float32Array([
+      -1, -1,
+       1, -1,
+      -1,  1,
+      -1,  1,
+       1, -1,
+       1,  1
+    ]);
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+    const positionLoc = gl.getAttribLocation(program, 'position');
+    gl.enableVertexAttribArray(positionLoc);
+    gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+
+    // Uniform locations
+    const uResolution = gl.getUniformLocation(program, 'u_resolution');
+    const uTime = gl.getUniformLocation(program, 'u_time');
+    const uCameraPos = gl.getUniformLocation(program, 'u_cameraPos');
+    const uCameraDir = gl.getUniformLocation(program, 'u_cameraDir');
+    const uCameraRight = gl.getUniformLocation(program, 'u_cameraRight');
+    const uCameraUp = gl.getUniformLocation(program, 'u_cameraUp');
+    const uFov = gl.getUniformLocation(program, 'u_fov');
+    const uSpin = gl.getUniformLocation(program, 'u_spin');
+    const uMass = gl.getUniformLocation(program, 'u_mass');
+    const uDiskInner = gl.getUniformLocation(program, 'u_diskInner');
+    const uDiskOuter = gl.getUniformLocation(program, 'u_diskOuter');
+    const uBeaming = gl.getUniformLocation(program, 'u_beaming');
+    const uStyle = gl.getUniformLocation(program, 'u_style');
+
+    const uHotspot0 = gl.getUniformLocation(program, 'u_hotspot0');
+    const uHotspot1 = gl.getUniformLocation(program, 'u_hotspot1');
+    const uHotspot2 = gl.getUniformLocation(program, 'u_hotspot2');
+    const uHotspot3 = gl.getUniformLocation(program, 'u_hotspot3');
+
+    // UI elements references
+    const spanMass = document.getElementById('val-mass');
+    const spanSpin = document.getElementById('val-spin');
+    const spanInner = document.getElementById('val-inner');
+    const spanOuter = document.getElementById('val-outer');
+    const spanBeaming = document.getElementById('val-beaming');
+
+    const paramMass = document.getElementById('param-mass');
+    const paramSpin = document.getElementById('param-spin');
+    const paramInner = document.getElementById('param-inner');
+    const paramOuter = document.getElementById('param-outer');
+    const paramBeaming = document.getElementById('param-beaming');
+
+    const statusHorizon = document.getElementById('status-horizon');
+    const statusTension = document.getElementById('status-tension');
+    const statusLed = document.getElementById('status-led');
+
+    const telHorizon = document.getElementById('tel-horizon');
+    const telErgosphere = document.getElementById('tel-ergosphere');
+    const telIsco = document.getElementById('tel-isco');
+    const telSpeed = document.getElementById('tel-speed');
+    const telRedshift = document.getElementById('tel-redshift');
+    const telBeamingFactor = document.getElementById('tel-beaming-factor');
+
+    const overlayResolution = document.getElementById('overlay-resolution');
+
+    // Web Audio Synthesizer implementation
+    let audioCtx = null;
+    let isSoundOn = false;
+
+    // Synth Nodes
+    let horizonOsc = null;
+    let horizonFilter = null;
+    let horizonGain = null;
+
+    let diskNoise = null;
+    let diskFilter = null;
+    let diskPan = null;
+    let diskGain = null;
+
+    let spinOsc = null;
+    let spinFilter = null;
+    let spinGain = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        logEvent("Web Audio engine initialized.", "system");
+
+        // 1. EVENT HORIZON HUM (Triangle wave rumbles)
+        horizonOsc = audioCtx.createOscillator();
+        horizonOsc.type = 'triangle';
+        horizonOsc.frequency.setValueAtTime(55 / mass, audioCtx.currentTime); // low frequency inversely proportional to mass
+
+        horizonFilter = audioCtx.createBiquadFilter();
+        horizonFilter.type = 'lowpass';
+        horizonFilter.frequency.setValueAtTime(80, audioCtx.currentTime);
+
+        horizonGain = audioCtx.createGain();
+        horizonGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+
+        horizonOsc.connect(horizonFilter);
+        horizonFilter.connect(horizonGain);
+        horizonGain.connect(audioCtx.destination);
+        horizonOsc.start();
+
+        // 2. ACCRETION DISK SWIRL (Bandpass swept noise)
+        // Generate noise buffer
+        const bufferSize = audioCtx.sampleRate * 2; // 2 seconds
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+
+        diskNoise = audioCtx.createBufferSource();
+        diskNoise.buffer = noiseBuffer;
+        diskNoise.loop = true;
+
+        diskFilter = audioCtx.createBiquadFilter();
+        diskFilter.type = 'bandpass';
+        diskFilter.Q.setValueAtTime(4.0, audioCtx.currentTime);
+        diskFilter.frequency.setValueAtTime(250, audioCtx.currentTime);
+
+        diskPan = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+        diskGain = audioCtx.createGain();
+        diskGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+
+        diskNoise.connect(diskFilter);
+        if (diskPan) {
+          diskFilter.connect(diskPan);
+          diskPan.connect(diskGain);
+        } else {
+          diskFilter.connect(diskGain);
+        }
+        diskGain.connect(audioCtx.destination);
+        diskNoise.start();
+
+        // 3. SYNCHROTRON HISS (Spin high pitch hiss)
+        spinOsc = audioCtx.createOscillator();
+        spinOsc.type = 'sine';
+        spinOsc.frequency.setValueAtTime(4000, audioCtx.currentTime);
+
+        spinFilter = audioCtx.createBiquadFilter();
+        spinFilter.type = 'bandpass';
+        spinFilter.Q.setValueAtTime(8.0, audioCtx.currentTime);
+        spinFilter.frequency.setValueAtTime(3000, audioCtx.currentTime);
+
+        spinGain = audioCtx.createGain();
+        spinGain.gain.setValueAtTime(0.0, audioCtx.currentTime); // volume based on spin parameter
+
+        spinOsc.connect(spinFilter);
+        spinFilter.connect(spinGain);
+        spinGain.connect(audioCtx.destination);
+        spinOsc.start();
+
+        isSoundOn = true;
+        document.getElementById('btn-toggle-sound').disabled = false;
+        document.getElementById('btn-toggle-sound').textContent = "AUDIO MUTED";
+        document.getElementById('btn-toggle-sound').classList.add('active');
+        document.getElementById('audio-notice').style.display = 'none';
+
+        logEvent("Audio synthesizer output mapped successfully.", "system");
+      } catch (err) {
+        console.error("Audio failed: ", err);
+        logEvent("Error: Audio hardware blocked or incompatible.", "warn");
+      }
+    }
+
+    // Toggle Sound Button
+    const btnToggleSound = document.getElementById('btn-toggle-sound');
+    btnToggleSound.addEventListener('click', () => {
+      if (!audioCtx) return;
+      if (isSoundOn) {
+        // Mute all gains
+        horizonGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        diskGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        spinGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        isSoundOn = false;
+        btnToggleSound.textContent = "AUDIO MUTED";
+        btnToggleSound.classList.remove('active');
+        logEvent("Synthesizer audio output muted.", "warn");
+      } else {
+        // Restore gains
+        horizonGain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        diskGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        spinGain.gain.setValueAtTime(Math.abs(spin) * 0.15, audioCtx.currentTime);
+        isSoundOn = true;
+        btnToggleSound.textContent = "AUDIO ACTIVE";
+        btnToggleSound.classList.add('active');
+        logEvent("Synthesizer audio output unmuted.", "system");
+      }
+    });
+
+    // Start audio on button click
+    document.getElementById('btn-enable-audio').addEventListener('click', () => {
+      initAudio();
+    });
+
+    // Update synthesizer parameters dynamically
+    function updateSynthParams() {
+      if (!audioCtx || !isSoundOn) return;
+
+      // mass LFO hum modulation
+      horizonOsc.frequency.setValueAtTime(45.0 / mass, audioCtx.currentTime);
+      horizonFilter.frequency.setValueAtTime(70.0 + 30.0 * Math.sin(Date.now() * 0.001), audioCtx.currentTime);
+
+      // spin hiss modulation
+      const targetSpinGain = Math.abs(spin) * 0.15;
+      spinGain.gain.setTargetAtTime(targetSpinGain, audioCtx.currentTime, 0.1);
+      spinOsc.frequency.setValueAtTime(3000 + Math.abs(spin) * 2000, audioCtx.currentTime);
+
+      // Accretion disk sweep frequency based on rotation
+      const sweepFreq = 0.5 + Math.sqrt(mass / (innerRadius * innerRadius * innerRadius)) * 10.0;
+      const filterSweeper = 180 + 120 * Math.sin(Date.now() * 0.0015 * sweepFreq);
+      diskFilter.frequency.setValueAtTime(filterSweeper, audioCtx.currentTime);
+
+      if (diskPan) {
+        const panValue = Math.sin(Date.now() * 0.001 * sweepFreq);
+        diskPan.pan.setValueAtTime(panValue, audioCtx.currentTime);
+      }
+    }
+
+    // Spawn a hot spot bell chime
+    function playHotspotChime(r, dopplerFactor) {
+      if (!audioCtx || !isSoundOn) return;
+
+      // Bell frequency is higher near the horizon (energy-frequency correlation)
+      const baseFreq = 180.0 * (15.0 / r); 
+      const now = audioCtx.currentTime;
+
+      // FM Synth bell
+      const carrier = audioCtx.createOscillator();
+      carrier.type = 'sine';
+      carrier.frequency.setValueAtTime(baseFreq, now);
+
+      const modulator = audioCtx.createOscillator();
+      modulator.type = 'sine';
+      modulator.frequency.setValueAtTime(baseFreq * 1.414, now); // Metallic ratio
+
+      const modGain = audioCtx.createGain();
+      // Modulate frequency deviation
+      modGain.gain.setValueAtTime(baseFreq * 2.0, now);
+      modGain.gain.exponentialRampToValueAtTime(1.0, now + 1.2);
+
+      const voiceGain = audioCtx.createGain();
+      // Doppler volume shift
+      const initialVolume = 0.15 * dopplerFactor;
+      voiceGain.gain.setValueAtTime(initialVolume, now);
+      voiceGain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+
+      modulator.connect(modGain);
+      modGain.connect(carrier.frequency);
+      carrier.connect(voiceGain);
+      voiceGain.connect(audioCtx.destination);
+
+      modulator.start(now);
+      carrier.start(now);
+      
+      modulator.stop(now + 1.6);
+      carrier.stop(now + 1.6);
+    }
+
+    // Trigger Hotspot from interface
+    function triggerRandomFlare() {
+      // Pick random radius within accretion bounds
+      const flareRadius = innerRadius + Math.random() * (outerRadius - innerRadius) * 0.6;
+      const flarePhi = Math.random() * Math.PI * 2.0;
+      
+      injectHotspot(flareRadius, flarePhi);
+    }
+
+    document.getElementById('btn-trigger-flare').addEventListener('click', triggerRandomFlare);
+
+    // Inject Hotspot Logic
+    function injectHotspot(r, phi) {
+      // Find inactive hotspot slot
+      let index = -1;
+      for (let i = 0; i < hotspots.length; i++) {
+        if (hotspots[i].active === 0) {
+          index = i;
+          break;
+        }
+      }
+      // If all are active, overwrite oldest
+      if (index === -1) {
+        index = Math.floor(Math.random() * hotspots.length);
+      }
+
+      hotspots[index].r = r;
+      hotspots[index].phi = phi;
+      hotspots[index].size = 1.0 + Math.random() * 1.0;
+      hotspots[index].active = 1;
+      hotspots[index].age = 0.0;
+      hotspots[index].maxAge = 6.0 + Math.random() * 4.0; // live for 6 to 10 seconds
+
+      // Calculate approximate Doppler shift for sound
+      const beta = Math.sqrt(mass / r);
+      const dopplerFactor = 1.0 / (1.0 - beta * Math.sin(cameraAngleX));
+      
+      logEvent(`Flare injection: Hotspot [${index}] bound at r = ${r.toFixed(2)}M.`, "system");
+      playHotspotChime(r, dopplerFactor);
+    }
+
+    // Update hotspots orbital position
+    function updateHotspots(dt) {
+      for (let i = 0; i < hotspots.length; i++) {
+        if (hotspots[i].active === 1) {
+          // Keplerian omega = sqrt(M / r^3)
+          const omega = Math.sqrt(mass / (hotspots[i].r * hotspots[i].r * hotspots[i].r));
+          // Apply frame dragging spin impact
+          const spinDrift = 1.8 * spin * mass / (hotspots[i].r * hotspots[i].r * hotspots[i].r);
+          hotspots[i].phi += (omega * 2.2 + spinDrift) * dt;
+          hotspots[i].age += dt;
+          
+          // Animate size: swell up, fade out
+          const ageRatio = hotspots[i].age / hotspots[i].maxAge;
+          if (ageRatio < 0.1) {
+            hotspots[i].size = (ageRatio / 0.1) * 1.5;
+          } else if (ageRatio > 0.7) {
+            hotspots[i].size = ((1.0 - ageRatio) / 0.3) * 1.5;
+          } else {
+            hotspots[i].size = 1.5;
+          }
+
+          if (hotspots[i].age >= hotspots[i].maxAge) {
+            hotspots[i].active = 0;
+            logEvent(`Hotspot [${i}] sheared and absorbed by event horizon.`, "warn");
+          }
+        }
+      }
+    }
+
+    // Calculate exact ISCO radius for Kerr black hole
+    function getISCO(a) {
+      const M = 1.0;
+      const abs_a = Math.abs(a);
+      if (abs_a < 1e-5) return 6.0 * M;
+      
+      const Z1 = 1.0 + Math.pow(1.0 - abs_a*abs_a, 1/3) * (Math.pow(1.0 + abs_a, 1/3) + Math.pow(1.0 - abs_a, 1/3));
+      const Z2 = Math.sqrt(3.0 * abs_a * abs_a + Z1 * Z1);
+      
+      const sign = a >= 0 ? 1 : -1;
+      const r_isco = M * (3.0 + Z2 - sign * Math.sqrt((3.0 - Z1) * (3.0 + Z1 + 2.0 * Z2)));
+      return r_isco;
+    }
+
+    // Handle Resize Viewport and Resolution Scale
+    let renderWidth = 600;
+    let renderHeight = 600;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      renderWidth = Math.floor(rect.width * resolutionScale);
+      renderHeight = Math.floor(rect.height * resolutionScale);
+      canvas.width = renderWidth;
+      canvas.height = renderHeight;
+      overlayResolution.textContent = `VIEWPORT: ${canvas.width} x ${canvas.height} (${Math.round(resolutionScale*100)}%)`;
+      if (gl) {
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // Resolution button click listeners
+    document.getElementById('btn-res-low').addEventListener('click', (e) => {
+      resolutionScale = 0.5;
+      setActiveButton(e.target);
+      resizeCanvas();
+    });
+    document.getElementById('btn-res-med').addEventListener('click', (e) => {
+      resolutionScale = 0.75;
+      setActiveButton(e.target);
+      resizeCanvas();
+    });
+    document.getElementById('btn-res-high').addEventListener('click', (e) => {
+      resolutionScale = 1.0;
+      setActiveButton(e.target);
+      resizeCanvas();
+    });
+
+    function setActiveButton(btn) {
+      const siblings = btn.parentNode.children;
+      for (let s of siblings) s.classList.remove('active');
+      btn.classList.add('active');
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    // Style selecting buttons
+    document.getElementById('btn-style-orange').addEventListener('click', (e) => { styleIndex = 0; setActiveButton(e.target); logEvent("Color Spectrum shifted: Novikov-Thorne thermal emission.", "system"); });
+    document.getElementById('btn-style-neon').addEventListener('click', (e) => { styleIndex = 1; setActiveButton(e.target); logEvent("Color Spectrum shifted: Quantum plasma polarization.", "system"); });
+    document.getElementById('btn-style-green').addEventListener('click', (e) => { styleIndex = 2; setActiveButton(e.target); logEvent("Color Spectrum shifted: Emerald aether field.", "system"); });
+    document.getElementById('btn-style-chrono').addEventListener('click', (e) => { styleIndex = 3; setActiveButton(e.target); logEvent("Color Spectrum shifted: Chrono dust fluctuation.", "system"); });
+
+    // Drag-to-rotate interaction logic
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (isDragging) {
+        // If they barely moved, register it as a click flare injection
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < 4) {
+          const rect = canvas.getBoundingClientRect();
+          const clickX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          const clickY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+          
+          raytraceClick(clickX, clickY);
+        }
+      }
+      isDragging = false;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      
+      cameraAngleX -= dx * 0.007;
+      cameraAngleY += dy * 0.007;
+      
+      // Cap inclination
+      cameraAngleY = Math.max(0.08, Math.min(1.48, cameraAngleY));
+      
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    // Touch Support for mobile
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+      }
+    });
+
+    window.addEventListener('touchend', (e) => {
+      isDragging = false;
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - lastMouseX;
+      const dy = e.touches[0].clientY - lastMouseY;
+      cameraAngleX -= dx * 0.007;
+      cameraAngleY += dy * 0.007;
+      cameraAngleY = Math.max(0.08, Math.min(1.48, cameraAngleY));
+      lastMouseX = e.touches[0].clientX;
+      lastMouseY = e.touches[0].clientY;
+    });
+
+    // 2D Geodesic raytrace on Click to spawn hotspot in accretion plane
+    function raytraceClick(mx, my) {
+      // Find normalized direction vector of click ray
+      const f_aspect = renderWidth / renderHeight;
+      
+      // Camera vectors
+      const cosX = Math.cos(cameraAngleX);
+      const sinX = Math.sin(cameraAngleX);
+      const cosY = Math.cos(cameraAngleY);
+      const sinY = Math.sin(cameraAngleY);
+      
+      const cPos = [
+        cameraDistance * sinY * sinX,
+        cameraDistance * cosY,
+        -cameraDistance * sinY * cosX
+      ];
+      
+      const cDir = [
+        -sinY * sinX,
+        -cosY,
+        sinY * cosX
+      ];
+      
+      const cRight = [cosX, 0, sinX];
+      const cUp = [
+        -cosY * sinX,
+        sinY,
+        cosY * cosX
+      ];
+      
+      // Calculate ray direction
+      const vx = cDir[0] + mx * cRight[0] * fov * f_aspect + my * cUp[0] * fov;
+      const vy = cDir[1] + mx * cRight[1] * fov * f_aspect + my * cUp[1] * fov;
+      const vz = cDir[2] + mx * cRight[2] * fov * f_aspect + my * cUp[2] * fov;
+      
+      let v = [vx, vy, vz];
+      // Normalize
+      const v_len = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+      v = [v[0]/v_len, v[1]/v_len, v[2]/v_len];
+      
+      let p = [...cPos];
+      const M = mass;
+      const dt = 0.25;
+      
+      // Integrate single ray in JS
+      for (let step = 0; step < 95; step++) {
+        const r2 = p[0]*p[0] + p[1]*p[1] + p[2]*p[2];
+        const r = Math.sqrt(r2);
+        
+        if (r < 2.0 * M) break; // absorbed
+        if (r > 24.0 * M) break; // escaped
+        
+        // Schwarzschild force
+        const h_x = p[1]*v[2] - p[2]*v[1];
+        const h_y = p[2]*v[0] - p[0]*v[2];
+        const h_z = p[0]*v[1] - p[1]*v[0];
+        const h2 = h_x*h_x + h_y*h_y + h_z*h_z;
+        
+        const f = -3.0 * M * h2 / (r2 * r2 * r);
+        const ax = f * p[0];
+        const ay = f * p[1];
+        const az = f * p[2];
+        
+        // Frame drag spin push
+        const w_drag = 1.8 * spin * M / (r2 * r);
+        const drag_ax = -w_drag * v[2]; // cross product (0, w_drag, 0) x v
+        const drag_az = w_drag * v[0];
+        
+        v[0] += (ax + drag_ax) * dt;
+        v[1] += ay * dt;
+        v[2] += (az + drag_az) * dt;
+        
+        // renormalize
+        const len = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        v = [v[0]/len, v[1]/len, v[2]/len];
+        
+        const prev_y = p[1];
+        p[0] += v[0] * dt;
+        p[1] += v[1] * dt;
+        p[2] += v[2] * dt;
+        
+        // Check plane crossing
+        if (prev_y * p[1] < 0.0) {
+          const t = -prev_y / (p[1] - prev_y);
+          const hitX = p[0] - v[0] * dt * (1.0 - t);
+          const hitZ = p[2] - v[2] * dt * (1.0 - t);
+          const hitR = Math.sqrt(hitX*hitX + hitZ*hitZ);
+          
+          if (hitR >= innerRadius && hitR <= outerRadius) {
+            const hitPhi = Math.atan2(hitZ, hitX);
+            injectHotspot(hitR, hitPhi);
+            return;
+          }
+        }
+      }
+      
+      logEvent("Lensed click trace escaped. No accretion intersection.", "warn");
+    }
+
+    // Connect slider inputs to variables
+    paramMass.addEventListener('input', (e) => {
+      mass = parseFloat(e.target.value);
+      spanMass.textContent = `${mass.toFixed(2)} M₀`;
+      
+      // Singularity size status warning
+      if (mass > 1.6) {
+        statusHorizon.textContent = "EXPANDING";
+        statusHorizon.style.color = "var(--neon-magenta)";
+        statusTension.textContent = "DISTORTED";
+        statusTension.style.color = "var(--neon-magenta)";
+      } else if (mass < 0.6) {
+        statusHorizon.textContent = "COMPRESSED";
+        statusHorizon.style.color = "var(--neon-amber)";
+        statusTension.textContent = "VOLATILE";
+        statusTension.style.color = "var(--neon-amber)";
+      } else {
+        statusHorizon.textContent = "STABLE";
+        statusHorizon.style.color = "var(--neon-cyan)";
+        statusTension.textContent = "NORMAL";
+        statusTension.style.color = "var(--neon-cyan)";
+      }
+    });
+
+    paramSpin.addEventListener('input', (e) => {
+      spin = parseFloat(e.target.value);
+      spanSpin.textContent = `${spin.toFixed(2)} M`;
+    });
+
+    paramInner.addEventListener('input', (e) => {
+      innerRadius = parseFloat(e.target.value);
+      spanInner.textContent = `${innerRadius.toFixed(2)} M`;
+      // Ensure inner is smaller than outer
+      if (innerRadius >= outerRadius - 1.0) {
+        outerRadius = innerRadius + 1.0;
+        paramOuter.value = outerRadius;
+        spanOuter.textContent = `${outerRadius.toFixed(2)} M`;
+      }
+    });
+
+    paramOuter.addEventListener('input', (e) => {
+      outerRadius = parseFloat(e.target.value);
+      spanOuter.textContent = `${outerRadius.toFixed(2)} M`;
+      // Ensure outer is larger than inner
+      if (outerRadius <= innerRadius + 1.0) {
+        innerRadius = outerRadius - 1.0;
+        paramInner.value = innerRadius;
+        spanInner.textContent = `${innerRadius.toFixed(2)} M`;
+      }
+    });
+
+    paramBeaming.addEventListener('input', (e) => {
+      beaming = parseFloat(e.target.value);
+      spanBeaming.textContent = `${beaming.toFixed(2)}`;
+    });
+
+    // Main Draw & Frame Update Loop
+    let lastTime = 0;
+
+    function render(currentTime) {
+      if (!isPlaying) return;
+      requestAnimationFrame(render);
+      
+      const dt = (currentTime - lastTime) * 0.001; // dt in seconds
+      lastTime = currentTime;
+
+      // Update variables
+      updateHotspots(dt);
+      updateSynthParams();
+
+      // Check for WebGL program validity
+      if (!program) return;
+
+      // Calculate camera matrices
+      const cosX = Math.cos(cameraAngleX);
+      const sinX = Math.sin(cameraAngleX);
+      const cosY = Math.cos(cameraAngleY);
+      const sinY = Math.sin(cameraAngleY);
+      
+      // 3D Spherical Coordinate Position
+      const cameraX = cameraDistance * sinY * sinX;
+      const cameraY = cameraDistance * cosY;
+      const cameraZ = -cameraDistance * sinY * cosX;
+
+      // Camera orientation vectors
+      const lookDirX = -sinY * sinX;
+      const lookDirY = -cosY;
+      const lookDirZ = sinY * cosX;
+
+      const rightX = cosX;
+      const rightY = 0;
+      const rightZ = sinX;
+
+      // Up vector: Right x Look
+      const upX = -cosY * sinX;
+      const upY = sinY;
+      const upZ = cosY * cosX;
+
+      // Pass values to uniforms
+      gl.uniform2f(uResolution, renderWidth, renderHeight);
+      gl.uniform1f(uTime, currentTime * 0.001);
+      
+      gl.uniform3f(uCameraPos, cameraX, cameraY, cameraZ);
+      gl.uniform3f(uCameraDir, lookDirX, lookDirY, lookDirZ);
+      gl.uniform3f(uCameraRight, rightX, rightY, rightZ);
+      gl.uniform3f(uCameraUp, upX, upY, upZ);
+      
+      gl.uniform1f(uFov, fov);
+      gl.uniform1f(uSpin, spin);
+      gl.uniform1f(uMass, mass);
+      gl.uniform1f(uDiskInner, innerRadius);
+      gl.uniform1f(uDiskOuter, outerRadius);
+      gl.uniform1f(uBeaming, beaming);
+      gl.uniform1i(uStyle, styleIndex);
+
+      // Pass hotspot vector arrays (r, phi, size, active)
+      gl.uniform4f(uHotspot0, hotspots[0].r, hotspots[0].phi, hotspots[0].size, hotspots[0].active);
+      gl.uniform4f(uHotspot1, hotspots[1].r, hotspots[1].phi, hotspots[1].size, hotspots[1].active);
+      gl.uniform4f(uHotspot2, hotspots[2].r, hotspots[2].phi, hotspots[2].size, hotspots[2].active);
+      gl.uniform4f(uHotspot3, hotspots[3].r, hotspots[3].phi, hotspots[3].size, hotspots[3].active);
+
+      // Draw Screen Quad
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      // Update real-time telemetry metrics
+      const r_horizon = 2.0 * mass;
+      const r_isco = getISCO(spin) * mass;
+      const v_isco = Math.sqrt(mass / innerRadius) * (1.0 + spin * 0.1 * (mass / innerRadius));
+      const redshift_inner = Math.sqrt(1.0 - 2.0 * mass / innerRadius);
+
+      // Beaming factor: Doppler factor shift envelope bounds
+      const beamingMax = Math.pow((1.0 + v_isco) / Math.sqrt(1.0 - v_isco*v_isco), beaming);
+
+      // Draw values
+      telHorizon.textContent = `${r_horizon.toFixed(2)} M₀`;
+      telErgosphere.textContent = `${(r_horizon * (1.0 + Math.sqrt(1.0 - spin*spin * 0.5))).toFixed(2)} M₀`;
+      telIsco.textContent = `${r_isco.toFixed(2)} M₀`;
+      telSpeed.textContent = `${v_isco.toFixed(2)} c`;
+      telRedshift.textContent = `${redshift_inner.toFixed(2)} z`;
+      telBeamingFactor.textContent = `${beamingMax.toFixed(2)}x`;
+    }
+
+    // Set initial size and start render loop
+    resizeCanvas();
+    requestAnimationFrame((t) => {
+      lastTime = t;
+      render(t);
+    });
+
+  </script>
+</body>
+</html>
