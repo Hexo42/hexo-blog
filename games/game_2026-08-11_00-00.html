@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>chiral-edge: topological edge-state & quantum-hall sequencer</title>
+  <style>
+    :root {
+      --bg-color: #050510;
+      --panel-bg: rgba(13, 13, 35, 0.7);
+      --accent-color: #00f3ff;
+      --accent-pink: #ff007f;
+      --text-color: #e2e8f0;
+      --text-dim: #718096;
+      --border-glow: 0 0 10px rgba(0, 243, 255, 0.3);
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* sidebar style */
+    #sidebar {
+      width: 320px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(0, 243, 255, 0.15);
+      padding: 25px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 10;
+      overflow-y: auto;
+    }
+
+    h1 {
+      font-size: 1.5em;
+      font-weight: 800;
+      margin: 0;
+      color: var(--accent-color);
+      text-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 0.85em;
+      color: var(--text-dim);
+      margin: -15px 0 10px 0;
+      font-family: monospace;
+      text-transform: lowercase;
+    }
+
+    .section-title {
+      font-size: 0.8em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-pink);
+      margin-bottom: 8px;
+      border-bottom: 1px dashed rgba(255, 0, 127, 0.3);
+      padding-bottom: 4px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8em;
+      color: var(--text-color);
+    }
+
+    .slider-val {
+      font-family: monospace;
+      color: var(--accent-color);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--accent-color);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-color);
+      padding: 8px 12px;
+      font-size: 0.85em;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      box-shadow: var(--border-glow);
+    }
+
+    button.active {
+      background: rgba(0, 243, 255, 0.2);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .radio-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85em;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .radio-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .radio-btn.active {
+      border-color: rgba(255, 0, 127, 0.4);
+      background: rgba(255, 0, 127, 0.08);
+      color: #fff;
+    }
+
+    .radio-btn input {
+      display: none;
+    }
+
+    .bullet {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .radio-btn.active .bullet {
+      background: var(--accent-pink);
+      box-shadow: 0 0 6px var(--accent-pink);
+    }
+
+    .info-panel {
+      font-size: 0.78em;
+      line-height: 1.5;
+      color: var(--text-dim);
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: monospace;
+    }
+
+    /* main view */
+    #main-view {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #0f0b29 0%, #050510 100%);
+    }
+
+    canvas {
+      display: block;
+      cursor: crosshair;
+      max-width: 90vmin;
+      max-height: 90vmin;
+    }
+
+    /* audio prompt overlay */
+    #audio-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 5, 16, 0.85);
+      backdrop-filter: blur(15px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      transition: opacity 0.5s ease;
+    }
+
+    #audio-overlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .overlay-title {
+      font-size: 1.8em;
+      font-weight: 800;
+      color: var(--accent-color);
+      text-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+    }
+
+    .overlay-desc {
+      font-size: 0.9em;
+      color: var(--text-dim);
+      max-width: 400px;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+
+    .audio-btn {
+      background: var(--accent-pink);
+      border: none;
+      color: #fff;
+      padding: 15px 30px;
+      font-size: 1em;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 0, 127, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .audio-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 30px rgba(255, 0, 127, 0.7);
+      background: #ff1a8c;
+    }
+
+    /* helper layout elements */
+    #nav-back {
+      position: absolute;
+      bottom: 20px;
+      left: 25px;
+      font-size: 0.8em;
+      font-family: monospace;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+      z-index: 15;
+    }
+
+    #nav-back:hover {
+      color: var(--accent-color);
+    }
+
+    #legend {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(5, 5, 16, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.75em;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Audio unlock overlay -->
+  <div id="audio-overlay">
+    <div class="overlay-title">chiral-edge sequencer</div>
+    <div class="overlay-desc">
+      welcome to the quantum hall loop. this simulator models the schrödinger equation of an electron under intense magnetic fields. click below to enable the sonified feedback engine.
+    </div>
+    <button class="audio-btn" onclick="enableAudio()">initialize simulation</button>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div>
+      <h1>chiral-edge</h1>
+      <div class="subtitle">topological edge-state sandbox</div>
+    </div>
+
+    <!-- Mode Select -->
+    <div class="control-group">
+      <div class="section-title">interaction mode</div>
+      <div class="radio-group">
+        <div class="radio-btn active" id="mode-excite" onclick="setMode('excite')">
+          <div class="bullet"></div>
+          <span>slingshot (spawn packet)</span>
+        </div>
+        <div class="radio-btn" id="mode-draw" onclick="setMode('draw')">
+          <div class="bullet"></div>
+          <span>draw defect (remove site)</span>
+        </div>
+        <div class="radio-btn" id="mode-erase" onclick="setMode('erase')">
+          <div class="bullet"></div>
+          <span>repair lattice (add site)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Physics Parameters -->
+    <div class="control-group">
+      <div class="section-title">physics configuration</div>
+      
+      <div class="slider-container">
+        <div class="slider-header">
+          <span>magnetic flux (φ)</span>
+          <span class="slider-val" id="val-flux">0.166</span>
+        </div>
+        <input type="range" id="param-flux" min="0" max="0.5" step="0.005" value="0.166" oninput="updateParam('flux', this.value)">
+      </div>
+
+      <div class="slider-container">
+        <div class="slider-header">
+          <span>sim speed</span>
+          <span class="slider-val" id="val-speed">3x</span>
+        </div>
+        <input type="range" id="param-speed" min="1" max="10" step="1" value="3" oninput="updateParam('speed', this.value)">
+      </div>
+
+      <div class="slider-container">
+        <div class="slider-header">
+          <span>synth volume</span>
+          <span class="slider-val" id="val-vol">60%</span>
+        </div>
+        <input type="range" id="param-vol" min="0" max="100" step="5" value="60" oninput="updateParam('volume', this.value)">
+      </div>
+    </div>
+
+    <!-- Preset & Reset -->
+    <div class="control-group">
+      <div class="section-title">presets & maintenance</div>
+      <div class="btn-grid">
+        <button onclick="loadPreset('chiral')">chiral loop</button>
+        <button onclick="loadPreset('bulk')">bulk landau</button>
+        <button onclick="loadPreset('bypass')">bypass test</button>
+        <button onclick="loadPreset('free')">free wave</button>
+      </div>
+      <div class="btn-grid" style="grid-template-columns: 1fr;">
+        <button onclick="clearWave()">clear wave</button>
+        <button onclick="resetLattice()">rebuild lattice</button>
+      </div>
+    </div>
+
+    <!-- Explainer log -->
+    <div class="info-panel" id="explainer">
+      select "slingshot" mode, click and drag inside the lattice grid, then release to launch a wavepacket. watch it follow the boundary unidirectionally when magnetic flux is non-zero.
+    </div>
+
+    <a href="../index.html" id="nav-back">[back to home]</a>
+  </div>
+
+  <!-- Main Simulator Viewport -->
+  <div id="main-view">
+    <div id="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background: var(--accent-color); box-shadow: 0 0 6px var(--accent-color);"></div>
+        <span>wave phase (colors: 0 to 2π)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255, 255, 255, 0.2);"></div>
+        <span>active lattice site</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: rgba(255, 0, 127, 0.3); border: 1px dashed var(--accent-pink);"></div>
+        <span>defect / boundary note pad</span>
+      </div>
+    </div>
+
+    <canvas id="quantum-canvas"></canvas>
+  </div>
+
+  <script>
+    // Simulator constants
+    const W = 28;
+    const H = 28;
+    const N = W * H;
+
+    // Simulation states
+    const re = new Float32Array(N);
+    const im = new Float32Array(N);
+    const active = new Uint8Array(N); // 1 if atom exists, 0 if defect
+    const V = new Float32Array(N);      // potential landscape
+
+    // RK4 auxiliary workspace arrays
+    const k1_re = new Float32Array(N), k1_im = new Float32Array(N);
+    const k2_re = new Float32Array(N), k2_im = new Float32Array(N);
+    const k3_re = new Float32Array(N), k3_im = new Float32Array(N);
+    const k4_re = new Float32Array(N), k4_im = new Float32Array(N);
+    const tmp_re = new Float32Array(N), tmp_im = new Float32Array(N);
+
+    // Flow particles
+    const particles = [];
+    const max_particles = 150;
+
+    // Interactive parameters
+    let phi = 0.166;
+    let sim_speed = 3;
+    let synth_vol = 0.6;
+    let current_mode = 'excite'; // excite, draw, erase
+
+    // Slingshot variables
+    let is_dragging = false;
+    let drag_start_site = null; // {x, y, idx}
+    let mouse_world = {x: 0, y: 0};
+
+    // Canvas variables
+    const canvas = document.getElementById('quantum-canvas');
+    const ctx = canvas.getContext('2d');
+    let cell_size = 20;
+    let grid_offset_x = 0;
+    let grid_offset_y = 0;
+
+    // Audio states
+    let audio_ctx = null;
+    let audio_enabled = false;
+    let audio_destination = null;
+    let last_note_trigger_time = 0;
+    let last_triggered_note_segment = -1;
+
+    // Boundary looping representation
+    let boundary_loop = [];
+
+    // Initialize lattice
+    function initLattice() {
+      for (let i = 0; i < N; i++) {
+        active[i] = 1;
+        V[i] = 0;
+      }
+      updateBoundaryLoop();
+    }
+
+    // Set interactive modes
+    function setMode(mode) {
+      current_mode = mode;
+      document.querySelectorAll('.radio-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`mode-${mode}`).classList.add('active');
+
+      const logs = {
+        excite: "slingshot active. click and drag to pull back and fling the electron wavepacket with momentum. angle = direction, distance = velocity.",
+        draw: "excavator tool selected. click or drag on green grid sites to obliterate the atoms, leaving a physical cavity in the crystal.",
+        erase: "repair tool active. click on disabled grayed-out spaces to restore atoms back to the tight-binding Hamiltonian network."
+      };
+      document.getElementById('explainer').innerText = logs[mode];
+    }
+
+    // Update variables from UI
+    function updateParam(name, val) {
+      if (name === 'flux') {
+        phi = parseFloat(val);
+        document.getElementById('val-flux').innerText = phi.toFixed(3);
+        updateBoundaryLoop(); // Phase boundaries might change with flux
+      } else if (name === 'speed') {
+        sim_speed = parseInt(val);
+        document.getElementById('val-speed').innerText = `${sim_speed}x`;
+      } else if (name === 'volume') {
+        synth_vol = parseFloat(val) / 100.0;
+        document.getElementById('val-vol').innerText = `${Math.round(synth_vol * 100)}%`;
+      }
+    }
+
+    // Reset/clear wave wavefunction
+    function clearWave() {
+      for (let i = 0; i < N; i++) {
+        re[i] = 0;
+        im[i] = 0;
+      }
+    }
+
+    function resetLattice() {
+      initLattice();
+      clearWave();
+    }
+
+    // Find nodes on the edge and sort them around their centroid
+    function updateBoundaryLoop() {
+      let boundary_sites = [];
+      let sum_x = 0, sum_y = 0, count = 0;
+      
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (active[idx] === 0) continue;
+          sum_x += x;
+          sum_y += y;
+          count++;
+        }
+      }
+      
+      if (count === 0) {
+        boundary_loop = [];
+        return;
+      }
+      
+      const cx = sum_x / count;
+      const cy = sum_y / count;
+
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (active[idx] === 0) continue;
+          
+          let is_boundary = false;
+          if (x === 0 || x === W - 1 || y === 0 || y === H - 1) {
+            is_boundary = true;
+          } else {
+            // Check if any cardinal neighbor is inactive
+            if (active[idx + 1] === 0 || active[idx - 1] === 0 || active[idx + W] === 0 || active[idx - W] === 0) {
+              is_boundary = true;
+            }
+          }
+          
+          if (is_boundary) {
+            boundary_sites.push({
+              idx: idx,
+              x: x,
+              y: y,
+              angle: Math.atan2(y - cy, x - cx)
+            });
+          }
+        }
+      }
+
+      // Sort clockwise by polar angle
+      boundary_sites.sort((a, b) => a.angle - b.angle);
+      boundary_loop = boundary_sites;
+    }
+
+    // Schrödinger tight binding time derivative: dpsi/dt = -i * H * psi
+    function compute_dpsi(re_in, im_in, re_out, im_out) {
+      const t0 = 1.0;
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (active[idx] === 0) {
+            re_out[idx] = 0;
+            im_out[idx] = 0;
+            continue;
+          }
+
+          let H_re = V[idx] * re_in[idx];
+          let H_im = V[idx] * im_in[idx];
+
+          // Right neighbor
+          if (x < W - 1) {
+            const n_idx = idx + 1;
+            if (active[n_idx] !== 0) {
+              H_re += -t0 * re_in[n_idx];
+              H_im += -t0 * im_in[n_idx];
+            }
+          }
+          // Left neighbor
+          if (x > 0) {
+            const n_idx = idx - 1;
+            if (active[n_idx] !== 0) {
+              H_re += -t0 * re_in[n_idx];
+              H_im += -t0 * im_in[n_idx];
+            }
+          }
+
+          // Landau gauge phase factors for hops in Y direction
+          const theta = 2.0 * Math.PI * phi * x;
+          const cos_t = Math.cos(theta);
+          const sin_t = Math.sin(theta);
+
+          // Up neighbor
+          if (y < H - 1) {
+            const n_idx = idx + W;
+            if (active[n_idx] !== 0) {
+              H_re += -t0 * (cos_t * re_in[n_idx] - sin_t * im_in[n_idx]);
+              H_im += -t0 * (sin_t * re_in[n_idx] + cos_t * im_in[n_idx]);
+            }
+          }
+          // Down neighbor
+          if (y > 0) {
+            const n_idx = idx - W;
+            if (active[n_idx] !== 0) {
+              H_re += -t0 * (cos_t * re_in[n_idx] + sin_t * im_in[n_idx]);
+              H_im += -t0 * (-sin_t * re_in[n_idx] + cos_t * im_in[n_idx]);
+            }
+          }
+
+          // Multiply by -i:
+          // Re(dpsi/dt) = H_im
+          // Im(dpsi/dt) = -H_re
+          re_out[idx] = H_im;
+          im_out[idx] = -H_re;
+        }
+      }
+    }
+
+    // RK4 ODE integration step
+    function stepRK4(dt) {
+      // k1
+      compute_dpsi(re, im, k1_re, k1_im);
+
+      // k2
+      for (let i = 0; i < N; i++) {
+        tmp_re[i] = re[i] + 0.5 * dt * k1_re[i];
+        tmp_im[i] = im[i] + 0.5 * dt * k1_im[i];
+      }
+      compute_dpsi(tmp_re, tmp_im, k2_re, k2_im);
+
+      // k3
+      for (let i = 0; i < N; i++) {
+        tmp_re[i] = re[i] + 0.5 * dt * k2_re[i];
+        tmp_im[i] = im[i] + 0.5 * dt * k2_im[i];
+      }
+      compute_dpsi(tmp_re, tmp_im, k3_re, k3_im);
+
+      // k4
+      for (let i = 0; i < N; i++) {
+        tmp_re[i] = re[i] + dt * k3_re[i];
+        tmp_im[i] = im[i] + dt * k3_im[i];
+      }
+      compute_dpsi(tmp_re, tmp_im, k4_re, k4_im);
+
+      // Recompose and track normalization
+      let norm = 0;
+      for (let i = 0; i < N; i++) {
+        re[i] += (dt / 6.0) * (k1_re[i] + 2.0 * k2_re[i] + 2.0 * k3_re[i] + k4_re[i]);
+        im[i] += (dt / 6.0) * (k1_im[i] + 2.0 * k2_im[i] + 2.0 * k3_im[i] + k4_im[i]);
+        norm += re[i]*re[i] + im[i]*im[i];
+      }
+
+      // Re-normalize to prevent rounding decay/expansion
+      if (norm > 1e-12) {
+        const scale = 1.0 / Math.sqrt(norm);
+        for (let i = 0; i < N; i++) {
+          re[i] *= scale;
+          im[i] *= scale;
+        }
+      }
+    }
+
+    // Launch Gaussian wavepacket
+    function spawnWavepacket(xc, yc, kx, ky) {
+      let norm = 0;
+      const sigma = 2.2;
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (active[idx] === 0) {
+            re[idx] = 0;
+            im[idx] = 0;
+            continue;
+          }
+          const dx = x - xc;
+          const dy = y - yc;
+          const amp = Math.exp(-(dx*dx + dy*dy) / (2.0 * sigma * sigma));
+          const phase = kx * x + ky * y;
+          re[idx] = amp * Math.cos(phase);
+          im[idx] = amp * Math.sin(phase);
+          norm += re[idx]*re[idx] + im[idx]*im[idx];
+        }
+      }
+
+      if (norm > 0) {
+        const scale = 1.0 / Math.sqrt(norm);
+        for (let i = 0; i < N; i++) {
+          re[i] *= scale;
+          im[i] *= scale;
+        }
+      }
+    }
+
+    // Audio node configuration
+    function enableAudio() {
+      if (audio_ctx) return;
+      audio_ctx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Delay feedback setup
+      const master = audio_ctx.createGain();
+      master.gain.value = 0.7;
+      master.connect(audio_ctx.destination);
+
+      const delay = audio_ctx.createDelay(2.0);
+      delay.delayTime.value = 0.38; // 380ms echo
+      const feedback = audio_ctx.createGain();
+      feedback.gain.value = 0.35; // 35% decay feedback
+
+      delay.connect(feedback);
+      feedback.connect(delay);
+
+      audio_destination = audio_ctx.createGain();
+      audio_destination.connect(master);
+      audio_destination.connect(delay);
+      delay.connect(master);
+
+      audio_enabled = true;
+      document.getElementById('audio-overlay').classList.add('fade-out');
+    }
+
+    // FM bell synthesiser trigger
+    function triggerSynthNote(segment) {
+      if (!audio_enabled || !audio_ctx) return;
+      
+      // C Pentatonic scale across two octaves
+      const scale = [
+        196.00, // G3
+        220.00, // A3
+        261.63, // C4
+        293.66, // D4
+        329.63, // E4
+        392.00, // G4
+        440.00, // A4
+        523.25, // C5
+        587.33, // D5
+        659.25  // E5
+      ];
+      
+      const freq = scale[segment % scale.length];
+      const now = audio_ctx.currentTime;
+
+      const carrier = audio_ctx.createOscillator();
+      const modulator = audio_ctx.createOscillator();
+      const mod_gain = audio_ctx.createGain();
+      const carrier_gain = audio_ctx.createGain();
+
+      carrier.type = 'sine';
+      modulator.type = 'sine';
+
+      carrier.frequency.setValueAtTime(freq, now);
+      modulator.frequency.setValueAtTime(freq * 1.5, now); // Harmonic ratio
+
+      // FM Modulation index decay
+      mod_gain.gain.setValueAtTime(freq * 3.0, now);
+      mod_gain.gain.exponentialRampToValueAtTime(0.1, now + 0.8);
+
+      // Carrier amplitude volume decay (affected by slider)
+      const base_vol = 0.18 * synth_vol;
+      carrier_gain.gain.setValueAtTime(base_vol, now);
+      carrier_gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+
+      modulator.connect(mod_gain);
+      mod_gain.connect(carrier.frequency);
+      carrier.connect(carrier_gain);
+      carrier_gain.connect(audio_destination);
+
+      modulator.start(now);
+      carrier.start(now);
+      modulator.stop(now + 1.6);
+      carrier.stop(now + 1.6);
+    }
+
+    // Particle flow loop
+    function updateParticles() {
+      // Find probability current flow fields
+      // J_x(x,y) = -2 * t0 * Im(psi*[x,y] * psi[x+1, y])
+      // J_y(x,y) = -2 * t0 * Im(psi*[x,y] * exp(iθ) * psi[x, y+1])
+      
+      // Respawn dead particles
+      while (particles.length < max_particles) {
+        // pick a site weighted by density
+        let rx = Math.floor(Math.random() * W);
+        let ry = Math.floor(Math.random() * H);
+        let idx = ry * W + rx;
+        let density = re[idx]*re[idx] + im[idx]*im[idx];
+        if (Math.random() < density * 50.0 + 0.02 && active[idx] === 1) {
+          particles.push({
+            x: rx + Math.random() * 0.4 - 0.2,
+            y: ry + Math.random() * 0.4 - 0.2,
+            life: Math.random() * 60 + 40
+          });
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life--;
+        
+        const px = Math.round(p.x);
+        const py = Math.round(p.y);
+        
+        if (px < 0 || px >= W || py < 0 || py >= H || p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        const idx = py * W + px;
+        if (active[idx] === 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        // Get local current components
+        let Jx = 0;
+        let Jy = 0;
+        const t0 = 1.0;
+
+        // Current X (to right neighbor)
+        if (px < W - 1) {
+          const r_idx = idx + 1;
+          if (active[r_idx] === 1) {
+            Jx = -2.0 * t0 * (re[idx] * im[r_idx] - im[idx] * re[r_idx]);
+          }
+        }
+        // Current Y (to up neighbor)
+        if (py < H - 1) {
+          const u_idx = idx + W;
+          if (active[u_idx] === 1) {
+            const theta = 2.0 * Math.PI * phi * px;
+            const cos_t = Math.cos(theta);
+            const sin_t = Math.sin(theta);
+            
+            const u = cos_t * re[u_idx] - sin_t * im[u_idx];
+            const v = sin_t * re[u_idx] + cos_t * im[u_idx];
+            
+            Jy = -2.0 * t0 * (re[idx] * v - im[idx] * u);
+          }
+        }
+
+        // Move particle along current
+        const vel_factor = 2.5;
+        p.x += Jx * vel_factor;
+        p.y += Jy * vel_factor;
+      }
+    }
+
+    // Audio Sonification Tracking
+    function trackEdgeSequencing() {
+      if (boundary_loop.length === 0) return;
+
+      // Find site of maximum probability density
+      let max_density = 0;
+      let max_idx = -1;
+      for (let i = 0; i < N; i++) {
+        const d = re[i]*re[i] + im[i]*im[i];
+        if (d > max_density) {
+          max_density = d;
+          max_idx = i;
+        }
+      }
+
+      if (max_idx === -1 || max_density < 0.04) return;
+
+      // Check if this maximum density index is on our boundary loop
+      const b_index = boundary_loop.findIndex(node => node.idx === max_idx);
+      if (b_index !== -1) {
+        // Map this perimeter index to one of 10 musical divisions
+        const M = boundary_loop.length;
+        const num_segments = 10;
+        const segment = Math.floor((b_index / M) * num_segments);
+        
+        const now = audio_ctx ? audio_ctx.currentTime : 0;
+        
+        // Cooldown between triggers to prevent musical clutter
+        if (segment !== last_triggered_note_segment && (now - last_note_trigger_time > 0.14)) {
+          triggerSynthNote(segment);
+          last_triggered_note_segment = segment;
+          last_note_trigger_time = now;
+        }
+      }
+    }
+
+    // Presets
+    function loadPreset(preset) {
+      clearWave();
+      initLattice();
+
+      if (preset === 'chiral') {
+        updateParam('flux', 0.166);
+        document.getElementById('param-flux').value = 0.166;
+        
+        // Spawn packet close to bottom-left boundary, launched clockwise
+        spawnWavepacket(2, H/2, 0.0, 1.2);
+        
+      } else if (preset === 'bulk') {
+        updateParam('flux', 0.25);
+        document.getElementById('param-flux').value = 0.25;
+        
+        // Launch inside bulk, watch cyclotron oscillation and complete localization
+        spawnWavepacket(W/2, H/2, 0.8, -0.2);
+        
+      } else if (preset === 'bypass') {
+        updateParam('flux', 0.166);
+        document.getElementById('param-flux').value = 0.166;
+        
+        // Draw a massive rectangular defect block in the middle left path
+        for (let y = 6; y < 14; y++) {
+          for (let x = 0; x < 8; x++) {
+            active[y * W + x] = 0;
+          }
+        }
+        updateBoundaryLoop();
+        
+        // Spawn wavepacket. Observe how it glides cleanly around the new cavity boundary
+        // instead of bouncing backwards! This is the hallmark of topological protection.
+        spawnWavepacket(3, 2, 1.2, 0.0);
+        
+      } else if (preset === 'free') {
+        updateParam('flux', 0.0);
+        document.getElementById('param-flux').value = 0.0;
+        
+        // Launch wavepacket. With no magnetic field, it disperses isotropically 
+        // and scatters off boundaries.
+        spawnWavepacket(W/2, H/2 - 5, 0.0, 1.0);
+      }
+    }
+
+    // Resize canvas
+    function resize() {
+      const size = Math.min(window.innerWidth - 350, window.innerHeight - 40);
+      canvas.width = size * window.devicePixelRatio;
+      canvas.height = size * window.devicePixelRatio;
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
+      
+      cell_size = (size * window.devicePixelRatio) / (W + 2);
+      grid_offset_x = cell_size * 1.5;
+      grid_offset_y = cell_size * 1.5;
+    }
+
+    // Coordinate conversion
+    function getSiteFromPos(mx, my) {
+      const rect = canvas.getBoundingClientRect();
+      const client_x = mx - rect.left;
+      const client_y = my - rect.top;
+      
+      const pixel_x = client_x * window.devicePixelRatio;
+      const pixel_y = client_y * window.devicePixelRatio;
+      
+      const x = Math.round((pixel_x - grid_offset_x) / cell_size);
+      const y = Math.round((pixel_y - grid_offset_y) / cell_size);
+      
+      if (x >= 0 && x < W && y >= 0 && y < H) {
+        return {x, y, idx: y * W + x};
+      }
+      return null;
+    }
+
+    // Render loop
+    function draw() {
+      ctx.fillStyle = '#050510';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw background grid lines (subtle blueprint aesthetic)
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.03)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= W; i++) {
+        ctx.beginPath();
+        ctx.moveTo(grid_offset_x + (i - 0.5) * cell_size, grid_offset_y - 0.5 * cell_size);
+        ctx.lineTo(grid_offset_x + (i - 0.5) * cell_size, grid_offset_y + (H - 0.5) * cell_size);
+        ctx.stroke();
+      }
+      for (let j = 0; j <= H; j++) {
+        ctx.beginPath();
+        ctx.moveTo(grid_offset_x - 0.5 * cell_size, grid_offset_y + (j - 0.5) * cell_size);
+        ctx.lineTo(grid_offset_x + (W - 0.5) * cell_size, grid_offset_y + (j - 0.5) * cell_size);
+        ctx.stroke();
+      }
+
+      // Draw boundary loop contour
+      if (boundary_loop.length > 1) {
+        ctx.strokeStyle = 'rgba(255, 0, 127, 0.15)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        const start_x = grid_offset_x + boundary_loop[0].x * cell_size;
+        const start_y = grid_offset_y + boundary_loop[0].y * cell_size;
+        ctx.moveTo(start_x, start_y);
+        for (let i = 1; i < boundary_loop.length; i++) {
+          ctx.lineTo(grid_offset_x + boundary_loop[i].x * cell_size, grid_offset_y + boundary_loop[i].y * cell_size);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      // Draw atoms
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          const cx = grid_offset_x + x * cell_size;
+          const cy = grid_offset_y + y * cell_size;
+
+          if (active[idx] === 0) {
+            // Disabled defect site
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.015)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(cx, cy, cell_size * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            continue;
+          }
+
+          // Quantum state probability density
+          const density = re[idx]*re[idx] + im[idx]*im[idx];
+          
+          // Phase angle mapped to color hue
+          const phase = Math.atan2(im[idx], re[idx]); // [-π, π]
+          const hue = ((phase + Math.PI) / (Math.PI * 2)) * 360;
+
+          // Draw baseline active atom dot
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+          ctx.beginPath();
+          ctx.arc(cx, cy, cell_size * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw quantum wave glow
+          if (density > 0.0001) {
+            const amp = Math.sqrt(density);
+            const radius = cell_size * (0.2 + amp * 0.7);
+            
+            // Neon gradient radial glow
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+            grad.addColorStop(0, `hsla(${hue}, 100%, 65%, ${Math.min(amp * 1.5, 0.95)})`);
+            grad.addColorStop(0.4, `hsla(${hue}, 100%, 55%, ${Math.min(amp * 0.5, 0.5)})`);
+            grad.addColorStop(1, `hsla(${hue}, 100%, 50%, 0)`);
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // White core for strong probability nodes
+            if (amp > 0.3) {
+              ctx.fillStyle = `rgba(255, 255, 255, ${Math.min((amp - 0.3) * 1.4, 0.85)})`;
+              ctx.beginPath();
+              ctx.arc(cx, cy, cell_size * 0.12, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+
+      // Draw flowing current particles
+      ctx.fillStyle = 'rgba(0, 243, 255, 0.85)';
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const px = grid_offset_x + p.x * cell_size;
+        const py = grid_offset_y + p.y * cell_size;
+        ctx.beginPath();
+        // size decays with particle life
+        const r = 1.2 * Math.min(p.life / 30.0, 1.0);
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw slingshot drag vector
+      if (is_dragging && drag_start_site) {
+        const sx = grid_offset_x + drag_start_site.x * cell_size;
+        const sy = grid_offset_y + drag_start_site.y * cell_size;
+        
+        const rect = canvas.getBoundingClientRect();
+        const mx = (mouse_world.x - rect.left) * window.devicePixelRatio;
+        const my = (mouse_world.y - rect.top) * window.devicePixelRatio;
+
+        // Slingshot elastic band line
+        ctx.strokeStyle = 'var(--accent-pink)';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = 'var(--accent-pink)';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(mx, my);
+        ctx.stroke();
+        ctx.shadowBlur = 0; // reset shadow
+
+        // Anchor dots
+        ctx.fillStyle = 'var(--accent-pink)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+        ctx.arc(mx, my, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Launch trajectory preview guide (dotted line opposite to drag direction)
+        const dx = mx - sx;
+        const dy = my - sy;
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx - dx, sy - dy);
+        ctx.stroke();
+        ctx.setLineDash([]); // Reset
+      }
+    }
+
+    // Animation Loop
+    function animate() {
+      // Simulate multiple physics updates per frame
+      for (let step = 0; step < sim_speed; step++) {
+        // dt = 0.1 is mathematically stable for tight-binding bounds
+        stepRK4(0.1);
+      }
+
+      updateParticles();
+      trackEdgeSequencing();
+      draw();
+      
+      requestAnimationFrame(animate);
+    }
+
+    // Event listeners for interaction
+    canvas.addEventListener('mousedown', e => {
+      if (!audio_enabled) return;
+      const site = getSiteFromPos(e.clientX, e.clientY);
+      if (!site) return;
+
+      if (current_mode === 'excite') {
+        is_dragging = true;
+        drag_start_site = site;
+        mouse_world.x = e.clientX;
+        mouse_world.y = e.clientY;
+      } else if (current_mode === 'draw') {
+        active[site.idx] = 0;
+        // Erase any local wavefunction amplitude
+        re[site.idx] = 0;
+        im[site.idx] = 0;
+        updateBoundaryLoop();
+      } else if (current_mode === 'erase') {
+        active[site.idx] = 1;
+        updateBoundaryLoop();
+      }
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (is_dragging) {
+        mouse_world.x = e.clientX;
+        mouse_world.y = e.clientY;
+      } else if (e.buttons === 1) {
+        // Drag-drawing defects or repairing
+        const site = getSiteFromPos(e.clientX, e.clientY);
+        if (site) {
+          if (current_mode === 'draw') {
+            active[site.idx] = 0;
+            re[site.idx] = 0;
+            im[site.idx] = 0;
+            updateBoundaryLoop();
+          } else if (current_mode === 'erase') {
+            active[site.idx] = 1;
+            updateBoundaryLoop();
+          }
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', e => {
+      if (is_dragging && drag_start_site) {
+        const rect = canvas.getBoundingClientRect();
+        const client_x = e.clientX - rect.left;
+        const client_y = e.clientY - rect.top;
+        
+        const pixel_x = client_x * window.devicePixelRatio;
+        const pixel_y = client_y * window.devicePixelRatio;
+        
+        const sx = grid_offset_x + drag_start_site.x * cell_size;
+        const sy = grid_offset_y + drag_start_site.y * cell_size;
+        
+        // Calculate physics launch momentum
+        // opposite direction of drag, scaled by cell size
+        const dx = (sx - pixel_x) / cell_size;
+        const dy = (sy - pixel_y) / cell_size;
+        
+        // Cap momentum components to avoid aliased velocities
+        const scale_factor = 0.55;
+        const kx = Math.max(Math.min(dx * scale_factor, 1.8), -1.8);
+        const ky = Math.max(Math.min(dy * scale_factor, 1.8), -1.8);
+
+        spawnWavepacket(drag_start_site.x, drag_start_site.y, kx, ky);
+      }
+      is_dragging = false;
+      drag_start_site = null;
+    });
+
+    // Handle viewport resize
+    window.addEventListener('resize', () => {
+      resize();
+      draw();
+    });
+
+    // Startup
+    window.onload = () => {
+      resize();
+      initLattice();
+      // Load preset by default
+      loadPreset('chiral');
+      
+      // Start animating
+      requestAnimationFrame(animate);
+    };
+  </script>
+</body>
+</html>
