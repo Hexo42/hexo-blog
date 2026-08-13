@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>josephson-flow: superconducting phase & squid magnetometer sandbox</title>
+  <style>
+    :root {
+      --bg-color: hsl(224, 25%, 6%);
+      --panel-bg: hsl(222, 20%, 10%);
+      --text-color: hsl(210, 40%, 98%);
+      --text-dim: hsl(215, 15%, 65%);
+      --accent-color: hsl(180, 100%, 50%); /* Electric cyan */
+      --accent-glow: rgba(0, 243, 255, 0.4);
+      --well-color: hsl(330, 100%, 60%); /* Hot pink */
+      --border-color: hsl(217, 10%, 18%);
+      --grid-line: hsl(217, 10%, 12%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    header {
+      max-width: 1300px;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 15px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      letter-spacing: -0.025em;
+    }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      margin-top: 5px;
+    }
+
+    .main-container {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1000px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sidebar {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: fit-content;
+    }
+
+    .sim-area {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .tab-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background-color: hsl(222, 20%, 6%);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      padding: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background-color: var(--panel-bg);
+      color: var(--accent-color);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .canvas-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .canvas-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      background-color: hsl(222, 20%, 4%);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      width: 100%;
+      height: 320px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-group label span.val-display {
+      color: var(--accent-color);
+      font-family: monospace;
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: hsl(222, 15%, 15%);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button.action-btn {
+      background-color: hsl(222, 15%, 16%);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button.action-btn:hover {
+      background-color: hsl(222, 15%, 22%);
+      border-color: var(--text-dim);
+    }
+
+    button.action-btn.primary {
+      background-color: var(--accent-color);
+      color: hsl(224, 25%, 6%);
+      border: none;
+    }
+
+    button.action-btn.primary:hover {
+      background-color: hsl(180, 100%, 65%);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    button.action-btn.active {
+      background-color: rgba(0, 243, 255, 0.1);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    button.action-btn.pulse {
+      animation: pulse-border 2s infinite;
+    }
+
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(0, 243, 255, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(0, 243, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 243, 255, 0); }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 15px;
+    }
+
+    .stat-box {
+      background-color: hsl(222, 20%, 6%);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-box .label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-box .value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      font-family: monospace;
+      margin-top: 4px;
+    }
+
+    .plot-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .plot-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .info-section {
+      max-width: 1300px;
+      margin: 30px auto 0 auto;
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 30px;
+    }
+
+    .info-section h2 {
+      font-size: 1.3rem;
+      color: var(--accent-color);
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .info-section p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      margin-bottom: 15px;
+      line-height: 1.6;
+    }
+
+    .info-section ul {
+      color: var(--text-dim);
+      margin-left: 20px;
+      margin-bottom: 15px;
+      font-size: 0.95rem;
+    }
+
+    .info-section ul li {
+      margin-bottom: 8px;
+    }
+
+    .info-section code {
+      font-family: monospace;
+      background-color: hsl(222, 20%, 6%);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-color);
+    }
+
+    .nav-link {
+      color: var(--well-color);
+      text-decoration: none;
+      font-weight: bold;
+      display: inline-block;
+      margin-top: 15px;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      text-decoration: underline;
+      color: hsl(330, 100%, 70%);
+    }
+
+    /* Tooltip styling */
+    .tooltip-container {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+      border-bottom: 1px dotted var(--text-dim);
+    }
+
+    .tooltip-container:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: hsl(222, 25%, 15%);
+      color: var(--text-color);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      font-size: 0.8rem;
+      white-space: normal;
+      width: 250px;
+      z-index: 10;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>josephson-flow: superconducting phase & squid washboard sandbox</h1>
+    <p>explore phase dynamics and macro-quantum interference in josephson junctions. toggle washboard rolling balls, trace shapiro steps, and probe magnetic flux.</p>
+  </header>
+
+  <div class="main-container">
+    
+    <!-- SIDEBAR CONTROLS -->
+    <div class="sidebar">
+      <button id="audioBtn" class="action-btn primary pulse">Enable Phase Sonification</button>
+      
+      <div class="control-group">
+        <label>Simulation Mode</label>
+        <div class="tab-group">
+          <button class="tab-btn active" onclick="setMode('single')">Single JJ</button>
+          <button class="tab-btn" onclick="setMode('squid')">DC SQUID</button>
+          <button class="tab-btn" onclick="setMode('chain')">1D Chain</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>DC Bias Current (i<sub>dc</sub>) <span class="val-display" id="biasVal">0.00</span></label>
+        <input type="range" id="biasRange" min="-2.5" max="2.5" step="0.01" value="0.00">
+      </div>
+
+      <div class="control-group" id="acControl">
+        <label>AC RF Amplitude (i<sub>ac</sub>) <span class="val-display" id="acVal">0.00</span></label>
+        <input type="range" id="acRange" min="0" max="2" step="0.02" value="0.00">
+      </div>
+
+      <div class="control-group" id="freqControl">
+        <label>AC RF Frequency (&omega;) <span class="val-display" id="freqVal">0.50</span></label>
+        <input type="range" id="freqRange" min="0.1" max="1.5" step="0.01" value="0.50">
+      </div>
+
+      <div class="control-group">
+        <label>Damping / McCumber (&beta;<sub>c</sub>) <span class="val-display" id="betaVal">0.50</span></label>
+        <input type="range" id="betaRange" min="0" max="4" step="0.05" value="0.50">
+      </div>
+
+      <div class="control-group" id="fluxControl" style="display: none;">
+        <label>External Flux (&Phi;<sub>ext</sub> / &Phi;<sub>0</sub>) <span class="val-display" id="fluxVal">0.00</span></label>
+        <input type="range" id="fluxRange" min="-2" max="2" step="0.01" value="0.00">
+      </div>
+
+      <div class="control-group" id="asymControl" style="display: none;">
+        <label>SQUID Asymmetry (&alpha;) <span class="val-display" id="asymVal">0.00</span></label>
+        <input type="range" id="asymRange" min="0" max="0.8" step="0.02" value="0.00">
+      </div>
+
+      <div class="control-group" id="couplingControl" style="display: none;">
+        <label>Chain Coupling (K) <span class="val-display" id="couplingVal">0.25</span></label>
+        <input type="range" id="couplingRange" min="0.05" max="0.8" step="0.01" value="0.25">
+      </div>
+
+      <div class="control-group">
+        <label>Thermal Noise / Temp (T) <span class="val-display" id="noiseVal">0.02</span></label>
+        <input type="range" id="noiseRange" min="0" max="0.3" step="0.005" value="0.02">
+      </div>
+
+      <div class="btn-grid">
+        <button id="sweepBtn" class="action-btn">Auto-Sweep i<sub>dc</sub></button>
+        <button id="pauseBtn" class="action-btn">Pause</button>
+      </div>
+
+      <div class="btn-grid">
+        <button id="clearTraceBtn" class="action-btn">Clear Trace</button>
+        <button id="resetBtn" class="action-btn">Regen/Reset</button>
+      </div>
+    </div>
+
+    <!-- MAIN SIMULATION AREA -->
+    <div class="sim-area">
+      
+      <!-- MAIN VISUALIZER -->
+      <div class="canvas-card">
+        <h3 id="panelTitle">Single Josephson Junction Washboard Potential
+          <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-dim);" id="interactionHint">Drag to tilt washboard</span>
+        </h3>
+        <div class="canvas-wrapper">
+          <canvas id="mainCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- REAL-TIME DIAGNOSTIC STATS -->
+      <div class="stats-grid">
+        <div class="stat-box">
+          <span class="label">Phase Value (&phi;)</span>
+          <span class="value" id="phiStat">0.00 rad</span>
+        </div>
+        <div class="stat-box">
+          <span class="label">Instant Voltage (v)</span>
+          <span class="value" id="voltStat">0.00 V</span>
+        </div>
+        <div class="stat-box">
+          <span class="label">Avg Voltage (&lt;v&gt;)</span>
+          <span class="value" id="avgVoltStat">0.00 V</span>
+        </div>
+        <div class="stat-box">
+          <span class="label" id="specLabel">Supercurrent (i<sub>s</sub>)</span>
+          <span class="value" id="specStat">0.00 I₀</span>
+        </div>
+      </div>
+
+      <!-- PLOT CHARTS -->
+      <div class="plot-row">
+        <!-- I-V CHARACTERISTIC PLOT -->
+        <div class="canvas-card">
+          <h3>Current-Voltage (I-V) Trace</h3>
+          <div class="canvas-wrapper" style="height: 220px;">
+            <canvas id="ivCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- TIME DOMAIN OR INTERFERENCE PLOT -->
+        <div class="canvas-card">
+          <h3 id="secondPlotTitle">Voltage Waveform v(t)</h3>
+          <div class="canvas-wrapper" style="height: 220px;">
+            <canvas id="secCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDUCATIONAL INFO SECTION -->
+  <div class="info-section">
+    <h2>Macro-Quantum Dynamics: The Physics</h2>
+    <p>A <strong>Josephson Junction</strong> consists of two superconductors separated by a thin insulating barrier. The macroscopic wavefunctions of the two superconductors overlap, allowing cooper pairs to tunnel across without resistance up to a critical current <code>I₀</code>. This quantum phase difference <code>&phi;</code> governs the junction's electrical state via the two Josephson Relations:</p>
+    <ul>
+      <li><strong>DC Josephson Relation:</strong> <code>I = I₀ sin(&phi;)</code> (supercurrent is proportional to the sine of the phase difference).</li>
+      <li><strong>AC Josephson Relation:</strong> <code>V = (&hbar; / 2e) d&phi;/dt</code> (a voltage across the junction implies a rotating phase difference).</li>
+    </ul>
+
+    <h2>Resistively & Capacitively Shunted Junction (RCSJ) Model</h2>
+    <p>To capture realistic behavior, we shunt the pure junction with a resistor (resistance <code>R</code>) and capacitor (capacitance <code>C</code>). Applying Kirchhoff's laws leads to a second-order stochastic differential equation identical to a particle rolling down a <strong>Tilted Washboard Potential</strong>:</p>
+    <p style="text-align: center; margin: 15px 0; font-family: monospace; font-size: 1.05rem; color: var(--accent-color);">
+      &beta;<sub>c</sub> d²&phi;/dt² + d&phi;/dt + sin(&phi;) = i<sub>dc</sub> + i<sub>ac</sub> sin(&omega;t) + noise(T)
+    </p>
+    <p>Here, the McCumber parameter <code>&beta;<sub>c</sub></code> represents capacitance (mass of the particle), the linear first-derivative term represents resistance (damping), and the bias current <code>i<sub>dc</sub></code> tilts the potential. When <code>i<sub>dc</sub> &lt; 1</code>, the phase particle can remain trapped in a well (zero average voltage, zero electrical resistance). When <code>i<sub>dc</sub> &gt; 1</code>, the particle rolls continuously down the washboard, yielding periodic phase slips and a non-zero average voltage.</p>
+
+    <h2>Key Phenomena to Explore</h2>
+    <ul>
+      <li><strong>Hysteresis (&beta;<sub>c</sub> &gt; 1):</strong> Switch Damping to a value higher than 1. Auto-Sweep the bias current. Notice that the phase particle stays trapped in a well going up until <code>i<sub>dc</sub> &gt; 1</code>, but once rolling, it keeps rolling even as current falls far below 1. This represents the hysteretic transition of underdamped junctions.</li>
+      <li><strong>Shapiro Steps:</strong> Turn up AC Amplitude <code>i<sub>ac</sub></code> to around 1.0 and watch the I-V curve. The phase particle locks its speed to the driving frequency, generating flat horizontal plateaus (steps) at discrete average voltages <code>&lt;v&gt; = n&omega;</code>. This is the quantum standard for defining the Volt.</li>
+      <li><strong>DC SQUID (Superconducting Quantum Interference Device):</strong> Two junctions in parallel inside a superconducting loop are sensitive to magnetic flux <code>&Phi;<sub>ext</sub></code>. Watch how the total critical current modulates periodically, demonstrating macro-quantum interference. Hover and drag the magnet in SQUID mode to see the circulating current <code>J</code> and voltage shift.</li>
+      <li><strong>1D coupled Chain:</strong> A discrete chain of junctions coupled inductively. A phase slip at one end creates a magnetic soliton (fluxon) that slides through the array, showing how collective phase modes propagate in superconducting arrays.</li>
+    </ul>
+
+    <a href="../index.html" class="nav-link">&lt;&lt; back to index</a>
+  </div>
+
+  <script>
+    // --- Physics Simulation Variables ---
+    let currentMode = 'single'; // 'single', 'squid', 'chain'
+    let isRunning = true;
+    let isSweeping = false;
+    let sweepDirection = 1;
+
+    // Simulation Parameters (normalized units)
+    let biasCurrent = 0.0;
+    let acAmplitude = 0.0;
+    let acFrequency = 0.50;
+    let betaC = 0.50;
+    let extFlux = 0.0;
+    let squidAsym = 0.0; // asymmetry parameter
+    let couplingK = 0.25;
+    let temperature = 0.02;
+
+    // State Variables
+    let phi = 0.0;
+    let velocity = 0.0; // dphi/dt (instantaneous voltage)
+    let acPhase = 0.0;
+    let voltageHistory = new Array(200).fill(0);
+    let avgVoltage = 0.0;
+    let voltFilterAcc = 0;
+    let voltFilterCount = 0;
+
+    // SQUID specific state
+    let phiS = 0.0; // average phase of SQUID
+    let vS = 0.0;   // average phase velocity (voltage)
+
+    // Chain specific state (15 junctions)
+    const chainSize = 12;
+    let chainPhis = new Array(chainSize).fill(0);
+    let chainVels = new Array(chainSize).fill(0);
+
+    // IV Curve history tracing
+    let ivPoints = []; // objects with {i: bias, v: avgV}
+    let lastSweepPointTime = 0;
+
+    // Magnet dragging state (SQUID Mode)
+    let magnetX = 180;
+    let magnetY = 60;
+    let isDraggingMagnet = false;
+
+    // Simulation time steps
+    const dt = 0.05;
+    const stepsPerFrame = 8; // microsteps for integrator stability
+
+    // Canvas elements & Contexts
+    const mainCanvas = document.getElementById('mainCanvas');
+    const mainCtx = mainCanvas.getContext('2d');
+    const ivCanvas = document.getElementById('ivCanvas');
+    const ivCtx = ivCanvas.getContext('2d');
+    const secCanvas = document.getElementById('secCanvas');
+    const secCtx = secCanvas.getContext('2d');
+
+    // UI elements
+    const biasRange = document.getElementById('biasRange');
+    const biasVal = document.getElementById('biasVal');
+    const acRange = document.getElementById('acRange');
+    const acVal = document.getElementById('acVal');
+    const freqRange = document.getElementById('freqRange');
+    const freqVal = document.getElementById('freqVal');
+    const betaRange = document.getElementById('betaRange');
+    const betaVal = document.getElementById('betaVal');
+    const fluxRange = document.getElementById('fluxRange');
+    const fluxVal = document.getElementById('fluxVal');
+    const asymRange = document.getElementById('asymRange');
+    const asymVal = document.getElementById('asymVal');
+    const couplingRange = document.getElementById('couplingRange');
+    const couplingVal = document.getElementById('couplingVal');
+    const noiseRange = document.getElementById('noiseRange');
+    const noiseVal = document.getElementById('noiseVal');
+
+    const sweepBtn = document.getElementById('sweepBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const clearTraceBtn = document.getElementById('clearTraceBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const audioBtn = document.getElementById('audioBtn');
+
+    const phiStat = document.getElementById('phiStat');
+    const voltStat = document.getElementById('voltStat');
+    const avgVoltStat = document.getElementById('avgVoltStat');
+    const specStat = document.getElementById('specStat');
+    const specLabel = document.getElementById('specLabel');
+
+    // --- Audio Engine Variables ---
+    let audioCtx = null;
+    let masterGain = null;
+    let oscNode = null;
+    let vcoGain = null;
+    let noiseFilter = null;
+    let isAudioEnabled = false;
+
+    // Last phase slip trigger time
+    let lastPhaseCross = 0;
+
+    // Initialize Canvas Sizes
+    function resizeCanvases() {
+      const container = mainCanvas.parentElement;
+      mainCanvas.width = container.clientWidth * window.devicePixelRatio;
+      mainCanvas.height = 320 * window.devicePixelRatio;
+      mainCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+      ivCanvas.width = ivCanvas.parentElement.clientWidth * window.devicePixelRatio;
+      ivCanvas.height = 220 * window.devicePixelRatio;
+      ivCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+      secCanvas.width = secCanvas.parentElement.clientWidth * window.devicePixelRatio;
+      secCanvas.height = 220 * window.devicePixelRatio;
+      secCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+
+    window.addEventListener('resize', resizeCanvases);
+
+    // Set Mode Handler
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.innerText.toLowerCase().includes(mode === 'single' ? 'single' : mode));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Update control visibility
+      document.getElementById('fluxControl').style.display = (mode === 'squid') ? 'flex' : 'none';
+      document.getElementById('asymControl').style.display = (mode === 'squid') ? 'flex' : 'none';
+      document.getElementById('acControl').style.display = (mode === 'single') ? 'flex' : 'none';
+      document.getElementById('freqControl').style.display = (mode === 'single') ? 'flex' : 'none';
+      document.getElementById('couplingControl').style.display = (mode === 'chain') ? 'flex' : 'none';
+
+      // Update titles/labels
+      const panelTitle = document.getElementById('panelTitle');
+      const interactionHint = document.getElementById('interactionHint');
+      const secondPlotTitle = document.getElementById('secondPlotTitle');
+
+      if (mode === 'single') {
+        panelTitle.innerHTML = 'Single Josephson Junction Washboard Potential <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-dim);" id="interactionHint">Drag to tilt washboard</span>';
+        secondPlotTitle.innerText = 'Voltage Waveform v(t)';
+        specLabel.innerText = 'Supercurrent (i_s)';
+      } else if (mode === 'squid') {
+        panelTitle.innerHTML = 'DC SQUID Superconducting Loop & Magnetometer <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-dim);" id="interactionHint">Drag magnet to adjust flux</span>';
+        secondPlotTitle.innerText = 'SQUID Modulation (Voltage vs Flux)';
+        specLabel.innerText = 'Circulating Current (J)';
+        // Center magnet in squid mode canvas
+        magnetX = 180;
+        magnetY = 65;
+      } else if (mode === 'chain') {
+        panelTitle.innerHTML = '1D Coupled Junction Chain (Discretized Sine-Gordon) <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-dim);" id="interactionHint">Observe fluxon propagation</span>';
+        secondPlotTitle.innerText = 'Voltage Distribution across Chain';
+        specLabel.innerText = 'Active Junctions';
+      }
+
+      resetSimulation();
+      resizeCanvases();
+    }
+
+    // --- Inputs Handling ---
+    function updateInputs() {
+      biasCurrent = parseFloat(biasRange.value);
+      biasVal.innerText = biasCurrent.toFixed(2);
+
+      acAmplitude = parseFloat(acRange.value);
+      acVal.innerText = acAmplitude.toFixed(2);
+
+      acFrequency = parseFloat(freqRange.value);
+      freqVal.innerText = acFrequency.toFixed(2);
+
+      betaC = parseFloat(betaRange.value);
+      betaVal.innerText = betaC.toFixed(2);
+
+      extFlux = parseFloat(fluxRange.value);
+      fluxVal.innerText = extFlux.toFixed(2);
+
+      squidAsym = parseFloat(asymRange.value);
+      asymVal.innerText = squidAsym.toFixed(2);
+
+      couplingK = parseFloat(couplingRange.value);
+      couplingVal.innerText = couplingK.toFixed(2);
+
+      temperature = parseFloat(noiseRange.value);
+      noiseVal.innerText = temperature.toFixed(3);
+    }
+
+    // Set UI Sliders programmatically
+    function setSlider(elementId, value) {
+      const el = document.getElementById(elementId);
+      el.value = value;
+      updateInputs();
+    }
+
+    [biasRange, acRange, freqRange, betaRange, fluxRange, asymRange, couplingRange, noiseRange].forEach(input => {
+      input.addEventListener('input', () => {
+        updateInputs();
+        if (input === biasRange) {
+          // If manually dragging bias, stop sweep
+          if (isSweeping) stopSweep();
+        }
+      });
+    });
+
+    // Pause / Play
+    pauseBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      pauseBtn.innerText = isRunning ? 'Pause' : 'Resume';
+      pauseBtn.classList.toggle('active', !isRunning);
+    });
+
+    // Clear history trace
+    clearTraceBtn.addEventListener('click', () => {
+      ivPoints = [];
+    });
+
+    // Sweep Current Toggle
+    function stopSweep() {
+      isSweeping = false;
+      sweepBtn.innerText = 'Auto-Sweep i_dc';
+      sweepBtn.classList.remove('active');
+    }
+
+    sweepBtn.addEventListener('click', () => {
+      isSweeping = !isSweeping;
+      sweepBtn.innerText = isSweeping ? 'Sweeping i_dc...' : 'Auto-Sweep i_dc';
+      sweepBtn.classList.toggle('active', isSweeping);
+      if (isSweeping) {
+        setSlider('biasRange', -2.0);
+        sweepDirection = 1;
+      }
+    });
+
+    // Reset Simulation State
+    function resetSimulation() {
+      phi = 0.0;
+      velocity = 0.0;
+      phiS = 0.0;
+      vS = 0.0;
+      chainPhis.fill(0);
+      chainVels.fill(0);
+      voltageHistory.fill(0);
+      avgVoltage = 0.0;
+      voltFilterAcc = 0;
+      voltFilterCount = 0;
+      ivPoints = [];
+      acPhase = 0.0;
+    }
+
+    resetBtn.addEventListener('click', resetSimulation);
+
+    // --- Drag Interactions ---
+    let isDraggingPotential = false;
+    let dragStartBias = 0;
+    let dragStartX = 0;
+
+    mainCanvas.addEventListener('mousedown', (e) => {
+      const rect = mainCanvas.getBoundingClientRect();
+      const scaleX = mainCanvas.width / (rect.width * window.devicePixelRatio);
+      const scaleY = mainCanvas.height / (rect.height * window.devicePixelRatio);
+      const mouseX = (e.clientX - rect.left) * scaleX;
+      const mouseY = (e.clientY - rect.top) * scaleY;
+
+      if (currentMode === 'single') {
+        isDraggingPotential = true;
+        dragStartBias = biasCurrent;
+        dragStartX = e.clientX;
+      } else if (currentMode === 'squid') {
+        // Check if mouse is near magnet
+        const magScreenX = magnetX;
+        const magScreenY = magnetY;
+        const dist = Math.hypot(mouseX - magScreenX, mouseY - magScreenY);
+        if (dist < 20) {
+          isDraggingMagnet = true;
+        }
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDraggingPotential && currentMode === 'single') {
+        const dx = e.clientX - dragStartX;
+        // Map delta X to tilt change
+        const sensitivity = 0.015;
+        let newBias = Math.max(-2.5, Math.min(2.5, dragStartBias + dx * sensitivity));
+        setSlider('biasRange', newBias);
+      } else if (isDraggingMagnet && currentMode === 'squid') {
+        const rect = mainCanvas.getBoundingClientRect();
+        const scaleX = mainCanvas.width / (rect.width * window.devicePixelRatio);
+        const scaleY = mainCanvas.height / (rect.height * window.devicePixelRatio);
+        
+        // Boundaries for magnet placement
+        magnetX = Math.max(20, Math.min(320, (e.clientX - rect.left) * scaleX));
+        magnetY = Math.max(20, Math.min(180, (e.clientY - rect.top) * scaleY));
+
+        // Calculate magnetic flux based on magnet distance to SQUID loop center (approx x: 180, y: 120)
+        const squidCenterX = 180;
+        const squidCenterY = 120;
+        const dx = magnetX - squidCenterX;
+        const dy = magnetY - squidCenterY;
+        const dist = Math.max(15, Math.hypot(dx, dy));
+        
+        // Let's create a dipolar field approximation. Flux decreases as 1/r^2
+        // If magnet is exactly on center, flux is max.
+        // Sign is positive if magnet is left/above, negative if right/below to allow full flux sweep
+        const maxFlux = 2.0;
+        const rawFlux = (dx / dist) * (150 / dist);
+        let calculatedFlux = Math.max(-2.0, Math.min(2.0, rawFlux * maxFlux));
+        setSlider('fluxRange', calculatedFlux);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingPotential = false;
+      isDraggingMagnet = false;
+    });
+
+    // Touch support for dragging
+    mainCanvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent("mousedown", {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        mainCanvas.dispatchEvent(mouseEvent);
+      }
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent("mousemove", {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        window.dispatchEvent(mouseEvent);
+      }
+    });
+
+    window.addEventListener('touchend', () => {
+      window.dispatchEvent(new MouseEvent("mouseup"));
+    });
+
+
+    // --- Audio Engine Implementation ---
+    function initAudio() {
+      if (audioCtx) return;
+      
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClass();
+      
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime); // start silent
+      
+      // VCO for Josephson continuous frequency
+      oscNode = audioCtx.createOscillator();
+      oscNode.type = 'triangle';
+      oscNode.frequency.setValueAtTime(100, audioCtx.currentTime);
+      
+      vcoGain = audioCtx.createGain();
+      vcoGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+      
+      // Connect VCO path
+      oscNode.connect(vcoGain);
+      vcoGain.connect(masterGain);
+      oscNode.start();
+
+      // Click generator for phase slips
+      // Bandpass noise generator
+      noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(800, audioCtx.currentTime);
+      noiseFilter.Q.setValueAtTime(3.0, audioCtx.currentTime);
+      noiseFilter.connect(masterGain);
+
+      masterGain.connect(audioCtx.destination);
+    }
+
+    function triggerPhaseSlipClick(direction, scale) {
+      if (!isAudioEnabled || !audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      // Prevent click spamming if running at extreme speed
+      if (now - lastPhaseCross < 0.01) return;
+      lastPhaseCross = now;
+
+      // Create a noise buffer source for the pop
+      const bufferSize = audioCtx.sampleRate * 0.05; // 50ms buffer
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noiseSource = audioCtx.createBufferSource();
+      noiseSource.buffer = buffer;
+
+      const clickGain = audioCtx.createGain();
+      // Click intensity based on velocity scale
+      const volume = Math.min(0.2, Math.max(0.02, scale * 0.08));
+      clickGain.gain.setValueAtTime(volume, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+      noiseSource.connect(clickGain);
+      clickGain.connect(noiseFilter);
+      noiseSource.start(now);
+    }
+
+    function updateAudioSynth(avgV, instV) {
+      if (!isAudioEnabled || !audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      
+      // Continuous VCO tone for the running state
+      const absV = Math.abs(avgV);
+      if (absV > 0.03) {
+        // Map average voltage to frequency. AC Josephson effect: f = 2e/h * V
+        // Base frequency 80Hz + 220Hz per unit voltage
+        const targetFreq = 80 + absV * 220;
+        oscNode.frequency.setTargetAtTime(targetFreq, now, 0.03);
+        
+        // Blend gain of continuous tone: louder at higher voltage
+        const targetGain = Math.min(0.18, absV * 0.12);
+        vcoGain.gain.setTargetAtTime(targetGain, now, 0.05);
+      } else {
+        // Fade out VCO in zero voltage state
+        vcoGain.gain.setTargetAtTime(0.0, now, 0.05);
+      }
+    }
+
+    audioBtn.addEventListener('click', () => {
+      initAudio();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      isAudioEnabled = !isAudioEnabled;
+      audioBtn.classList.toggle('active', isAudioEnabled);
+      audioBtn.classList.remove('pulse');
+
+      if (isAudioEnabled) {
+        audioBtn.innerText = 'Mute Sonification';
+        masterGain.gain.setTargetAtTime(0.6, audioCtx.currentTime, 0.1);
+      } else {
+        audioBtn.innerText = 'Enable Phase Sonification';
+        masterGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.1);
+      }
+    });
+
+
+    // --- Physics Core Engine (Integrators) ---
+
+    // Solve Single JJ using 4th-order Runge-Kutta
+    function stepSingleJJ(p, v, i_bias, i_ac, ac_p, damping, dt_val) {
+      let noise = (Math.random() - 0.5) * Math.sqrt(2 * temperature / dt_val);
+      let total_i = i_bias + i_ac * Math.sin(ac_p) + noise;
+
+      if (damping === 0) { // Overdamped limit (first order equation)
+        let dp = (total_i - Math.sin(p)) * dt_val;
+        let new_p = p + dp;
+        let inst_v = (total_i - Math.sin(new_p));
+        return { p: new_p, v: inst_v };
+      }
+
+      // Underdamped (second order equation)
+      // v_dot = (total_i - v - sin(p)) / beta_c
+      // p_dot = v
+      let k1_p = v;
+      let k1_v = (total_i - v - Math.sin(p)) / damping;
+
+      let p_mid1 = p + k1_p * dt_val / 2;
+      let v_mid1 = v + k1_v * dt_val / 2;
+      let k2_p = v_mid1;
+      let k2_v = (total_i - v_mid1 - Math.sin(p_mid1)) / damping;
+
+      let p_mid2 = p + k2_p * dt_val / 2;
+      let v_mid2 = v + k2_v * dt_val / 2;
+      let k3_p = v_mid2;
+      let k3_v = (total_i - v_mid2 - Math.sin(p_mid2)) / damping;
+
+      let p_end = p + k3_p * dt_val;
+      let v_end = v + k3_v * dt_val;
+      let k4_p = v_end;
+      let k4_v = (total_i - v_end - Math.sin(p_end)) / damping;
+
+      let new_p = p + (k1_p + 2 * k2_p + 2 * k3_p + k4_p) * dt_val / 6;
+      let new_v = v + (k1_v + 2 * k2_v + 2 * k3_v + k4_v) * dt_val / 6;
+
+      return { p: new_p, v: new_v };
+    }
+
+    // Solve DC SQUID Symmetric/Asymmetric using RK4
+    function stepSQUID(p_avg, velocity_avg, i_bias, flux, asym, damping, dt_val) {
+      let noise = (Math.random() - 0.5) * Math.sqrt(2 * temperature / dt_val);
+      let theta = Math.PI * flux;
+
+      // Branch critical currents
+      let i_c1 = 0.5 * (1.0 + asym);
+      let i_c2 = 0.5 * (1.0 - asym);
+
+      // Force function (torque)
+      function getTorque(phi_s) {
+        return i_bias + noise - i_c1 * Math.sin(phi_s + theta) - i_c2 * Math.sin(phi_s - theta);
+      }
+
+      if (damping === 0) { // Overdamped SQUID
+        let dp = getTorque(p_avg) * dt_val;
+        let new_p = p_avg + dp;
+        let inst_v = getTorque(new_p);
+        return { p: new_p, v: inst_v };
+      }
+
+      // Underdamped SQUID
+      let k1_p = velocity_avg;
+      let k1_v = (getTorque(p_avg) - velocity_avg) / damping;
+
+      let p_mid1 = p_avg + k1_p * dt_val / 2;
+      let v_mid1 = velocity_avg + k1_v * dt_val / 2;
+      let k2_p = v_mid1;
+      let k2_v = (getTorque(p_mid1) - v_mid1) / damping;
+
+      let p_mid2 = p_avg + k2_p * dt_val / 2;
+      let v_mid2 = velocity_avg + k2_v * dt_val / 2;
+      let k3_p = v_mid2;
+      let k3_v = (getTorque(p_mid2) - v_mid2) / damping;
+
+      let p_end = p_avg + k3_p * dt_val;
+      let v_end = velocity_avg + k3_v * dt_val;
+      let k4_p = v_end;
+      let k4_v = (getTorque(p_end) - v_end) / damping;
+
+      let new_p = p_avg + (k1_p + 2 * k2_p + 2 * k3_p + k4_p) * dt_val / 6;
+      let new_v = velocity_avg + (k1_v + 2 * k2_v + 2 * k3_v + k4_v) * dt_val / 6;
+
+      return { p: new_p, v: new_v };
+    }
+
+    // Solve 1D Coupled Chain (array of pendulums)
+    function stepChain(phis, vels, i_bias, coupling, damping, dt_val) {
+      let size = phis.length;
+      let nextPhis = [...phis];
+      let nextVels = [...vels];
+
+      for (let k = 0; k < size; k++) {
+        let noise = (Math.random() - 0.5) * Math.sqrt(2 * temperature / dt_val);
+        // Series load bias and neighboring couplings (periodic boundaries)
+        let leftNeighbor = phis[(k - 1 + size) % size];
+        let rightNeighbor = phis[(k + 1) % size];
+        let couplingTorque = coupling * (leftNeighbor - 2 * phis[k] + rightNeighbor);
+
+        let bias = i_bias;
+        // Inject a little local disturbance in the middle to break symmetry when sweeping
+        if (k === Math.floor(size/2)) bias += 0.05;
+
+        let total_i = bias + couplingTorque + noise;
+
+        if (damping === 0) { // Overdamped element
+          let dp = (total_i - Math.sin(phis[k])) * dt_val;
+          nextPhis[k] += dp;
+          nextVels[k] = (total_i - Math.sin(nextPhis[k]));
+        } else { // Underdamped element
+          let k1_v = (total_i - vels[k] - Math.sin(phis[k])) / damping;
+          let k1_p = vels[k];
+          
+          let p_mid1 = phis[k] + k1_p * dt_val / 2;
+          let v_mid1 = vels[k] + k1_v * dt_val / 2;
+          let k2_v = (total_i - v_mid1 - Math.sin(p_mid1)) / damping;
+          let k2_p = v_mid1;
+
+          let p_mid2 = phis[k] + k2_p * dt_val / 2;
+          let v_mid2 = vels[k] + k2_v * dt_val / 2;
+          let k3_v = (total_i - v_mid2 - Math.sin(p_mid2)) / damping;
+          let k3_p = v_mid2;
+
+          let p_end = phis[k] + k3_p * dt_val;
+          let v_end = vels[k] + k3_v * dt_val;
+          let k4_v = (total_i - v_end - Math.sin(p_end)) / damping;
+          let k4_p = v_end;
+
+          nextPhis[k] += (k1_p + 2 * k2_p + 2 * k3_p + k4_p) * dt_val / 6;
+          nextVels[k] += (k1_v + 2 * k2_v + 2 * k3_v + k4_v) * dt_val / 6;
+        }
+      }
+
+      return { phis: nextPhis, vels: nextVels };
+    }
+
+    // --- Simulation Main Physics Tick ---
+    function tickPhysics() {
+      if (!isRunning) return;
+
+      // Handle Auto-Sweep of Bias Current
+      if (isSweeping) {
+        let currentBias = parseFloat(biasRange.value);
+        let speed = 0.005;
+        let nextBias = currentBias + sweepDirection * speed;
+        if (nextBias > 2.2) {
+          nextBias = 2.2;
+          sweepDirection = -1;
+        } else if (nextBias < -2.2) {
+          nextBias = -2.2;
+          sweepDirection = 1;
+        }
+        setSlider('biasRange', nextBias);
+      }
+
+      let phiBefore = (currentMode === 'single') ? phi : phiS;
+
+      // Microsteps inside frame to keep differential solver accurate
+      for (let s = 0; s < stepsPerFrame; s++) {
+        acPhase += acFrequency * dt;
+
+        if (currentMode === 'single') {
+          let res = stepSingleJJ(phi, velocity, biasCurrent, acAmplitude, acPhase, betaC, dt);
+          phi = res.p;
+          velocity = res.v;
+        } else if (currentMode === 'squid') {
+          let res = stepSQUID(phiS, vS, biasCurrent, extFlux, squidAsym, betaC, dt);
+          phiS = res.p;
+          vS = res.v;
+        } else if (currentMode === 'chain') {
+          let res = stepChain(chainPhis, chainVels, biasCurrent, couplingK, betaC, dt);
+          chainPhis = res.phis;
+          chainVels = res.vels;
+        }
+      }
+
+      // Check for phase slips (modulo 2pi transitions) for the audio pop
+      let phiAfter = (currentMode === 'single') ? phi : phiS;
+      let deltaPhi = phiAfter - phiBefore;
+      let instV = (currentMode === 'single') ? velocity : (currentMode === 'squid' ? vS : chainVels[0]);
+
+      if (Math.abs(deltaPhi) > 0.01) {
+        let prevCross = Math.floor(phiBefore / (2 * Math.PI));
+        let nextCross = Math.floor(phiAfter / (2 * Math.PI));
+        if (prevCross !== nextCross) {
+          triggerPhaseSlipClick(Math.sign(deltaPhi), Math.abs(instV));
+        }
+      }
+
+      // Accumulate voltage for sliding window average
+      voltFilterAcc += instV;
+      voltFilterCount++;
+
+      if (voltFilterCount >= 10) {
+        let avgVal = voltFilterAcc / voltFilterCount;
+        avgVoltage = 0.95 * avgVoltage + 0.05 * avgVal; // smooth
+        voltageHistory.push(avgVal);
+        voltageHistory.shift();
+
+        // Feed synth
+        updateAudioSynth(avgVoltage, instV);
+
+        voltFilterAcc = 0;
+        voltFilterCount = 0;
+
+        // Record IV Curve Points
+        let now = Date.now();
+        if (now - lastSweepPointTime > 150) { // throttle point accumulation
+          // Add point to history
+          ivPoints.push({ i: biasCurrent, v: avgVoltage });
+          // Limit history points to trace
+          if (ivPoints.length > 500) ivPoints.shift();
+          lastSweepPointTime = now;
+        }
+      }
+    }
+
+
+    // --- RENDERING ROUTINES ---
+
+    // 1. Render Washboard Potential (Single Junction)
+    function drawWashboard() {
+      const width = mainCanvas.width / window.devicePixelRatio;
+      const height = mainCanvas.height / window.devicePixelRatio;
+
+      mainCtx.clearRect(0, 0, width, height);
+
+      // Render grid background
+      mainCtx.strokeStyle = 'var(--grid-line)';
+      mainCtx.lineWidth = 1;
+      for (let x = 0; x < width; x += 40) {
+        mainCtx.beginPath();
+        mainCtx.moveTo(x, 0);
+        mainCtx.lineTo(x, height);
+        mainCtx.stroke();
+      }
+      for (let y = 0; y < height; y += 40) {
+        mainCtx.beginPath();
+        mainCtx.moveTo(0, y);
+        mainCtx.lineTo(width, y);
+        mainCtx.stroke();
+      }
+
+      // Potential Equation: U(x) = -cos(x) - tilt * x
+      // We scale x and U to fit screen
+      const scaleX = 45; // pixels per radian
+      const scaleY = 40; // pixels per unit potential
+      const centerY = height / 2 + 10;
+      const centerX = width / 2;
+
+      // Draw potential curve
+      mainCtx.strokeStyle = 'var(--accent-color)';
+      mainCtx.lineWidth = 3;
+      mainCtx.shadowBlur = 8;
+      mainCtx.shadowColor = 'var(--accent-glow)';
+      
+      mainCtx.beginPath();
+      
+      const radStart = -centerX / scaleX + phi;
+      const radEnd = centerX / scaleX + phi;
+      const steps = 150;
+
+      for (let i = 0; i <= steps; i++) {
+        let xRad = radStart + (radEnd - radStart) * (i / steps);
+        let screenX = (xRad - phi) * scaleX + centerX;
+        let uVal = -Math.cos(xRad) - biasCurrent * xRad;
+        
+        // Normalize potential relative to current point to keep ball centered on screen
+        let currentU = -Math.cos(phi) - biasCurrent * phi;
+        let screenY = (uVal - currentU) * scaleY + centerY;
+
+        if (i === 0) mainCtx.moveTo(screenX, screenY);
+        else mainCtx.lineTo(screenX, screenY);
+      }
+      mainCtx.stroke();
+      
+      // Reset shadow
+      mainCtx.shadowBlur = 0;
+
+      // Draw periodic peaks labels
+      mainCtx.fillStyle = 'var(--text-dim)';
+      mainCtx.font = '10px monospace';
+      mainCtx.textAlign = 'center';
+      
+      // Vertical markers at multiples of 2pi
+      let start2pi = Math.floor(radStart / (2*Math.PI)) * (2*Math.PI);
+      let end2pi = Math.ceil(radEnd / (2*Math.PI)) * (2*Math.PI);
+      
+      for (let pVal = start2pi; pVal <= end2pi; pVal += 2 * Math.PI) {
+        let screenX = (pVal - phi) * scaleX + centerX;
+        if (screenX > 0 && screenX < width) {
+          mainCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+          mainCtx.setLineDash([4, 4]);
+          mainCtx.beginPath();
+          mainCtx.moveTo(screenX, 10);
+          mainCtx.lineTo(screenX, height - 10);
+          mainCtx.stroke();
+          mainCtx.setLineDash([]);
+          
+          let uVal = -Math.cos(pVal) - biasCurrent * pVal;
+          let currentU = -Math.cos(phi) - biasCurrent * phi;
+          let screenY = (uVal - currentU) * scaleY + centerY;
+          
+          mainCtx.fillText(`${Math.round(pVal/(Math.PI))}π`, screenX, screenY - 12);
+        }
+      }
+
+      // Draw Ball (phase particle)
+      mainCtx.fillStyle = 'var(--well-color)';
+      mainCtx.beginPath();
+      // Ball is centered at (centerX, centerY) because potential relative to phi is centered
+      mainCtx.arc(centerX, centerY - 10, 10, 0, 2 * Math.PI);
+      mainCtx.fill();
+
+      // Ball core gloss
+      mainCtx.fillStyle = 'white';
+      mainCtx.beginPath();
+      mainCtx.arc(centerX - 3, centerY - 13, 3, 0, 2 * Math.PI);
+      mainCtx.fill();
+
+      // Velocity/Voltage vector arrow
+      if (Math.abs(velocity) > 0.05) {
+        mainCtx.strokeStyle = 'var(--well-color)';
+        mainCtx.lineWidth = 2.5;
+        mainCtx.beginPath();
+        mainCtx.moveTo(centerX, centerY - 10);
+        let arrowLen = Math.max(-40, Math.min(40, velocity * 15));
+        mainCtx.lineTo(centerX + arrowLen, centerY - 10);
+        mainCtx.stroke();
+        
+        // Arrow head
+        mainCtx.fillStyle = 'var(--well-color)';
+        mainCtx.beginPath();
+        mainCtx.moveTo(centerX + arrowLen, centerY - 10);
+        let dir = Math.sign(arrowLen);
+        mainCtx.lineTo(centerX + arrowLen - dir*5, centerY - 14);
+        mainCtx.lineTo(centerX + arrowLen - dir*5, centerY - 6);
+        mainCtx.fill();
+      }
+
+      // Text status overlay on visualizer
+      mainCtx.fillStyle = 'rgba(255,255,255,0.85)';
+      mainCtx.font = '12px monospace';
+      mainCtx.textAlign = 'left';
+      mainCtx.fillText(`i_bias = ${biasCurrent.toFixed(2)}`, 20, 25);
+      mainCtx.fillText(`v = ${velocity.toFixed(3)}`, 20, 42);
+      
+      let stateMsg = Math.abs(avgVoltage) < 0.03 ? 'SUPERCONDUCTING (Zero R)' : 'RESISTIVE STATE';
+      mainCtx.fillStyle = Math.abs(avgVoltage) < 0.03 ? 'var(--accent-color)' : 'var(--well-color)';
+      mainCtx.fillText(stateMsg, 20, 60);
+    }
+
+    // 2. Render DC SQUID Loop Diagram
+    function drawSQUID() {
+      const width = mainCanvas.width / window.devicePixelRatio;
+      const height = mainCanvas.height / window.devicePixelRatio;
+
+      mainCtx.clearRect(0, 0, width, height);
+
+      // SQUID Loop Coordinates
+      const loopLeft = 110;
+      const loopRight = 250;
+      const loopTop = 100;
+      const loopBottom = 160;
+      const loopMidX = (loopLeft + loopRight) / 2; // 180
+      const loopMidY = (loopTop + loopBottom) / 2; // 130
+
+      // Render grid background
+      mainCtx.strokeStyle = 'var(--grid-line)';
+      mainCtx.lineWidth = 1;
+      mainCtx.beginPath();
+      for (let x = 0; x < width; x += 40) {
+        mainCtx.moveTo(x, 0); mainCtx.lineTo(x, height);
+      }
+      for (let y = 0; y < height; y += 40) {
+        mainCtx.moveTo(0, y); mainCtx.lineTo(width, y);
+      }
+      mainCtx.stroke();
+
+      // Draw the SQUID ring structure
+      mainCtx.strokeStyle = 'hsl(217, 10%, 25%)';
+      mainCtx.lineWidth = 22;
+      mainCtx.lineJoin = 'round';
+      mainCtx.beginPath();
+      mainCtx.moveTo(loopMidX, loopTop - 25);
+      mainCtx.lineTo(loopMidX, loopTop);
+      mainCtx.lineTo(loopLeft, loopTop);
+      mainCtx.lineTo(loopLeft, loopBottom);
+      mainCtx.lineTo(loopMidX, loopBottom);
+      mainCtx.lineTo(loopMidX, loopBottom + 25);
+      mainCtx.stroke();
+      
+      mainCtx.beginPath();
+      mainCtx.moveTo(loopMidX, loopTop);
+      mainCtx.lineTo(loopRight, loopTop);
+      mainCtx.lineTo(loopRight, loopBottom);
+      mainCtx.lineTo(loopMidX, loopBottom);
+      mainCtx.stroke();
+
+      // Inside cutout (hollow center)
+      mainCtx.fillStyle = 'var(--bg-color)';
+      mainCtx.fillRect(loopLeft + 11, loopTop + 11, (loopRight - loopLeft) - 22, (loopBottom - loopTop) - 22);
+
+      // Draw the two Josephson Junctions (Gaps)
+      // Left junction
+      mainCtx.fillStyle = 'var(--well-color)';
+      mainCtx.fillRect(loopLeft - 13, loopMidY - 8, 26, 16);
+      mainCtx.strokeStyle = 'white';
+      mainCtx.lineWidth = 2;
+      mainCtx.strokeRect(loopLeft - 13, loopMidY - 8, 26, 16);
+      
+      // Right junction
+      mainCtx.fillStyle = 'var(--well-color)';
+      mainCtx.fillRect(loopRight - 13, loopMidY - 8, 26, 16);
+      mainCtx.strokeRect(loopRight - 13, loopMidY - 8, 26, 16);
+
+      // Junction Labels
+      mainCtx.fillStyle = 'var(--text-color)';
+      mainCtx.font = '10px sans-serif';
+      mainCtx.textAlign = 'center';
+      mainCtx.fillText("JJ 1", loopLeft - 22, loopMidY + 4);
+      mainCtx.fillText("JJ 2", loopRight + 22, loopMidY + 4);
+
+      // Calculate branch currents
+      let theta = Math.PI * extFlux;
+      let j1 = 0.5 * (1.0 + squidAsym) * Math.sin(phiS + theta);
+      let j2 = 0.5 * (1.0 - squidAsym) * Math.sin(phiS - theta);
+      let circulating = (j1 - j2) / 2;
+
+      // Draw current flow arrows
+      mainCtx.strokeStyle = 'var(--accent-color)';
+      mainCtx.fillStyle = 'var(--accent-color)';
+      mainCtx.lineWidth = 3;
+
+      // Top bias entry
+      drawArrow(loopMidX, loopTop - 35, loopMidX, loopTop - 5, biasCurrent);
+      // Split arrows
+      drawArrow(loopMidX, loopTop, loopLeft + 10, loopTop, biasCurrent / 2);
+      drawArrow(loopMidX, loopTop, loopRight - 10, loopTop, biasCurrent / 2);
+
+      // Left branch current (j1 + resistive)
+      let tot_j1 = j1 + vS * 0.5;
+      drawArrow(loopLeft, loopTop + 10, loopLeft, loopMidY - 14, tot_j1);
+      drawArrow(loopLeft, loopMidY + 14, loopLeft, loopBottom - 10, tot_j1);
+
+      // Right branch current (j2 + resistive)
+      let tot_j2 = j2 + vS * 0.5;
+      drawArrow(loopRight, loopTop + 10, loopRight, loopMidY - 14, tot_j2);
+      drawArrow(loopRight, loopMidY + 14, loopRight, loopBottom - 10, tot_j2);
+
+      // Recombine at bottom
+      drawArrow(loopLeft + 10, loopBottom, loopMidX, loopBottom, biasCurrent / 2);
+      drawArrow(loopRight - 10, loopBottom, loopMidX, loopBottom, biasCurrent / 2);
+      drawArrow(loopMidX, loopBottom + 5, loopMidX, loopBottom + 35, biasCurrent);
+
+      // Circulating Current Loop Arrow (Clockwise/Counter-clockwise)
+      if (Math.abs(circulating) > 0.02) {
+        mainCtx.strokeStyle = 'var(--well-color)';
+        mainCtx.fillStyle = 'var(--well-color)';
+        mainCtx.lineWidth = 2.5;
+        mainCtx.beginPath();
+        // Circular arc in center
+        mainCtx.arc(loopMidX, loopMidY, 24, -Math.PI * 0.7, Math.PI * 0.7, circulating < 0);
+        mainCtx.stroke();
+        // Arrow head on arc
+        let angle = circulating > 0 ? Math.PI * 0.7 : -Math.PI * 0.7;
+        let headX = loopMidX + 24 * Math.cos(angle);
+        let headY = loopMidY + 24 * Math.sin(angle);
+        mainCtx.beginPath();
+        mainCtx.arc(headX, headY, 4, 0, 2*Math.PI);
+        mainCtx.fill();
+
+        mainCtx.fillStyle = 'var(--well-color)';
+        mainCtx.font = '10px monospace';
+        mainCtx.textAlign = 'center';
+        mainCtx.fillText(`J = ${circulating.toFixed(2)}`, loopMidX, loopMidY + 4);
+      }
+
+      // Draw Magnetic Flux (X crosses inside SQUID loop)
+      const fluxSign = Math.sign(extFlux);
+      const fluxDensity = Math.min(6, Math.ceil(Math.abs(extFlux) * 3));
+      mainCtx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+      mainCtx.lineWidth = 1.5;
+      if (fluxDensity > 0) {
+        for (let i = 0; i < fluxDensity; i++) {
+          // grid placement inside loop
+          let fx = loopMidX + (i - (fluxDensity-1)/2) * 12;
+          let fy = loopMidY;
+          if (fluxSign > 0) {
+            // crosses for field entering loop
+            mainCtx.beginPath();
+            mainCtx.moveTo(fx - 4, fy - 4); mainCtx.lineTo(fx + 4, fy + 4);
+            mainCtx.moveTo(fx + 4, fy - 4); mainCtx.lineTo(fx - 4, fy + 4);
+            mainCtx.stroke();
+          } else {
+            // dots/circles for field exiting
+            mainCtx.beginPath();
+            mainCtx.arc(fx, fy, 3, 0, 2*Math.PI);
+            mainCtx.stroke();
+          }
+        }
+      }
+
+      // Draw Magnet (Probe Source)
+      // Magnet handles dragging
+      mainCtx.shadowBlur = 6;
+      mainCtx.shadowColor = 'black';
+      
+      // South Pole (blue)
+      mainCtx.fillStyle = 'hsl(210, 80%, 40%)';
+      mainCtx.fillRect(magnetX - 10, magnetY - 18, 20, 18);
+      // North Pole (red)
+      mainCtx.fillStyle = 'hsl(0, 85%, 45%)';
+      mainCtx.fillRect(magnetX - 10, magnetY, 20, 18);
+      
+      mainCtx.shadowBlur = 0;
+
+      // Magnet Labels
+      mainCtx.fillStyle = 'white';
+      mainCtx.font = 'bold 9px sans-serif';
+      mainCtx.textAlign = 'center';
+      mainCtx.fillText("S", magnetX, magnetY - 6);
+      mainCtx.fillText("N", magnetX, magnetY + 12);
+      
+      // Draw magnet body border
+      mainCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+      mainCtx.lineWidth = 1;
+      mainCtx.strokeRect(magnetX - 10, magnetY - 18, 20, 36);
+
+      // Text Info Overlay
+      mainCtx.fillStyle = 'rgba(255,255,255,0.85)';
+      mainCtx.font = '11px monospace';
+      mainCtx.textAlign = 'left';
+      mainCtx.fillText(`Ext Flux \u03a6 = ${extFlux.toFixed(2)} \u03a6\u2080`, 20, 25);
+      mainCtx.fillText(`Total i_c = ${(2 * Math.cos(Math.PI * extFlux / 2)).toFixed(2)}`, 20, 40);
+    }
+
+    // Helper to draw clean vector arrows for current flow
+    function drawArrow(x1, y1, x2, y2, scaleVal) {
+      const mag = Math.abs(scaleVal);
+      if (mag < 0.05) return; // silent arrow
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy);
+      
+      // Scale arrow width and alpha by current magnitude
+      mainCtx.save();
+      mainCtx.lineWidth = Math.min(4, 1.5 + mag * 1.5);
+      mainCtx.strokeStyle = scaleVal > 0 ? 'var(--accent-color)' : 'var(--well-color)';
+      mainCtx.fillStyle = scaleVal > 0 ? 'var(--accent-color)' : 'var(--well-color)';
+      mainCtx.globalAlpha = Math.min(1.0, 0.3 + mag * 0.7);
+
+      mainCtx.beginPath();
+      mainCtx.moveTo(x1, y1);
+      mainCtx.lineTo(x2, y2);
+      mainCtx.stroke();
+
+      // Draw arrowhead at end in direction of flow
+      const flowDirX = scaleVal > 0 ? dx / len : -dx / len;
+      const flowDirY = scaleVal > 0 ? dy / len : -dy / len;
+      const headX = scaleVal > 0 ? x2 : x1;
+      const headY = scaleVal > 0 ? y2 : y1;
+
+      mainCtx.beginPath();
+      mainCtx.moveTo(headX, headY);
+      // perpendicular components for head shape
+      mainCtx.lineTo(headX - flowDirX * 6 + flowDirY * 4, headY - flowDirY * 6 - flowDirX * 4);
+      mainCtx.lineTo(headX - flowDirX * 6 - flowDirY * 4, headY - flowDirY * 6 + flowDirX * 4);
+      mainCtx.closePath();
+      mainCtx.fill();
+      mainCtx.restore();
+    }
+
+    // 3. Render 1D Pendulum Chain (Coupled Junction Array)
+    function drawChain() {
+      const width = mainCanvas.width / window.devicePixelRatio;
+      const height = mainCanvas.height / window.devicePixelRatio;
+
+      mainCtx.clearRect(0, 0, width, height);
+
+      // Render grid background
+      mainCtx.strokeStyle = 'var(--grid-line)';
+      mainCtx.lineWidth = 1;
+      mainCtx.beginPath();
+      for (let x = 0; x < width; x += 40) {
+        mainCtx.moveTo(x, 0); mainCtx.lineTo(x, height);
+      }
+      for (let y = 0; y < height; y += 40) {
+        mainCtx.moveTo(0, y); mainCtx.lineTo(width, y);
+      }
+      mainCtx.stroke();
+
+      const numPendulums = chainPhis.length;
+      const spacing = width / (numPendulums + 1);
+      const pivotY = height / 2 - 20;
+      const armLength = 55;
+
+      // Draw horizontal coupling axis
+      mainCtx.strokeStyle = 'hsl(217, 10%, 20%)';
+      mainCtx.lineWidth = 4;
+      mainCtx.beginPath();
+      mainCtx.moveTo(spacing, pivotY);
+      mainCtx.lineTo(width - spacing, pivotY);
+      mainCtx.stroke();
+
+      // Render each pendulum
+      for (let k = 0; k < numPendulums; k++) {
+        let x = spacing + k * spacing;
+        let phi_k = chainPhis[k];
+        let vel_k = chainVels[k];
+
+        // Draw spring coupling line to next pendulum
+        if (k < numPendulums - 1) {
+          let nextX = spacing + (k + 1) * spacing;
+          mainCtx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+          mainCtx.lineWidth = 1.5;
+          mainCtx.beginPath();
+          // Draw wave spring effect
+          mainCtx.moveTo(x, pivotY);
+          let midX = (x + nextX) / 2;
+          mainCtx.lineTo(midX - 5, pivotY - 6);
+          mainCtx.lineTo(midX + 5, pivotY + 6);
+          mainCtx.lineTo(nextX, pivotY);
+          mainCtx.stroke();
+        }
+
+        // Bob coordinates
+        // Phase maps to angle: phi_k is in radians. 0 is pointing straight down
+        let bobX = x + armLength * Math.sin(phi_k);
+        let bobY = pivotY + armLength * Math.cos(phi_k);
+
+        // Pivot point dot
+        mainCtx.fillStyle = 'var(--text-dim)';
+        mainCtx.beginPath();
+        mainCtx.arc(x, pivotY, 4, 0, 2*Math.PI);
+        mainCtx.fill();
+
+        // Rod
+        mainCtx.strokeStyle = 'hsl(217, 10%, 35%)';
+        mainCtx.lineWidth = 2;
+        mainCtx.beginPath();
+        mainCtx.moveTo(x, pivotY);
+        mainCtx.lineTo(bobX, bobY);
+        mainCtx.stroke();
+
+        // Glow bob color based on velocity (instantaneous voltage)
+        let speed = Math.abs(vel_k);
+        let hue = Math.max(180, Math.min(330, 180 + speed * 60)); // Cyan to Hot Pink
+        let saturation = speed > 0.05 ? 100 : 70;
+        let lightness = speed > 0.05 ? 60 : 45;
+        mainCtx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        
+        mainCtx.shadowBlur = Math.min(12, speed * 4);
+        mainCtx.shadowColor = mainCtx.fillStyle;
+
+        mainCtx.beginPath();
+        mainCtx.arc(bobX, bobY, 9, 0, 2 * Math.PI);
+        mainCtx.fill();
+        mainCtx.shadowBlur = 0;
+
+        // Draw tiny vector indicator on bob showing swing velocity
+        if (speed > 0.05) {
+          mainCtx.strokeStyle = 'white';
+          mainCtx.lineWidth = 1.5;
+          mainCtx.beginPath();
+          // Tangent vector
+          let tanX = Math.cos(phi_k);
+          let tanY = -Math.sin(phi_k);
+          let factor = Math.sign(vel_k) * Math.min(20, speed * 8);
+          mainCtx.moveTo(bobX, bobY);
+          mainCtx.lineTo(bobX + tanX * factor, bobY + tanY * factor);
+          mainCtx.stroke();
+        }
+      }
+
+      // Chain overlays
+      mainCtx.fillStyle = 'rgba(255,255,255,0.85)';
+      mainCtx.font = '11px monospace';
+      mainCtx.textAlign = 'left';
+      mainCtx.fillText(`i_bias = ${biasCurrent.toFixed(2)}`, 20, 25);
+      mainCtx.fillText(`Coupling K = ${couplingK}`, 20, 40);
+    }
+
+
+    // 4. Render real-time I-V characteristic curve
+    function drawIVCurve() {
+      const width = ivCanvas.width / window.devicePixelRatio;
+      const height = ivCanvas.height / window.devicePixelRatio;
+
+      ivCtx.clearRect(0, 0, width, height);
+
+      // Grid limits: Bias Current range [-2.5, 2.5] on X, Voltage range [-2.5, 2.5] on Y
+      const minX = -2.5, maxX = 2.5;
+      const minY = -2.2, maxY = 2.2;
+
+      function toScreen(valX, valY) {
+        let sx = ((valX - minX) / (maxX - minX)) * width;
+        // Y axis is inverted on screen
+        let sy = height - ((valY - minY) / (maxY - minY)) * height;
+        return { x: sx, y: sy };
+      }
+
+      // Draw grid lines
+      ivCtx.strokeStyle = 'hsl(217, 10%, 11%)';
+      ivCtx.lineWidth = 1;
+      for (let vx = -2.0; vx <= 2.0; vx += 0.5) {
+        let s = toScreen(vx, 0);
+        ivCtx.beginPath(); ivCtx.moveTo(s.x, 0); ivCtx.lineTo(s.x, height); ivCtx.stroke();
+      }
+      for (let vy = -2.0; vy <= 2.0; vy += 0.5) {
+        let s = toScreen(0, vy);
+        ivCtx.beginPath(); ivCtx.moveTo(0, s.y); ivCtx.lineTo(width, s.y); ivCtx.stroke();
+      }
+
+      // Draw origin axis lines
+      ivCtx.strokeStyle = 'hsl(217, 10%, 25%)';
+      ivCtx.lineWidth = 1.5;
+      
+      // X Axis (Y = 0)
+      let sZero = toScreen(0, 0);
+      ivCtx.beginPath(); ivCtx.moveTo(0, sZero.y); ivCtx.lineTo(width, sZero.y); ivCtx.stroke();
+      // Y Axis (X = 0)
+      ivCtx.beginPath(); ivCtx.moveTo(sZero.x, 0); ivCtx.lineTo(sZero.x, height); ivCtx.stroke();
+
+      // Axis labels
+      ivCtx.fillStyle = 'var(--text-dim)';
+      ivCtx.font = '9px monospace';
+      ivCtx.textAlign = 'right';
+      ivCtx.fillText("v = +2.0", sZero.x - 5, toScreen(0, 2.0).y + 3);
+      ivCtx.fillText("v = -2.0", sZero.x - 5, toScreen(0, -2.0).y + 3);
+      ivCtx.textAlign = 'center';
+      ivCtx.fillText("+2.0 i_dc", toScreen(2.0, 0).x, sZero.y + 12);
+      ivCtx.fillText("-2.0 i_dc", toScreen(-2.0, 0).x, sZero.y + 12);
+
+      // Plot historical trace points
+      if (ivPoints.length > 1) {
+        ivCtx.strokeStyle = 'var(--well-color)';
+        ivCtx.lineWidth = 2.5;
+        ivCtx.beginPath();
+        for (let i = 0; i < ivPoints.length; i++) {
+          let s = toScreen(ivPoints[i].i, ivPoints[i].v);
+          if (i === 0) ivCtx.moveTo(s.x, s.y);
+          else ivCtx.lineTo(s.x, s.y);
+        }
+        ivCtx.stroke();
+      }
+
+      // Draw current operating point dot
+      let sCurrent = toScreen(biasCurrent, avgVoltage);
+      ivCtx.fillStyle = 'var(--accent-color)';
+      ivCtx.shadowBlur = 6;
+      ivCtx.shadowColor = 'var(--accent-glow)';
+      ivCtx.beginPath();
+      ivCtx.arc(sCurrent.x, sCurrent.y, 5, 0, 2*Math.PI);
+      ivCtx.fill();
+      ivCtx.shadowBlur = 0;
+
+      // Hysteresis alert text
+      if (betaC > 1.0 && currentMode === 'single') {
+        ivCtx.fillStyle = 'rgba(255, 0, 127, 0.7)';
+        ivCtx.font = '9px sans-serif';
+        ivCtx.textAlign = 'left';
+        ivCtx.fillText("Hysteresis Active (Underdamped)", 10, 15);
+      }
+    }
+
+    // 5. Render Voltage Waveform or SQUID Interference
+    function drawSecondPlot() {
+      const width = secCanvas.width / window.devicePixelRatio;
+      const height = secCanvas.height / window.devicePixelRatio;
+
+      secCtx.clearRect(0, 0, width, height);
+
+      // Grid background
+      secCtx.strokeStyle = 'hsl(217, 10%, 11%)';
+      secCtx.lineWidth = 1;
+      secCtx.beginPath();
+      for (let x = 0; x < width; x += 40) {
+        secCtx.moveTo(x, 0); secCtx.lineTo(x, height);
+      }
+      for (let y = 0; y < height; y += 40) {
+        secCtx.moveTo(0, y); secCtx.lineTo(width, y);
+      }
+      secCtx.stroke();
+
+      if (currentMode === 'single' || currentMode === 'chain') {
+        // Draw real-time Voltage Waveform v(t) or Voltage distribution
+        secCtx.strokeStyle = 'var(--accent-color)';
+        secCtx.lineWidth = 2;
+        secCtx.beginPath();
+
+        if (currentMode === 'single') {
+          // Render standard waveform history
+          const stepX = width / voltageHistory.length;
+          for (let i = 0; i < voltageHistory.length; i++) {
+            let vx = i * stepX;
+            // Map voltage range [-2.5, 2.5] to canvas height
+            let vy = height/2 - (voltageHistory[i] / 2.5) * (height/2);
+            if (i === 0) secCtx.moveTo(vx, vy);
+            else secCtx.lineTo(vx, vy);
+          }
+        } else {
+          // Render Voltage distribution over array nodes
+          const stepX = width / (chainSize + 1);
+          for (let k = 0; k < chainSize; k++) {
+            let vx = stepX + k * stepX;
+            let vy = height/2 - (chainVels[k] / 2.5) * (height/2);
+            secCtx.fillStyle = 'var(--well-color)';
+            secCtx.beginPath();
+            secCtx.arc(vx, vy, 4, 0, 2*Math.PI);
+            secCtx.fill();
+
+            if (k === 0) secCtx.moveTo(vx, vy);
+            else secCtx.lineTo(vx, vy);
+          }
+        }
+        secCtx.stroke();
+
+        // Draw horizontal zero line
+        secCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+        secCtx.lineWidth = 1;
+        secCtx.beginPath();
+        secCtx.moveTo(0, height/2);
+        secCtx.lineTo(width, height/2);
+        secCtx.stroke();
+
+      } else if (currentMode === 'squid') {
+        // Render SQUID modulation curves: Critical Current vs Flux
+        // I_c(Flux) = 2 * I0 * |cos(pi * Flux)|
+        secCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        secCtx.lineWidth = 1.5;
+        secCtx.beginPath();
+        
+        const minF = -2.0, maxF = 2.0;
+        function getScreenX(f) { return ((f - minF) / (maxF - minF)) * width; }
+        function getScreenY(ic) { return height - 20 - (ic / 2.2) * (height - 40); }
+
+        // Draw horizontal zero line
+        secCtx.beginPath();
+        secCtx.moveTo(0, getScreenY(0));
+        secCtx.lineTo(width, getScreenY(0));
+        secCtx.stroke();
+
+        // Draw theoretical critical current curve
+        secCtx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+        secCtx.lineWidth = 1.5;
+        secCtx.beginPath();
+        for (let f = minF; f <= maxF; f += 0.05) {
+          // SQUID interference pattern including asymmetry
+          let theta = Math.PI * f;
+          let i_c1 = 0.5 * (1.0 + squidAsym);
+          let i_c2 = 0.5 * (1.0 - squidAsym);
+          
+          // Max value of: i_c1 * sin(phi + theta) + i_c2 * sin(phi - theta)
+          // Using trigonometric identities, the amplitude is:
+          let amp = Math.sqrt(i_c1*i_c1 + i_c2*i_c2 + 2*i_c1*i_c2*Math.cos(2*theta));
+          let sx = getScreenX(f);
+          let sy = getScreenY(amp * 2.0); // max scale 2.0
+
+          if (f === minF) secCtx.moveTo(sx, sy);
+          else secCtx.lineTo(sx, sy);
+        }
+        secCtx.stroke();
+
+        // Label curves
+        secCtx.fillStyle = 'var(--text-dim)';
+        secCtx.font = '8px monospace';
+        secCtx.textAlign = 'center';
+        secCtx.fillText("-2.0", getScreenX(-2.0) + 15, getScreenY(0) + 12);
+        secCtx.fillText("0.0", getScreenX(0.0), getScreenY(0) + 12);
+        secCtx.fillText("+2.0 \u03a6", getScreenX(2.0) - 15, getScreenY(0) + 12);
+        
+        secCtx.textAlign = 'left';
+        secCtx.fillText("Max SQUID i_c", 10, 18);
+
+        // Draw current operating point dot
+        let currentTheta = Math.PI * extFlux;
+        let c1 = 0.5 * (1.0 + squidAsym);
+        let c2 = 0.5 * (1.0 - squidAsym);
+        let currentAmp = Math.sqrt(c1*c1 + c2*c2 + 2*c1*c2*Math.cos(2*currentTheta));
+        
+        let opX = getScreenX(extFlux);
+        let opY = getScreenY(currentAmp * 2.0);
+
+        secCtx.fillStyle = 'var(--well-color)';
+        secCtx.beginPath();
+        secCtx.arc(opX, opY, 5, 0, 2*Math.PI);
+        secCtx.fill();
+      }
+    }
+
+
+    // --- UI Status Updater ---
+    function updateDiagnosticStats() {
+      // Instant stats update
+      if (currentMode === 'single') {
+        phiStat.innerText = `${phi.toFixed(2)} rad`;
+        voltStat.innerText = `${velocity.toFixed(3)} v`;
+        avgVoltStat.innerText = `${avgVoltage.toFixed(3)} v`;
+        let supercurrent = Math.sin(phi);
+        specStat.innerText = `${supercurrent.toFixed(2)} I₀`;
+      } else if (currentMode === 'squid') {
+        phiStat.innerText = `${phiS.toFixed(2)} rad`;
+        voltStat.innerText = `${vS.toFixed(3)} v`;
+        avgVoltStat.innerText = `${avgVoltage.toFixed(3)} v`;
+        
+        let theta = Math.PI * extFlux;
+        let j1 = 0.5 * (1.0 + squidAsym) * Math.sin(phiS + theta);
+        let j2 = 0.5 * (1.0 - squidAsym) * Math.sin(phiS - theta);
+        let circ = (j1 - j2) / 2;
+        specStat.innerText = `${circ.toFixed(2)} I₀`;
+      } else if (currentMode === 'chain') {
+        // Average phase of the array
+        let sumPhi = chainPhis.reduce((a,b)=>a+b, 0) / chainSize;
+        let sumVel = chainVels.reduce((a,b)=>a+b, 0) / chainSize;
+        phiStat.innerText = `${sumPhi.toFixed(2)} rad`;
+        voltStat.innerText = `${chainVels[0].toFixed(3)} v`;
+        avgVoltStat.innerText = `${sumVel.toFixed(3)} v`;
+        
+        // Count junctions currently spinning (resistive)
+        let activeJJs = chainVels.filter(v => Math.abs(v) > 0.05).length;
+        specStat.innerText = `${activeJJs} / ${chainSize}`;
+      }
+    }
+
+
+    // --- Main Animation & Simulation Loop ---
+    function runLoop() {
+      tickPhysics();
+
+      // Render Visualizers
+      if (currentMode === 'single') drawWashboard();
+      else if (currentMode === 'squid') drawSQUID();
+      else if (currentMode === 'chain') drawChain();
+
+      // Render plots
+      drawIVCurve();
+      drawSecondPlot();
+
+      // Update HUD
+      updateDiagnosticStats();
+
+      requestAnimationFrame(runLoop);
+    }
+
+    // --- Init Setup ---
+    updateInputs();
+    resetSimulation();
+    resizeCanvases();
+
+    // Start loop
+    requestAnimationFrame(runLoop);
+  </script>
+</body>
+</html>
