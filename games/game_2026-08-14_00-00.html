@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>spin-glass: magnetic phase transitions & associative memory sandbox</title>
+  <style>
+    :root {
+      --bg-color: hsl(225, 20%, 6%);
+      --panel-bg: hsl(225, 18%, 10%);
+      --panel-border: hsl(225, 12%, 18%);
+      --text-main: hsl(220, 14%, 90%);
+      --text-dim: hsl(220, 10%, 60%);
+      --accent-pink: hsl(330, 100%, 55%);
+      --accent-cyan: hsl(180, 100%, 48%);
+      --accent-yellow: hsl(50, 100%, 50%);
+      --accent-green: hsl(120, 100%, 45%);
+      --btn-hover: hsl(225, 15%, 15%);
+      --grid-line: hsl(225, 15%, 8%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    header {
+      max-width: 1400px;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.025em;
+    }
+
+    header h1 span.pink { color: var(--accent-pink); }
+    header h1 span.cyan { color: var(--accent-cyan); }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      margin-top: 5px;
+    }
+
+    .main-grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: fit-content;
+    }
+
+    .card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--grid-line);
+      padding-bottom: 8px;
+    }
+
+    .mode-tab-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      background-color: hsl(225, 20%, 4%);
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid var(--panel-border);
+      margin-bottom: 10px;
+    }
+
+    .mode-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      padding: 8px 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .mode-tab-btn.active {
+      background-color: var(--panel-bg);
+      color: var(--accent-cyan);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    /* Control Elements */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .control-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-group label span.val {
+      font-family: monospace;
+      color: var(--accent-cyan);
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: hsl(225, 12%, 18%);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      transition: transform 0.1s;
+      border: none;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .control-group.pink-accent input[type="range"]::-webkit-slider-thumb {
+      background: var(--accent-pink);
+    }
+    .control-group.pink-accent label span.val {
+      color: var(--accent-pink);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      background-color: hsl(225, 12%, 14%);
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover:not(:disabled) {
+      background-color: var(--btn-hover);
+      border-color: var(--text-dim);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn.primary {
+      background-color: var(--accent-cyan);
+      color: hsl(225, 20%, 4%);
+      border-color: var(--accent-cyan);
+    }
+
+    .btn.primary:hover:not(:disabled) {
+      background-color: hsl(180, 100%, 55%);
+      box-shadow: 0 0 10px rgba(0,243,255,0.25);
+    }
+
+    .btn.danger {
+      background-color: hsl(340, 60%, 25%);
+      color: var(--text-main);
+      border-color: hsl(340, 60%, 35%);
+    }
+    .btn.danger:hover:not(:disabled) {
+      background-color: hsl(340, 60%, 35%);
+    }
+
+    /* Simulation Container Layout */
+    .sim-area {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Stats Panel */
+    .stats-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+    }
+
+    .stat-box {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 10px 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-family: monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    /* Canvas Panels */
+    .canvas-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .canvas-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-card {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .canvas-container {
+      background-color: hsl(225, 20%, 3%);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      width: 100%;
+      position: relative;
+      cursor: crosshair;
+    }
+
+    canvas.sim-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    /* Charts and Side Panels */
+    .visualizer-side {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .mini-canvas-container {
+      background-color: hsl(225, 20%, 3%);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      overflow: hidden;
+      width: 100%;
+      height: 150px;
+    }
+
+    canvas.mini-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hopfield-presets-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .preset-btn {
+      background-color: hsl(225, 12%, 14%);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      font-family: monospace;
+      font-size: 0.8rem;
+      padding: 6px;
+      cursor: pointer;
+      border-radius: 4px;
+      text-align: center;
+      transition: all 0.1s ease;
+    }
+
+    .preset-btn:hover {
+      background-color: var(--btn-hover);
+      border-color: var(--text-dim);
+    }
+
+    /* Description Card */
+    .info-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .info-card h2 {
+      font-size: 1.25rem;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 6px;
+    }
+
+    .info-card p {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .info-card ul {
+      margin-left: 20px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+
+    .info-card li {
+      margin-bottom: 5px;
+    }
+
+    .info-card code {
+      font-family: monospace;
+      color: var(--accent-cyan);
+      background-color: hsl(225, 20%, 3%);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 0.85em;
+    }
+
+    /* Status Bar and Header Controls */
+    .system-status-btn {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: none;
+      border: 1px dashed var(--accent-cyan);
+      color: var(--accent-cyan);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .system-status-btn.muted {
+      border-color: var(--accent-pink);
+      color: var(--accent-pink);
+    }
+
+    .legend-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>spin-glass: <span class="pink">magnetic phase transitions</span> & <span class="cyan">associative memory</span> sandbox</h1>
+      <p>real-time statistical mechanics simulation: metropolis ising models, frustrated bonds, and neural networks</p>
+    </div>
+    <button class="system-status-btn" id="audioToggleBtn" onclick="toggleAudio()">
+      🔊 audio: active (click to mute)
+    </button>
+  </header>
+
+  <div class="main-grid">
+    <!-- Sidebar Control Panel -->
+    <div class="sidebar">
+      <!-- Mode Selection Card -->
+      <div class="card">
+        <div class="card-title">active simulation mode</div>
+        <div class="mode-tab-group">
+          <button class="mode-tab-btn active" id="modeIsingBtn" onclick="setMode('ising')">ising</button>
+          <button class="mode-tab-btn" id="modeGlassBtn" onclick="setMode('glass')">spin glass</button>
+          <button class="mode-tab-btn" id="modeHopfieldBtn" onclick="setMode('hopfield')">hopfield</button>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-dim); text-align:center; margin-top:5px;" id="modeDescription">
+          simulate a 2d ferromagnetic crystal with thermal fluctuations
+        </div>
+      </div>
+
+      <!-- Controls Panel (Ising Mode) -->
+      <div class="card" id="isingControlsCard">
+        <div class="card-title">ising model parameters</div>
+        
+        <div class="control-group">
+          <label>temperature (T) <span class="val" id="isingTempDisplay">2.27</span></label>
+          <input type="range" id="isingTempSlider" min="0.1" max="5.0" step="0.05" value="2.27" oninput="updateIsingParams()">
+          <div style="font-size:0.75rem; color:var(--accent-yellow); text-align:right;">critical temperature T<sub>c</sub> ≈ 2.27</div>
+        </div>
+
+        <div class="control-group pink-accent">
+          <label>external field (h) <span class="val" id="isingFieldDisplay">0.00</span></label>
+          <input type="range" id="isingFieldSlider" min="-2.0" max="2.0" step="0.05" value="0.00" oninput="updateIsingParams()">
+        </div>
+
+        <div class="control-group">
+          <label>coupling strength (J) <span class="val" id="isingJDisplay">1.00</span></label>
+          <input type="range" id="isingJSlider" min="-2.0" max="2.0" step="0.05" value="1.00" oninput="updateIsingParams()">
+        </div>
+
+        <div class="control-group">
+          <label>steps per frame <span class="val" id="isingStepsDisplay">20000</span></label>
+          <input type="range" id="isingStepsSlider" min="1000" max="80000" step="1000" value="20000" oninput="updateIsingParams()">
+        </div>
+
+        <div class="btn-grid">
+          <button class="btn" onclick="randomizeSpins()">randomize</button>
+          <button class="btn" onclick="clearSpins(1)">all up (+1)</button>
+          <button class="btn" onclick="clearSpins(-1)">all down (-1)</button>
+          <button class="btn primary" id="sweepBtn" onclick="runTempSweep()">temp sweep</button>
+        </div>
+      </div>
+
+      <!-- Controls Panel (Spin Glass Mode) -->
+      <div class="card" id="glassControlsCard" style="display:none;">
+        <div class="card-title">spin glass parameters</div>
+
+        <div class="control-group">
+          <label>temperature (T) <span class="val" id="glassTempDisplay">1.00</span></label>
+          <input type="range" id="glassTempSlider" min="0.1" max="4.0" step="0.05" value="1.00" oninput="updateGlassParams()">
+        </div>
+
+        <div class="control-group pink-accent">
+          <label>antiferromagnetic bonds <span class="val" id="glassFrustDisplay">50%</span></label>
+          <input type="range" id="glassFrustSlider" min="0" max="100" step="5" value="50" oninput="updateGlassParams()">
+        </div>
+
+        <div class="control-group">
+          <label>steps per frame <span class="val" id="glassStepsDisplay">20000</span></label>
+          <input type="range" id="glassStepsSlider" min="1000" max="80000" step="1000" value="20000" oninput="updateGlassParams()">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="font-size:0.85rem; display:flex; align-items:center; cursor:pointer;">
+            <input type="checkbox" id="showBondsCheckbox" checked onchange="toggleShowBonds()" style="margin-right:8px;">
+            draw bond couplings (J<sub>ij</sub>)
+          </label>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+          <label style="font-size:0.85rem; display:flex; align-items:center; cursor:pointer;">
+            <input type="checkbox" id="showFrustCheckbox" checked onchange="toggleShowFrust()" style="margin-right:8px;">
+            highlight frustration (gauge fields)
+          </label>
+        </div>
+
+        <div class="btn-grid">
+          <button class="btn primary" onclick="generateBonds()">remix bonds</button>
+          <button class="btn" onclick="randomizeSpins()">randomize spins</button>
+        </div>
+      </div>
+
+      <!-- Controls Panel (Hopfield Mode) -->
+      <div class="card" id="hopfieldControlsCard" style="display:none;">
+        <div class="card-title">hopfield network controls</div>
+
+        <div class="control-group">
+          <label>update dynamics</label>
+          <div style="display:flex; gap:10px; margin-top:4px;">
+            <label style="font-size:0.85rem; font-weight:normal; cursor:pointer; display:flex; align-items:center;">
+              <input type="radio" name="dynamicsMode" value="async" checked onchange="updateHopfieldParams()" style="margin-right:5px;">
+              asynchronous (random)
+            </label>
+            <label style="font-size:0.85rem; font-weight:normal; cursor:pointer; display:flex; align-items:center;">
+              <input type="radio" name="dynamicsMode" value="sync" onchange="updateHopfieldParams()" style="margin-right:5px;">
+              synchronous
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 0.85rem; font-weight:600; color:var(--text-dim);">select training patterns</label>
+          <div class="hopfield-presets-grid">
+            <button class="preset-btn" onclick="loadPatternPreset('smile')">smile</button>
+            <button class="preset-btn" onclick="loadPatternPreset('heart')">heart</button>
+            <button class="preset-btn" onclick="loadPatternPreset('star')">star</button>
+            <button class="preset-btn" onclick="loadPatternPreset('letterH')">char h</button>
+            <button class="preset-btn" onclick="loadPatternPreset('letterX')">char x</button>
+            <button class="preset-btn" onclick="loadPatternPreset('letterO')">char o</button>
+          </div>
+        </div>
+
+        <div class="btn-grid" style="margin-top: 15px;">
+          <button class="btn primary" onclick="trainNetwork()" style="grid-column: 1 / -1;">train network on current memory</button>
+          <button class="btn" onclick="injectNoise(0.2)">add 20% noise</button>
+          <button class="btn" onclick="injectNoise(0.5)">add 50% noise</button>
+          <button class="btn danger" onclick="clearHopfieldSpins()">clear grid</button>
+          <button class="btn" id="hopfieldPlayBtn" onclick="toggleHopfieldSimulation()">run recall</button>
+        </div>
+
+        <div style="font-size:0.75rem; color:var(--text-dim); margin-top:12px; border-top:1px dashed var(--panel-border); padding-top:8px;">
+          <strong>how to play:</strong> draw or select a preset, click <em>train network</em>, then distort it using noise or clicking, and hit <em>run recall</em> to relax the system.
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Simulator View -->
+    <div class="sim-area">
+      <!-- Real-Time Metrics -->
+      <div class="stats-panel">
+        <div class="stat-box">
+          <span class="stat-label">magnetization (M)</span>
+          <span class="stat-value" id="magnetizationVal" style="color:var(--accent-pink);">0.00</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">total energy (E)</span>
+          <span class="stat-value" id="energyVal" style="color:var(--accent-cyan);">0.00</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">temperature (T)</span>
+          <span class="stat-value" id="temperatureVal" style="color:var(--accent-yellow);">2.27</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">flip rate / activity</span>
+          <span class="stat-value" id="activityVal">0%</span>
+        </div>
+      </div>
+
+      <!-- Canvas Section -->
+      <div class="canvas-layout">
+        <!-- Main Simulation Card -->
+        <div class="card canvas-card">
+          <div class="card-title">
+            <span id="canvasTitle">lattice grid visualizer (100x100 spins)</span>
+            <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-dim); display: flex; gap: 10px;">
+              <span><span class="legend-indicator" style="background-color: var(--accent-pink);"></span>+1 spin</span>
+              <span><span class="legend-indicator" style="background-color: var(--accent-cyan);"></span>-1 spin</span>
+            </div>
+          </div>
+          <div class="canvas-container" id="simCanvasContainer">
+            <canvas class="sim-canvas" id="simCanvas" width="400" height="400"></canvas>
+          </div>
+        </div>
+
+        <!-- Visualizer Side Panel (Rolling Chart / Weight Matrix) -->
+        <div class="visualizer-side">
+          <!-- Rolling Chart Card -->
+          <div class="card" style="flex:1;">
+            <div class="card-title">real-time thermodynamic trace</div>
+            <div class="mini-canvas-container">
+              <canvas class="mini-canvas" id="chartCanvas" width="300" height="130"></canvas>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-dim); margin-top:8px;">
+              <span>history length: 200 pts</span>
+              <span><span class="legend-indicator" style="background-color: var(--accent-pink); width:8px; height:8px;"></span>M</span>
+              <span><span class="legend-indicator" style="background-color: var(--accent-cyan); width:8px; height:8px;"></span>E</span>
+            </div>
+          </div>
+
+          <!-- Secondary Visualizer Card -->
+          <div class="card" style="flex:1;" id="secondaryCard">
+            <div class="card-title" id="secondaryCardTitle">local magnetic tip</div>
+            <div class="mini-canvas-container" id="secondaryCanvasContainer" style="height:120px; display:flex; align-items:center; justify-content:center; flex-direction:column; padding: 10px; font-size:0.85rem; color:var(--text-dim); text-align:center;">
+              <div id="secondaryCanvasWrapper" style="display:none; width:100%; height:100%;">
+                <canvas class="mini-canvas" id="secondaryCanvas" width="300" height="100"></canvas>
+              </div>
+              <div id="secondaryStaticText">
+                drag / hover inside the lattice to apply a local external field (h = ±2.0) with your magnetic pointer tip
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Educational Card -->
+      <div class="card info-card">
+        <h2>theoretical framework: spin dynamics & memory wells</h2>
+        <div id="isingExplanation">
+          <p>
+            the <strong>2D Ising model</strong> is a foundational pillar of statistical physics, describing phase transitions in ferromagnetic systems. the Hamiltonian is given by:
+            <code>H = -J ∑<sub>⟨i,j⟩</sub> s<sub>i</sub> s<sub>j</sub> - h ∑<sub>i</sub> s<sub>i</sub></code>, where adjacent spins <code>s<sub>i</sub>, s<sub>j</sub> ∈ {-1, +1}</code> interact with coupling constant <code>J</code> under a global magnetic field <code>h</code>.
+          </p>
+          <p>
+            the system relaxes towards thermodynamic equilibrium via the <strong>Metropolis Monte Carlo algorithm</strong>. a single spin is chosen at random, and the energy change <code>ΔE</code> to flip it is evaluated. if <code>ΔE ≤ 0</code>, the flip is accepted. if <code>ΔE > 0</code>, the flip is accepted only with thermal probability <code>P = e<sup>-ΔE/k<sub>B</sub>T</sup></code>.
+          </p>
+          <p>
+            this simple rule produces the famous <strong>Onsager phase transition</strong> at the critical temperature <code>T<sub>c</sub> ≈ 2.27</code>. below <code>T<sub>c</sub></code>, local coupling dominates, causing spins to align into massive uniform domains (ferromagnetism). above <code>T<sub>c</sub></code>, thermal fluctuations destroy this order (paramagnetism). right at <code>T<sub>c</sub></code>, the system exhibits critical scaling, with spin clusters of all scales and giant magnetic fluctuations.
+          </p>
+        </div>
+        <div id="glassExplanation" style="display:none;">
+          <p>
+            in a <strong>Spin Glass</strong>, the uniform coupling <code>J</code> of the Ising model is replaced by random bonds <code>J<sub>ij</sub></code>. some bonds are positive (ferromagnetic, encouraging aligned spins), while others are negative (antiferromagnetic, encouraging opposite spins).
+          </p>
+          <p>
+            this mismatch leads to <strong>frustration</strong>: loops of spins where it is mathematically impossible to satisfy all bonds simultaneously. frustration bends the energy landscape into an incredibly complex, rugged structure with an exponential number of metastable local minima (energy wells) separated by high barriers.
+          </p>
+          <p>
+            the highlighted squares represent <strong>frustrated plaquettes</strong>, where the product of the four bonds around a unit cell is negative: <code>∏ J<sub>ij</sub> = -1</code>. these act as topological defects that trap the lattice, preventing it from ever reaching a simple, uniform ground state.
+          </p>
+        </div>
+        <div id="hopfieldExplanation" style="display:none;">
+          <p>
+            a <strong>Hopfield Network</strong> is a form of recurrent artificial neural network that functions as an associative, content-addressable memory. the network consists of binary threshold units (neurons) that map directly to Ising spins <code>s<sub>i</sub> ∈ {-1, +1}</code>.
+          </p>
+          <p>
+            memories are stored in the synaptic connection weights <code>W<sub>ij</sub></code> using <strong>Hebbian learning</strong>: <code>W<sub>ij</sub> = 1/N ∑<sub>μ</sub> ξ<sub>i</sub><sup>μ</sup> ξ<sub>j</sub><sup>μ</sup></code>, where <code>ξ<sup>μ</sup></code> are the trained binary patterns. during recall, neurons update states according to the local field: <code>s<sub>i</sub> ← sign(∑ W<sub>ij</sub> s<sub>j</sub>)</code>.
+          </p>
+          <p>
+            the network's dynamics are governed by a Lyapunov function, which is identical to the Ising spin-glass energy: <code>E = -1/2 ∑ W<sub>ij</sub> s<sub>i</sub> s<sub>j</sub></code>. every state update decreases this energy monotonically, dragging the system down the slopes of the energy landscape until it settles into a local minimum—corresponding to one of the trained memory patterns (attractor states).
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System Configurations
+    let mode = 'ising'; // 'ising', 'glass', 'hopfield'
+    let isRunning = true;
+    let isMouseDrawing = false;
+    let drawValue = 1; // +1 or -1
+    let localFieldX = -1;
+    let localFieldY = -1;
+    const localFieldRadius = 6;
+
+    // Canvas & Contexts
+    let simCanvas, simCtx;
+    let chartCanvas, chartCtx;
+    let secondaryCanvas, secondaryCtx;
+
+    // Simulation variables (Ising & Spin Glass)
+    const L = 100;
+    const N = L * L;
+    const spins = new Int8Array(N); // Holds active spins for Ising and Glass
+    const bondX = new Int8Array(N); // Coupling bounds (horizontal)
+    const bondY = new Int8Array(N); // Coupling bounds (vertical)
+    const frustratedPlaquettes = new Uint8Array(N); // 1 = frustrated, 0 = satisfied
+
+    // Parameter variables
+    let temperatureT = 2.27;
+    let externalFieldH = 0.0;
+    let couplingJ = 1.00;
+    let stepsPerFrame = 20000;
+    let frustrationP = 0.50; // fraction of antiferro bonds
+    let showBonds = true;
+    let showFrust = true;
+
+    // Rolling history for charts
+    const maxHistoryLength = 200;
+    let magnetizationHistory = [];
+    let energyHistory = [];
+    let activityHistory = [];
+
+    // Hopfield variables
+    const L_H = 32;
+    const N_H = L_H * L_H;
+    const hopfieldSpins = new Int8Array(N_H);
+    const W = new Float32Array(N_H * N_H);
+    const patternDatabase = {};
+    let trainedPatterns = [];
+    let hopfieldIsRunning = false;
+    let hopfieldDynamics = 'async'; // 'async' or 'sync'
+    let baseHopfieldEnergy = 0;
+
+    // Audio Variables
+    let audioCtx = null;
+    let audioMuted = true;
+    let droneOsc = null;
+    let droneGain = null;
+
+    // Temp Sweep Variables
+    let isSweeping = false;
+    let sweepDirection = 1; // 1 = heating, -1 = cooling
+    let sweepT = 1.0;
+
+    // Initialize Page
+    window.addEventListener('load', () => {
+      simCanvas = document.getElementById('simCanvas');
+      simCtx = simCanvas.getContext('2d');
+      chartCanvas = document.getElementById('chartCanvas');
+      chartCtx = chartCanvas.getContext('2d');
+      secondaryCanvas = document.getElementById('secondaryCanvas');
+      secondaryCtx = secondaryCanvas.getContext('2d');
+
+      // Initialize grids
+      initIsingSpins();
+      generateBonds();
+      initHopfieldPatterns();
+
+      // Mouse drawing event listeners
+      const container = document.getElementById('simCanvasContainer');
+      container.addEventListener('mousedown', handleMouseDown);
+      container.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      
+      // Touch listeners for mobile
+      container.addEventListener('touchstart', handleTouchStart, { passive: false });
+      container.addEventListener('touchmove', handleTouchMove, { passive: false });
+      container.addEventListener('touchend', handleMouseUp);
+
+      // Start animation loop
+      requestAnimationFrame(tick);
+    });
+
+    // --- Audio Sonification ---
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+      } catch(e) {
+        console.warn("web audio api not supported in this browser");
+      }
+    }
+
+    function toggleAudio() {
+      initAudio();
+      if (!audioCtx) return;
+
+      const btn = document.getElementById('audioToggleBtn');
+      if (audioMuted) {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        audioMuted = false;
+        btn.textContent = "🔊 audio: active (click to mute)";
+        btn.classList.remove('muted');
+        if (mode === 'hopfield') {
+          startHopfieldDrone();
+        }
+      } else {
+        audioMuted = true;
+        btn.textContent = "🔇 audio: muted (click to enable)";
+        btn.classList.add('muted');
+        stopHopfieldDrone();
+      }
+    }
+
+    function triggerClick(pitch = 3000, duration = 0.002, vol = 0.005) {
+      if (!audioCtx || audioMuted) return;
+      
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + duration);
+      
+      gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function startHopfieldDrone() {
+      if (!audioCtx || audioMuted) return;
+      if (droneOsc) return;
+
+      droneOsc = audioCtx.createOscillator();
+      droneGain = audioCtx.createGain();
+
+      droneOsc.type = 'triangle';
+      droneOsc.frequency.setValueAtTime(150, audioCtx.currentTime);
+
+      droneGain.gain.setValueAtTime(0, audioCtx.currentTime);
+      droneGain.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime + 0.1);
+
+      droneOsc.connect(droneGain);
+      droneGain.connect(audioCtx.destination);
+
+      droneOsc.start();
+    }
+
+    function updateHopfieldDrone(energy, minEnergy, maxEnergy) {
+      if (!droneOsc || audioMuted) return;
+      
+      const range = Math.abs(maxEnergy - minEnergy) || 1.0;
+      const pct = (energy - minEnergy) / range;
+      
+      // map pitch: higher energy = higher pitch, tense. lower energy = low pitch, resolved
+      const targetFreq = 80 + Math.max(0, Math.min(1.0, pct)) * 140; // 80Hz - 220Hz
+      droneOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.08);
+      droneGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 0.05);
+    }
+
+    function stopHopfieldDrone() {
+      if (droneGain) {
+        try {
+          droneGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+          const oldOsc = droneOsc;
+          const oldGain = droneGain;
+          setTimeout(() => {
+            try { oldOsc.stop(); } catch(e){}
+            try { oldOsc.disconnect(); } catch(e){}
+            try { oldGain.disconnect(); } catch(e){}
+          }, 150);
+        } catch(e){}
+      }
+      droneOsc = null;
+      droneGain = null;
+    }
+
+
+    // --- Setup & Grid Init ---
+    function initIsingSpins() {
+      for (let i = 0; i < N; i++) {
+        spins[i] = Math.random() < 0.5 ? 1 : -1;
+      }
+      magnetizationHistory = [];
+      energyHistory = [];
+    }
+
+    function randomizeSpins() {
+      if (mode === 'hopfield') {
+        for (let i = 0; i < N_H; i++) {
+          hopfieldSpins[i] = Math.random() < 0.5 ? 1 : -1;
+        }
+      } else {
+        initIsingSpins();
+      }
+    }
+
+    function clearSpins(val) {
+      if (mode === 'hopfield') {
+        hopfieldSpins.fill(val);
+      } else {
+        spins.fill(val);
+      }
+    }
+
+    function generateBonds() {
+      const frustP = frustrationP;
+      // bondX and bondY represent couplings between i and i+right, and i and i+down
+      for (let i = 0; i < N; i++) {
+        bondX[i] = Math.random() < frustP ? -1 : 1;
+        bondY[i] = Math.random() < frustP ? -1 : 1;
+      }
+
+      // Precalculate frustrated plaquettes
+      // A plaquette at (x, y) is frustrated if J_top * J_right * J_bottom * J_left < 0
+      for (let y = 0; y < L; y++) {
+        for (let x = 0; x < L; x++) {
+          const idx = x + y * L;
+          const j_top = bondX[idx];
+          const j_right = bondY[((x + 1) % L) + y * L];
+          const j_bottom = bondX[x + ((y + 1) % L) * L];
+          const j_left = bondY[idx];
+
+          const prod = j_top * j_right * j_bottom * j_left;
+          frustratedPlaquettes[idx] = prod < 0 ? 1 : 0;
+        }
+      }
+    }
+
+
+    // --- Simulation Engines ---
+
+    // Ising Metropolis Sweep
+    function simulateIsing() {
+      let flips = 0;
+      for (let s = 0; s < stepsPerFrame; s++) {
+        const idx = Math.floor(Math.random() * N);
+        const x = idx % L;
+        const y = Math.floor(idx / L);
+        
+        // Handle drawing / local pointer tip field
+        let h_eff = externalFieldH;
+        if (localFieldX >= 0 && localFieldY >= 0) {
+          const dx = Math.abs(x - localFieldX);
+          const dy = Math.abs(y - localFieldY);
+          const wrap_dx = Math.min(dx, L - dx);
+          const wrap_dy = Math.min(dy, L - dy);
+          if (wrap_dx * wrap_dx + wrap_dy * wrap_dy < localFieldRadius * localFieldRadius) {
+            h_eff += drawValue * 3.0; // Apply strong local field
+          }
+        }
+
+        const spin = spins[idx];
+        
+        // 4 Nearest neighbors wrapping around periodic bounds
+        const right = spins[((x + 1) % L) + y * L];
+        const left  = spins[((x - 1 + L) % L) + y * L];
+        const down  = spins[x + ((y + 1) % L) * L];
+        const up    = spins[x + ((y - 1 + L) % L) * L];
+        
+        const sumNN = left + right + up + down;
+        
+        // Hamiltonian dE = 2 * s * (J * sumNN + h)
+        const dE = 2 * spin * (couplingJ * sumNN + h_eff);
+        
+        if (dE <= 0 || Math.random() < Math.exp(-dE / temperatureT)) {
+          spins[idx] = -spin;
+          flips++;
+        }
+      }
+      return flips;
+    }
+
+    // Spin Glass Metropolis Sweep
+    function simulateSpinGlass() {
+      let flips = 0;
+      for (let s = 0; s < stepsPerFrame; s++) {
+        const idx = Math.floor(Math.random() * N);
+        const x = idx % L;
+        const y = Math.floor(idx / L);
+
+        let h_eff = externalFieldH;
+        if (localFieldX >= 0 && localFieldY >= 0) {
+          const dx = Math.abs(x - localFieldX);
+          const dy = Math.abs(y - localFieldY);
+          const wrap_dx = Math.min(dx, L - dx);
+          const wrap_dy = Math.min(dy, L - dy);
+          if (wrap_dx * wrap_dx + wrap_dy * wrap_dy < localFieldRadius * localFieldRadius) {
+            h_eff += drawValue * 3.0;
+          }
+        }
+
+        const spin = spins[idx];
+        
+        // Neighbor indices
+        const idxRight = ((x + 1) % L) + y * L;
+        const idxLeft  = ((x - 1 + L) % L) + y * L;
+        const idxDown  = x + ((y + 1) % L) * L;
+        const idxUp    = x + ((y - 1 + L) % L) * L;
+
+        // Coupling values on boundaries
+        const J_right = bondX[idx];
+        const J_left  = bondX[idxLeft];
+        const J_down  = bondY[idx];
+        const J_up    = bondY[idxUp];
+
+        const fieldSum = J_right * spins[idxRight] +
+                         J_left  * spins[idxLeft] +
+                         J_down  * spins[idxDown] +
+                         J_up    * spins[idxUp] +
+                         h_eff;
+
+        const dE = 2 * spin * fieldSum;
+
+        if (dE <= 0 || Math.random() < Math.exp(-dE / temperatureT)) {
+          spins[idx] = -spin;
+          flips++;
+        }
+      }
+      return flips;
+    }
+
+
+    // --- Hopfield Associative Memory Engine ---
+
+    // Procedural Pattern Initializers
+    function initHopfieldPatterns() {
+      // Smile preset
+      patternDatabase['smile'] = new Int8Array(N_H).fill(-1);
+      for (let y = 0; y < L_H; y++) {
+        for (let x = 0; x < L_H; x++) {
+          const cx = x - 15.5;
+          const cy = y - 15.5;
+          const r = Math.sqrt(cx*cx + cy*cy);
+          if (Math.abs(r - 12.5) < 1.0) patternDatabase['smile'][x + y * L_H] = 1; // Outer ring
+          if (Math.abs(cx) === 4 && cy === -4) patternDatabase['smile'][x + y * L_H] = 1; // Left/Right Eyes
+          if (Math.abs(cx) === 5 && cy === -4) patternDatabase['smile'][x + y * L_H] = 1;
+          if (cy > 1 && Math.abs(r - 8) < 1.0 && cy > Math.abs(cx) * 0.4) {
+            patternDatabase['smile'][x + y * L_H] = 1; // Smile arc
+          }
+        }
+      }
+
+      // Heart preset
+      patternDatabase['heart'] = new Int8Array(N_H).fill(-1);
+      for (let y = 0; y < L_H; y++) {
+        for (let x = 0; x < L_H; x++) {
+          const nx = (x - 15.5) / 10;
+          const ny = -(y - 13.5) / 10;
+          const term = nx*nx + ny*ny - 1;
+          if (term*term*term - nx*nx*ny*ny*ny <= 0) {
+            patternDatabase['heart'][x + y * L_H] = 1;
+          }
+        }
+      }
+
+      // Star preset
+      patternDatabase['star'] = new Int8Array(N_H).fill(-1);
+      for (let y = 0; y < L_H; y++) {
+        for (let x = 0; x < L_H; x++) {
+          const cx = x - 15.5;
+          const cy = y - 15.5;
+          const r = Math.sqrt(cx*cx + cy*cy);
+          const theta = Math.atan2(cy, cx);
+          const r_star = 7 * (1.1 + 0.6 * Math.cos(5 * theta - Math.PI / 2));
+          if (r <= r_star) {
+            patternDatabase['star'][x + y * L_H] = 1;
+          }
+        }
+      }
+
+      // Letter Presets
+      patternDatabase['letterH'] = generateLetterPattern('H');
+      patternDatabase['letterX'] = generateLetterPattern('X');
+      patternDatabase['letterO'] = generateLetterPattern('O');
+
+      // Load initial Smile as state
+      hopfieldSpins.set(patternDatabase['smile']);
+    }
+
+    function generateLetterPattern(char) {
+      const pat = new Int8Array(N_H).fill(-1);
+      for (let y = 0; y < L_H; y++) {
+        for (let x = 0; x < L_H; x++) {
+          const cx = x - 15.5;
+          const cy = y - 15.5;
+          if (char === 'H') {
+            if (Math.abs(cx) === 6 && Math.abs(cy) < 11) pat[x + y * L_H] = 1;
+            if (Math.abs(cx) === 5 && Math.abs(cy) < 11) pat[x + y * L_H] = 1;
+            if (Math.abs(cy) <= 1 && Math.abs(cx) < 6) pat[x + y * L_H] = 1;
+          } else if (char === 'X') {
+            if (Math.abs(Math.abs(cx) - Math.abs(cy)) < 1.8 && Math.abs(cx) < 12 && Math.abs(cy) < 12) pat[x + y * L_H] = 1;
+          } else if (char === 'O') {
+            const r2 = (cx*cx)/(10.5*10.5) + (cy*cy)/(11*11);
+            if (r2 > 0.60 && r2 < 1.25) pat[x + y * L_H] = 1;
+          }
+        }
+      }
+      return pat;
+    }
+
+    function loadPatternPreset(name) {
+      hopfieldSpins.set(patternDatabase[name]);
+      // If network isn't trained yet, let's train it immediately so the preset is stable
+      if (trainedPatterns.length === 0) {
+        trainNetwork();
+      }
+    }
+
+    function trainNetwork() {
+      // Store active state as a memory pattern
+      const newPattern = new Int8Array(hopfieldSpins);
+      
+      // Avoid duplicates
+      let isDuplicate = false;
+      for (let p of trainedPatterns) {
+        let diff = 0;
+        for (let i = 0; i < N_H; i++) {
+          if (p[i] !== newPattern[i]) diff++;
+        }
+        if (diff === 0) {
+          isDuplicate = true;
+          break;
+        }
+      }
+
+      if (!isDuplicate) {
+        // Cap capacity at 8 patterns to preserve attractor basins
+        if (trainedPatterns.length >= 8) {
+          trainedPatterns.shift();
+        }
+        trainedPatterns.push(newPattern);
+      }
+
+      // Compute Hebbian weights
+      // W_ij = 1/N * sum_mu (xi_i * xi_j), W_ii = 0
+      W.fill(0);
+      const M = trainedPatterns.length;
+      for (let i = 0; i < N_H; i++) {
+        for (let j = 0; j < N_H; j++) {
+          if (i === j) continue;
+          let sum = 0;
+          for (let p = 0; p < M; p++) {
+            sum += trainedPatterns[p][i] * trainedPatterns[p][j];
+          }
+          W[i + j * N_H] = sum / N_H;
+        }
+      }
+
+      // Recalculate baseline energies for drone
+      baseHopfieldEnergy = getHopfieldEnergy();
+      
+      // Trigger a success chime
+      initAudio();
+      triggerClick(880, 0.08, 0.015);
+      setTimeout(() => triggerClick(1320, 0.12, 0.015), 60);
+
+      // Draw weight matrix
+      drawWeightMatrix();
+    }
+
+    function injectNoise(fraction) {
+      for (let i = 0; i < N_H; i++) {
+        if (Math.random() < fraction) {
+          hopfieldSpins[i] = -hopfieldSpins[i];
+        }
+      }
+    }
+
+    function getHopfieldEnergy() {
+      let energy = 0;
+      for (let i = 0; i < N_H; i++) {
+        let rowSum = 0;
+        for (let j = 0; j < N_H; j++) {
+          rowSum += W[i + j * N_H] * hopfieldSpins[j];
+        }
+        energy += rowSum * hopfieldSpins[i];
+      }
+      return -0.5 * energy;
+    }
+
+    // Run Hopfield Recall step
+    function stepHopfield() {
+      let flips = 0;
+
+      if (hopfieldDynamics === 'async') {
+        // Run several asynchronous steps (pick random neurons)
+        const updates = 50; 
+        for (let k = 0; k < updates; k++) {
+          const i = Math.floor(Math.random() * N_H);
+          let sum = 0;
+          for (let j = 0; j < N_H; j++) {
+            sum += W[i + j * N_H] * hopfieldSpins[j];
+          }
+          const s_new = sum >= 0 ? 1 : -1;
+          if (hopfieldSpins[i] !== s_new) {
+            hopfieldSpins[i] = s_new;
+            flips++;
+          }
+        }
+      } else {
+        // Synchronous update
+        const nextSpins = new Int8Array(N_H);
+        for (let i = 0; i < N_H; i++) {
+          let sum = 0;
+          for (let j = 0; j < N_H; j++) {
+            sum += W[i + j * N_H] * hopfieldSpins[j];
+          }
+          nextSpins[i] = sum >= 0 ? 1 : -1;
+          if (hopfieldSpins[i] !== nextSpins[i]) {
+            flips++;
+          }
+        }
+        hopfieldSpins.set(nextSpins);
+      }
+      return flips;
+    }
+
+    function toggleHopfieldSimulation() {
+      initAudio();
+      const btn = document.getElementById('hopfieldPlayBtn');
+      if (hopfieldIsRunning) {
+        hopfieldIsRunning = false;
+        btn.textContent = "run recall";
+        btn.classList.remove('danger');
+        stopHopfieldDrone();
+      } else {
+        if (trainedPatterns.length === 0) {
+          trainNetwork(); // auto-train if empty
+        }
+        hopfieldIsRunning = true;
+        btn.textContent = "pause recall";
+        btn.classList.add('danger');
+        startHopfieldDrone();
+      }
+    }
+
+    function clearHopfieldSpins() {
+      hopfieldSpins.fill(-1);
+    }
+
+
+    // --- Global Controls / UI handlers ---
+    function setMode(newMode) {
+      if (newMode === mode) return;
+      mode = newMode;
+
+      // Stop any running schedulers
+      if (hopfieldIsRunning) {
+        toggleHopfieldSimulation();
+      }
+      isSweeping = false;
+      const sweepBtn = document.getElementById('sweepBtn');
+      if (sweepBtn) sweepBtn.textContent = "temp sweep";
+
+      // Reset histories
+      magnetizationHistory = [];
+      energyHistory = [];
+      activityHistory = [];
+
+      // Update active control cards
+      document.getElementById('isingControlsCard').style.display = mode === 'ising' ? 'block' : 'none';
+      document.getElementById('glassControlsCard').style.display = mode === 'glass' ? 'block' : 'none';
+      document.getElementById('hopfieldControlsCard').style.display = mode === 'hopfield' ? 'block' : 'none';
+
+      // Update descriptions
+      const modeDesc = document.getElementById('modeDescription');
+      const canvasTitle = document.getElementById('canvasTitle');
+      if (mode === 'ising') {
+        modeDesc.textContent = "simulate a 2d ferromagnetic crystal with thermal fluctuations";
+        canvasTitle.textContent = "lattice grid visualizer (100x100 spins)";
+        document.getElementById('isingExplanation').style.display = 'block';
+        document.getElementById('glassExplanation').style.display = 'none';
+        document.getElementById('hopfieldExplanation').style.display = 'none';
+        document.getElementById('secondaryCardTitle').textContent = "local magnetic tip";
+        document.getElementById('secondaryCanvasWrapper').style.display = 'none';
+        document.getElementById('secondaryStaticText').style.display = 'block';
+      } else if (mode === 'glass') {
+        modeDesc.textContent = "frustrated couplings with random ferromagnetic & antiferromagnetic bonds";
+        canvasTitle.textContent = "lattice spin glass (100x100 spins + bonds)";
+        document.getElementById('isingExplanation').style.display = 'none';
+        document.getElementById('glassExplanation').style.display = 'block';
+        document.getElementById('hopfieldExplanation').style.display = 'none';
+        document.getElementById('secondaryCardTitle').textContent = "local magnetic tip";
+        document.getElementById('secondaryCanvasWrapper').style.display = 'none';
+        document.getElementById('secondaryStaticText').style.display = 'block';
+      } else {
+        modeDesc.textContent = "associative memory neural grid that relaxes into trained energy attractors";
+        canvasTitle.textContent = "neural grid visualizer (32x32 neurons)";
+        document.getElementById('isingExplanation').style.display = 'none';
+        document.getElementById('glassExplanation').style.display = 'none';
+        document.getElementById('hopfieldExplanation').style.display = 'block';
+        document.getElementById('secondaryCardTitle').textContent = "synaptic weight matrix W_ij";
+        document.getElementById('secondaryCanvasWrapper').style.display = 'block';
+        document.getElementById('secondaryStaticText').style.display = 'none';
+        drawWeightMatrix();
+      }
+
+      // Update active tabs
+      document.getElementById('modeIsingBtn').classList.toggle('active', mode === 'ising');
+      document.getElementById('modeGlassBtn').classList.toggle('active', mode === 'glass');
+      document.getElementById('modeHopfieldBtn').classList.toggle('active', mode === 'hopfield');
+    }
+
+    function updateIsingParams() {
+      temperatureT = parseFloat(document.getElementById('isingTempSlider').value);
+      externalFieldH = parseFloat(document.getElementById('isingFieldSlider').value);
+      couplingJ = parseFloat(document.getElementById('isingJSlider').value);
+      stepsPerFrame = parseInt(document.getElementById('isingStepsSlider').value);
+
+      document.getElementById('isingTempDisplay').textContent = temperatureT.toFixed(2);
+      document.getElementById('isingFieldDisplay').textContent = externalFieldH.toFixed(2);
+      document.getElementById('isingJDisplay').textContent = couplingJ.toFixed(2);
+      document.getElementById('isingStepsDisplay').textContent = stepsPerFrame;
+    }
+
+    function updateGlassParams() {
+      temperatureT = parseFloat(document.getElementById('glassTempSlider').value);
+      frustrationP = parseInt(document.getElementById('glassFrustSlider').value) / 100.0;
+      stepsPerFrame = parseInt(document.getElementById('glassStepsSlider').value);
+
+      document.getElementById('glassTempDisplay').textContent = temperatureT.toFixed(2);
+      document.getElementById('glassFrustDisplay').textContent = (frustrationP * 100).toFixed(0) + "%";
+      document.getElementById('glassStepsDisplay').textContent = stepsPerFrame;
+    }
+
+    function updateHopfieldParams() {
+      const dynamicsEl = document.querySelector('input[name="dynamicsMode"]:checked');
+      hopfieldDynamics = dynamicsEl ? dynamicsEl.value : 'async';
+    }
+
+    function toggleShowBonds() {
+      showBonds = document.getElementById('showBondsCheckbox').checked;
+    }
+
+    function toggleShowFrust() {
+      showFrust = document.getElementById('showFrustCheckbox').checked;
+    }
+
+    // Run Automatic Temperature Sweep
+    function runTempSweep() {
+      if (mode !== 'ising') return;
+      isSweeping = !isSweeping;
+      const btn = document.getElementById('sweepBtn');
+      if (isSweeping) {
+        btn.textContent = "stop sweep";
+        sweepDirection = -1; // start by cooling down
+        sweepT = temperatureT;
+      } else {
+        btn.textContent = "temp sweep";
+      }
+    }
+
+
+    // --- Interactivity (Drawing) ---
+    function getMouseCoords(e) {
+      const rect = simCanvas.getBoundingClientRect();
+      const scaleX = simCanvas.width / rect.width;
+      const scaleY = simCanvas.height / rect.height;
+      
+      let clientX, clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+
+      const x = (clientX - rect.left) * scaleX;
+      const y = (clientY - rect.top) * scaleY;
+      
+      const gridL = mode === 'hopfield' ? L_H : L;
+      return {
+        gridX: Math.floor((x / simCanvas.width) * gridL),
+        gridY: Math.floor((y / simCanvas.height) * gridL)
+      };
+    }
+
+    function handleMouseDown(e) {
+      initAudio();
+      isMouseDrawing = true;
+      const coords = getMouseCoords(e);
+      const gridL = mode === 'hopfield' ? L_H : L;
+      
+      if (coords.gridX >= 0 && coords.gridX < gridL && coords.gridY >= 0 && coords.gridY < gridL) {
+        const idx = coords.gridX + coords.gridY * gridL;
+        if (mode === 'hopfield') {
+          // Toggle neuron state
+          drawValue = -hopfieldSpins[idx];
+          hopfieldSpins[idx] = drawValue;
+          triggerClick(drawValue > 0 ? 800 : 500, 0.005, 0.008);
+        } else {
+          // Flip spin
+          drawValue = -spins[idx];
+          spins[idx] = drawValue;
+          localFieldX = coords.gridX;
+          localFieldY = coords.gridY;
+          triggerClick(drawValue > 0 ? 1200 : 800, 0.003, 0.01);
+        }
+      }
+    }
+
+    function handleMouseMove(e) {
+      const coords = getMouseCoords(e);
+      const gridL = mode === 'hopfield' ? L_H : L;
+
+      if (coords.gridX >= 0 && coords.gridX < gridL && coords.gridY >= 0 && coords.gridY < gridL) {
+        if (isMouseDrawing) {
+          const idx = coords.gridX + coords.gridY * gridL;
+          if (mode === 'hopfield') {
+            if (hopfieldSpins[idx] !== drawValue) {
+              hopfieldSpins[idx] = drawValue;
+              triggerClick(drawValue > 0 ? 800 : 500, 0.003, 0.005);
+            }
+          } else {
+            spins[idx] = drawValue;
+            localFieldX = coords.gridX;
+            localFieldY = coords.gridY;
+          }
+        } else {
+          // Update localized field coordinates for pointing tip
+          if (mode !== 'hopfield') {
+            localFieldX = coords.gridX;
+            localFieldY = coords.gridY;
+          }
+        }
+      } else {
+        localFieldX = -1;
+        localFieldY = -1;
+      }
+    }
+
+    function handleMouseUp() {
+      isMouseDrawing = false;
+      localFieldX = -1;
+      localFieldY = -1;
+    }
+
+    function handleTouchStart(e) {
+      e.preventDefault();
+      handleMouseDown(e);
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault();
+      handleMouseMove(e);
+    }
+
+
+    // --- Renderers ---
+
+    // Draw the main grid (Spins & Bonds)
+    function drawSimulationGrid() {
+      simCtx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+      const w = simCanvas.width;
+      const h = simCanvas.height;
+
+      if (mode === 'hopfield') {
+        const cellSize = w / L_H;
+        for (let y = 0; y < L_H; y++) {
+          for (let x = 0; x < L_H; x++) {
+            const idx = x + y * L_H;
+            const spin = hopfieldSpins[idx];
+            
+            simCtx.fillStyle = spin > 0 ? 'hsl(330, 95%, 55%)' : 'hsl(180, 95%, 42%)';
+            simCtx.fillRect(x * cellSize + 0.5, y * cellSize + 0.5, cellSize - 1, cellSize - 1);
+            
+            // Draw grid borders faintly
+            simCtx.strokeStyle = 'rgba(255,255,255,0.03)';
+            simCtx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      } else {
+        const cellSize = w / L;
+        
+        // Fast buffer drawing for massive grid performance
+        const imgData = simCtx.createImageData(w, h);
+        const data = imgData.data;
+
+        // Custom colors
+        const pinkR = 255, pinkG = 0, pinkB = 127;   // #ff007f (+1)
+        const cyanR = 0, cyanG = 243, cyanB = 255;  // #00f3ff (-1)
+
+        for (let y = 0; y < h; y++) {
+          const gridY = Math.floor(y / cellSize);
+          const gridY_L = gridY * L;
+          for (let x = 0; x < w; x++) {
+            const gridX = Math.floor(x / cellSize);
+            const idx = gridX + gridY_L;
+            const spin = spins[idx];
+
+            const pixelIdx = (x + y * w) * 4;
+            if (spin > 0) {
+              data[pixelIdx] = pinkR;
+              data[pixelIdx+1] = pinkG;
+              data[pixelIdx+2] = pinkB;
+            } else {
+              data[pixelIdx] = cyanR;
+              data[pixelIdx+1] = cyanG;
+              data[pixelIdx+2] = cyanB;
+            }
+            data[pixelIdx+3] = 255; // opacity
+          }
+        }
+        simCtx.putImageData(imgData, 0, 0);
+
+        // Highlight local magnetic field tip
+        if (localFieldX >= 0 && localFieldY >= 0) {
+          simCtx.strokeStyle = 'rgba(255,255,255,0.4)';
+          simCtx.lineWidth = 1.5;
+          simCtx.beginPath();
+          simCtx.arc(
+            (localFieldX + 0.5) * cellSize,
+            (localFieldY + 0.5) * cellSize,
+            localFieldRadius * cellSize,
+            0, 2 * Math.PI
+          );
+          simCtx.stroke();
+        }
+
+        // Overlay spin glass frustration/bonds if active
+        if (mode === 'glass') {
+          // Draw frustrated plaquettes as tiny yellow boxes
+          if (showFrust) {
+            simCtx.fillStyle = 'rgba(255, 230, 0, 0.4)';
+            for (let y = 0; y < L; y++) {
+              for (let x = 0; x < L; x++) {
+                if (frustratedPlaquettes[x + y * L] === 1) {
+                  simCtx.fillRect(x * cellSize + 1.5, y * cellSize + 1.5, cellSize - 3, cellSize - 3);
+                }
+              }
+            }
+          }
+
+          // Draw bonds on top of squares
+          if (showBonds) {
+            for (let y = 0; y < L; y += 2) { // step by 2 to prevent cluttered visual
+              for (let x = 0; x < L; x += 2) {
+                const idx = x + y * L;
+                const px = (x + 0.5) * cellSize;
+                const py = (y + 0.5) * cellSize;
+
+                // Horizontal bond (right)
+                simCtx.strokeStyle = bondX[idx] > 0 ? 'rgba(0, 255, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)';
+                simCtx.lineWidth = 1.5;
+                simCtx.beginPath();
+                simCtx.moveTo(px, py);
+                simCtx.lineTo(px + cellSize * 1.5, py);
+                simCtx.stroke();
+
+                // Vertical bond (down)
+                simCtx.strokeStyle = bondY[idx] > 0 ? 'rgba(0, 255, 0, 0.7)' : 'rgba(255, 0, 0, 0.7)';
+                simCtx.beginPath();
+                simCtx.moveTo(px, py);
+                simCtx.lineTo(px, py + cellSize * 1.5);
+                simCtx.stroke();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Draw Rolling Trace Chart
+    function drawRollingChart() {
+      chartCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+      const w = chartCanvas.width;
+      const h = chartCanvas.height;
+
+      // Draw background grids
+      chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      chartCtx.lineWidth = 1;
+      chartCtx.beginPath();
+      for (let x = 0; x < w; x += 30) {
+        chartCtx.moveTo(x, 0);
+        chartCtx.lineTo(x, h);
+      }
+      for (let y = 0; y < h; y += 20) {
+        chartCtx.moveTo(0, y);
+        chartCtx.lineTo(w, y);
+      }
+      chartCtx.stroke();
+
+      // Zero-crossing line
+      chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      chartCtx.beginPath();
+      chartCtx.moveTo(0, h / 2);
+      chartCtx.lineTo(w, h / 2);
+      chartCtx.stroke();
+
+      const len = magnetizationHistory.length;
+      if (len < 2) return;
+
+      // Draw Magnetization (pink)
+      chartCtx.strokeStyle = 'hsl(330, 100%, 55%)';
+      chartCtx.lineWidth = 2.0;
+      chartCtx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const x = (i / (maxHistoryLength - 1)) * w;
+        // Map M [-1, 1] -> [h, 0]
+        const y = ((1.0 - magnetizationHistory[i]) / 2.0) * h;
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+      }
+      chartCtx.stroke();
+
+      // Draw Energy (cyan)
+      chartCtx.strokeStyle = 'hsl(180, 100%, 48%)';
+      chartCtx.lineWidth = 1.5;
+      chartCtx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const x = (i / (maxHistoryLength - 1)) * w;
+        // Map E [-2.2, 2.2] -> [h, 0]
+        const val = energyHistory[i];
+        const y = ((2.2 - val) / 4.4) * h;
+        if (i === 0) chartCtx.moveTo(x, y);
+        else chartCtx.lineTo(x, y);
+      }
+      chartCtx.stroke();
+    }
+
+    // Draw Hopfield Synaptic Weights Matrix W_ij
+    function drawWeightMatrix() {
+      if (mode !== 'hopfield') return;
+      secondaryCtx.clearRect(0, 0, secondaryCanvas.width, secondaryCanvas.height);
+      const w = secondaryCanvas.width;
+      const h = secondaryCanvas.height;
+
+      // Since N_H = 1024, the weight matrix is 1024x1024.
+      // We downsample it to a 128x128 grid for rendering.
+      const downsample = 8;
+      const size = L_H * L_H / downsample; // 128
+      const imgData = secondaryCtx.createImageData(w, h);
+      const data = imgData.data;
+
+      for (let y = 0; y < h; y++) {
+        // Map screen y to downsampled weight index
+        const j_block = Math.floor((y / h) * N_H);
+        for (let x = 0; x < w; x++) {
+          const i_block = Math.floor((x / w) * N_H);
+          const weight = W[i_block + j_block * N_H];
+
+          const pixelIdx = (x + y * w) * 4;
+          if (weight > 0) {
+            // green for excitatory
+            data[pixelIdx]   = 0;
+            data[pixelIdx+1] = Math.min(255, Math.floor(weight * 8000));
+            data[pixelIdx+2] = 0;
+          } else if (weight < 0) {
+            // red for inhibitory
+            data[pixelIdx]   = Math.min(255, Math.floor(Math.abs(weight) * 8000));
+            data[pixelIdx+1] = 0;
+            data[pixelIdx+2] = 0;
+          } else {
+            data[pixelIdx]   = 10;
+            data[pixelIdx+1] = 10;
+            data[pixelIdx+2] = 20;
+          }
+          data[pixelIdx+3] = 255;
+        }
+      }
+      secondaryCtx.putImageData(imgData, 0, 0);
+    }
+
+
+    // --- Simulation Core Loop ---
+    let lastTime = 0;
+    function tick(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = timestamp - lastTime;
+      lastTime = timestamp;
+
+      // Handle Automatic Temperature Sweep
+      if (mode === 'ising' && isSweeping) {
+        // Sweep temperature slowly
+        const sweepSpeed = 0.005;
+        sweepT += sweepDirection * sweepSpeed;
+        if (sweepT >= 4.5) {
+          sweepT = 4.5;
+          sweepDirection = -1; // start cooling
+        } else if (sweepT <= 0.2) {
+          sweepT = 0.2;
+          sweepDirection = 1; // start heating
+        }
+        temperatureT = sweepT;
+        document.getElementById('isingTempSlider').value = sweepT;
+        document.getElementById('isingTempDisplay').textContent = sweepT.toFixed(2);
+      }
+
+      let flips = 0;
+      let mag = 0;
+      let energy = 0;
+
+      if (mode === 'ising') {
+        flips = simulateIsing();
+
+        // Calculate Magnetization
+        let sumSpins = 0;
+        for (let i = 0; i < N; i++) sumSpins += spins[i];
+        mag = sumSpins / N;
+
+        // Calculate Energy per spin
+        let sumEnergy = 0;
+        for (let y = 0; y < L; y++) {
+          const y_L = y * L;
+          for (let x = 0; x < L; x++) {
+            const idx = x + y_L;
+            const right = spins[((x + 1) % L) + y_L];
+            const down  = spins[x + ((y + 1) % L) * L];
+            sumEnergy += -couplingJ * spins[idx] * (right + down) - externalFieldH * spins[idx];
+          }
+        }
+        energy = sumEnergy / N;
+
+        // Sound Triggering based on spin-flip density
+        const flipRatio = flips / stepsPerFrame;
+        if (Math.random() < flipRatio * 15.0) {
+          // Temperature-dependent crackle pitch
+          const pitch = 800 + Math.max(0, temperatureT) * 700 + Math.random() * 800;
+          triggerClick(pitch, 0.0025, Math.min(0.008, flipRatio * 0.05));
+        }
+
+        // Update stats
+        document.getElementById('magnetizationVal').textContent = mag.toFixed(4);
+        document.getElementById('energyVal').textContent = energy.toFixed(4);
+        document.getElementById('temperatureVal').textContent = temperatureT.toFixed(2);
+        document.getElementById('activityVal').textContent = (flipRatio * 100).toFixed(1) + "%";
+
+      } else if (mode === 'glass') {
+        flips = simulateSpinGlass();
+
+        let sumSpins = 0;
+        for (let i = 0; i < N; i++) sumSpins += spins[i];
+        mag = sumSpins / N;
+
+        // Spin glass energy
+        let sumEnergy = 0;
+        for (let y = 0; y < L; y++) {
+          const y_L = y * L;
+          for (let x = 0; x < L; x++) {
+            const idx = x + y_L;
+            const right = spins[((x + 1) % L) + y_L];
+            const down  = spins[x + ((y + 1) % L) * L];
+            sumEnergy += -bondX[idx] * spins[idx] * right - bondY[idx] * spins[idx] * down - externalFieldH * spins[idx];
+          }
+        }
+        energy = sumEnergy / N;
+
+        const flipRatio = flips / stepsPerFrame;
+        if (Math.random() < flipRatio * 15.0) {
+          triggerClick(600 + Math.random() * 1200, 0.003, Math.min(0.008, flipRatio * 0.05));
+        }
+
+        document.getElementById('magnetizationVal').textContent = mag.toFixed(4);
+        document.getElementById('energyVal').textContent = energy.toFixed(4);
+        document.getElementById('temperatureVal').textContent = temperatureT.toFixed(2);
+        document.getElementById('activityVal').textContent = (flipRatio * 100).toFixed(1) + "%";
+
+      } else if (mode === 'hopfield') {
+        // Run network relaxation
+        if (hopfieldIsRunning) {
+          flips = stepHopfield();
+        }
+
+        energy = getHopfieldEnergy();
+        let activeNeurons = 0;
+        for (let i = 0; i < N_H; i++) {
+          if (hopfieldSpins[i] > 0) activeNeurons++;
+        }
+        mag = (activeNeurons / N_H) * 2.0 - 1.0; // normalization
+
+        if (hopfieldIsRunning) {
+          // Adjust audio drone
+          // Minimum energy is roughly -0.5 * N_H (if fully memorized)
+          updateHopfieldDrone(energy, -15, 0);
+
+          if (flips === 0) {
+            // Converged! Stop running recall automatically
+            toggleHopfieldSimulation();
+            // Final success chime
+            triggerClick(660, 0.1, 0.01);
+            setTimeout(() => triggerClick(990, 0.15, 0.01), 80);
+          }
+        }
+
+        document.getElementById('magnetizationVal').textContent = mag.toFixed(4);
+        document.getElementById('energyVal').textContent = energy.toFixed(2);
+        document.getElementById('temperatureVal').textContent = "N/A";
+        document.getElementById('activityVal').textContent = flips > 0 ? "relaxing..." : "stable";
+      }
+
+      // Update rolling history charts
+      magnetizationHistory.push(mag);
+      energyHistory.push(energy);
+      if (magnetizationHistory.length > maxHistoryLength) {
+        magnetizationHistory.shift();
+        energyHistory.shift();
+      }
+
+      // Draw frames
+      drawSimulationGrid();
+      drawRollingChart();
+
+      requestAnimationFrame(tick);
+    }
+  </script>
+</body>
+</html>
