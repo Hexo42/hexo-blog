@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>nematic-flow: liquid crystal polarization & topological defect sandbox</title>
+  <style>
+    :root {
+      --bg-color: hsl(240, 16%, 6%);
+      --panel-bg: hsl(240, 14%, 10%);
+      --panel-border: hsl(240, 12%, 18%);
+      --text-main: hsl(240, 10%, 90%);
+      --text-dim: hsl(240, 8%, 60%);
+      --accent-cyan: hsl(180, 100%, 48%);
+      --accent-magenta: hsl(320, 100%, 55%);
+      --accent-yellow: hsl(50, 100%, 50%);
+      --btn-hover: hsl(240, 12%, 16%);
+      --grid-line: hsl(240, 12%, 8%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    header {
+      max-width: 1400px;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.025em;
+    }
+
+    header h1 span.cyan { color: var(--accent-cyan); }
+    header h1 span.magenta { color: var(--accent-magenta); }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      margin-top: 5px;
+    }
+
+    .main-grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: fit-content;
+    }
+
+    .card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--grid-line);
+      padding-bottom: 8px;
+    }
+
+    .mode-tab-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background-color: hsl(240, 16%, 4%);
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid var(--panel-border);
+      margin-bottom: 15px;
+    }
+
+    .mode-tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      padding: 8px 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .mode-tab-btn.active {
+      background-color: var(--panel-bg);
+      color: var(--accent-cyan);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .control-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-group label span.val {
+      font-family: monospace;
+      color: var(--accent-cyan);
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: hsl(240, 12%, 18%);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      transition: transform 0.1s;
+      border: none;
+    }
+
+    .control-group input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      background-color: hsl(240, 12%, 14%);
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+    }
+
+    .btn:hover:not(:disabled) {
+      background-color: var(--btn-hover);
+      border-color: var(--text-dim);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn.primary {
+      background-color: var(--accent-cyan);
+      color: hsl(240, 20%, 4%);
+      border-color: var(--accent-cyan);
+    }
+
+    .btn.primary:hover:not(:disabled) {
+      background-color: hsl(180, 100%, 55%);
+      box-shadow: 0 0 10px rgba(0,243,255,0.25);
+    }
+
+    .btn.audio-btn {
+      border-color: var(--accent-magenta);
+      color: var(--accent-magenta);
+    }
+
+    .btn.audio-btn.active {
+      background-color: var(--accent-magenta);
+      color: #000;
+    }
+
+    .sim-area {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .canvas-container {
+      position: relative;
+      background-color: #000;
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .view-modes {
+      display: flex;
+      gap: 10px;
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      padding: 6px;
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+
+    .view-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .view-btn.active {
+      background-color: hsl(240, 12%, 16%);
+      color: var(--accent-cyan);
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+
+    @media (max-width: 640px) {
+      .stats-bar {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .stat-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.2rem;
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .stat-value.cyan { color: var(--accent-cyan); }
+    .stat-value.magenta { color: var(--accent-magenta); }
+    .stat-value.yellow { color: var(--accent-yellow); }
+
+    .instructions p {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .instructions ul {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      padding-left: 15px;
+    }
+
+    .instructions li {
+      margin-bottom: 5px;
+    }
+
+    a.back-btn {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    a.back-btn:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>nematic-<span class="cyan">flow</span>: liquid crystal <span class="magenta">polarization</span> sandbox</h1>
+      <p>simulate franck-oseen elastic relaxation, defect thermodynamics, and white-light birefringence.</p>
+    </div>
+    <a href="../index.html" class="back-btn">&lt;&lt; back to index</a>
+  </header>
+
+  <div class="main-grid">
+    <div class="sidebar">
+      <div class="card">
+        <div class="card-title">simulation mode</div>
+        <div class="mode-tab-group">
+          <button class="mode-tab-btn active" onclick="setMode('passive')">passive LC</button>
+          <button class="mode-tab-btn" onclick="setMode('active')">active nematic</button>
+        </div>
+        
+        <div class="control-group">
+          <label>temperature (noise) <span class="val" id="temp-val">0.05</span></label>
+          <input type="range" id="temp-slider" min="0" max="1.5" step="0.01" value="0.05" oninput="updateVal('temp', this.value)">
+        </div>
+
+        <div class="control-group">
+          <label>elastic constant (K) <span class="val" id="elastic-val">0.30</span></label>
+          <input type="range" id="elastic-slider" min="0.05" max="0.8" step="0.01" value="0.30" oninput="updateVal('elastic', this.value)">
+        </div>
+
+        <div class="control-group" id="active-stress-control" style="display: none;">
+          <label>active stress (dipole) <span class="val" id="active-val">0.40</span></label>
+          <input type="range" id="active-slider" min="-1.5" max="1.5" step="0.05" value="0.40" oninput="updateVal('active', this.value)">
+        </div>
+
+        <div class="control-group">
+          <label>electric field voltage <span class="val" id="efield-val">0.00</span></label>
+          <input type="range" id="efield-slider" min="0" max="1.2" step="0.02" value="0.00" oninput="updateVal('efield', this.value)">
+        </div>
+
+        <div class="control-group">
+          <label>electric field angle <span class="val" id="efield-angle-val">0&deg;</span></label>
+          <input type="range" id="efield-angle-slider" min="0" max="180" step="5" value="0" oninput="updateVal('efield-angle', this.value)">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">optics (polarizer)</div>
+        <div class="control-group">
+          <label>polarizer angle (&phi;) <span class="val" id="polarizer-val">0&deg;</span></label>
+          <input type="range" id="polarizer-slider" min="0" max="90" step="1" value="0" oninput="updateVal('polarizer', this.value)">
+        </div>
+
+        <div class="control-group">
+          <label>retardance depth (nm) <span class="val" id="retard-val">550 nm</span></label>
+          <input type="range" id="retard-slider" min="50" max="1500" step="25" value="550" oninput="updateVal('retard', this.value)">
+        </div>
+
+        <div class="btn-grid">
+          <button class="btn" onclick="resetGrid('random')">scramble</button>
+          <button class="btn" onclick="resetGrid('uniform')">align parallel</button>
+        </div>
+        <div class="btn-grid">
+          <button class="btn" onclick="clearDefects()">dissolve defects</button>
+          <button class="btn audio-btn" id="audio-toggle" onclick="toggleAudio()">enable audio</button>
+        </div>
+      </div>
+
+      <div class="card instructions">
+        <div class="card-title">how to play</div>
+        <p>liquid crystals have head-tail symmetry. their orientation angle &theta; aligns with neighbors, but can support disclinations (topological defects) with half-integer charges.</p>
+        <ul>
+          <li><strong>drag on canvas:</strong> manually orient molecules.</li>
+          <li><strong>click:</strong> tap to perturb and seed defects.</li>
+          <li><strong>schlieren polarizer view:</strong> rotates dark brushes as you turn the polarizers. colors mimic genuine michel-l&eacute;vy birefringence charts.</li>
+          <li><strong>active nematic mode:</strong> drives flow based on director curvature, creating spontaneous defect pairs that swim and annihilate.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sim-area">
+      <div class="view-modes">
+        <button class="view-btn active" onclick="setViewMode('schlieren')">schlieren birefringence</button>
+        <button class="view-btn" onclick="setViewMode('directors')">molecular directors</button>
+        <button class="view-btn" onclick="setViewMode('angle')">orientation mapping</button>
+        <button class="view-btn" onclick="setViewMode('combined')">combined overlay</button>
+      </div>
+
+      <div class="canvas-container" id="canvas-container">
+        <canvas id="sim-canvas"></canvas>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-label">total defects</div>
+          <div class="stat-value magenta" id="defect-count">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">order parameter (S)</div>
+          <div class="stat-value cyan" id="order-param">0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">elastic free energy</div>
+          <div class="stat-value yellow" id="free-energy">0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">active flow speed</div>
+          <div class="stat-value" id="active-flow">0.00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Physics parameters & grid
+    const N = 64; // Grid size
+    let theta = new Float32Array(N * N);
+    let uX = new Float32Array(N * N); // Flow velocity X
+    let uY = new Float32Array(N * N); // Flow velocity Y
+    let fX = new Float32Array(N * N); // Force field X
+    let fY = new Float32Array(N * N); // Force field Y
+    let orderS = new Float32Array(N * N); // Local order parameter
+
+    // Configuration
+    let config = {
+      mode: 'passive',
+      temp: 0.05,
+      elastic: 0.30,
+      activeStress: 0.40,
+      efield: 0.00,
+      efieldAngle: 0.0,
+      polarizer: 0.0,
+      retardance: 550.0,
+      viewMode: 'schlieren',
+      audio: false
+    };
+
+    // UI state
+    let isDrawing = false;
+    let dragAngle = 0;
+    let lastMouseX = 0, lastMouseY = 0;
+    let defectList = [];
+    let prevDefectCount = 0;
+
+    // Web Audio state
+    let audioCtx = null;
+    let orderOsc = null;
+    let noiseNode = null;
+    let noiseFilter = null;
+    let droneFilter = null;
+    let orderGain = null;
+    let noiseGain = null;
+
+    // Canvas setup
+    const canvas = document.getElementById('sim-canvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvas-container');
+
+    function resizeCanvas() {
+      const size = Math.min(container.clientWidth, 800);
+      canvas.width = size;
+      canvas.height = size;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Initialize liquid crystal orientations
+    function resetGrid(type = 'random') {
+      for (let i = 0; i < N * N; i++) {
+        if (type === 'random') {
+          theta[i] = Math.random() * Math.PI;
+        } else {
+          theta[i] = 0; // Uniform horizontal alignment
+        }
+        uX[i] = 0;
+        uY[i] = 0;
+        fX[i] = 0;
+        fY[i] = 0;
+        orderS[i] = 1.0;
+      }
+      prevDefectCount = 0;
+    }
+    resetGrid('random');
+
+    // UI handling
+    function setMode(mode) {
+      config.mode = mode;
+      document.querySelectorAll('.mode-tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = event.target;
+      activeBtn.classList.add('active');
+      
+      const activeControl = document.getElementById('active-stress-control');
+      if (mode === 'active') {
+        activeControl.style.display = 'flex';
+      } else {
+        activeControl.style.display = 'none';
+        // Damp velocities
+        uX.fill(0);
+        uY.fill(0);
+      }
+    }
+
+    function setViewMode(mode) {
+      config.viewMode = mode;
+      document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function updateVal(key, val) {
+      let numeric = parseFloat(val);
+      if (key === 'temp') {
+        config.temp = numeric;
+        document.getElementById('temp-val').innerText = numeric.toFixed(2);
+      } else if (key === 'elastic') {
+        config.elastic = numeric;
+        document.getElementById('elastic-val').innerText = numeric.toFixed(2);
+      } else if (key === 'active') {
+        config.activeStress = numeric;
+        document.getElementById('active-val').innerText = numeric.toFixed(2);
+      } else if (key === 'efield') {
+        config.efield = numeric;
+        document.getElementById('efield-val').innerText = numeric.toFixed(2);
+      } else if (key === 'efield-angle') {
+        config.efieldAngle = numeric * Math.PI / 180;
+        document.getElementById('efield-angle-val').innerText = val + '°';
+      } else if (key === 'polarizer') {
+        config.polarizer = numeric * Math.PI / 180;
+        document.getElementById('polarizer-val').innerText = val + '°';
+      } else if (key === 'retard') {
+        config.retardance = numeric;
+        document.getElementById('retard-val').innerText = val + ' nm';
+      }
+    }
+
+    // Helper functions for periodic boundaries
+    function idx(i, j) {
+      return ((i + N) % N) + ((j + N) % N) * N;
+    }
+
+    // Franck-Oseen relaxation & active flow step
+    function stepSimulation() {
+      let newTheta = new Float32Array(N * N);
+      let totalEnergy = 0;
+      let totalOrder = 0;
+
+      // Calculate elastic relaxation and electric field torques
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          let currIdx = idx(x, y);
+          let t = theta[currIdx];
+
+          // Neighbors
+          let t_r = theta[idx(x + 1, y)];
+          let t_l = theta[idx(x - 1, y)];
+          let t_u = theta[idx(x, y - 1)];
+          let t_d = theta[idx(x, y + 1)];
+
+          // Interaction potential favors parallel alignment: -K * cos(2*(t1 - t2))
+          // Torques proportional to sin(2*(t2 - t1))
+          let torque = 
+            Math.sin(2 * (t_r - t)) + 
+            Math.sin(2 * (t_l - t)) + 
+            Math.sin(2 * (t_u - t)) + 
+            Math.sin(2 * (t_d - t));
+
+          // Elastic Energy accumulation
+          let localEnergy = 
+            (1 - Math.cos(2 * (t_r - t))) +
+            (1 - Math.cos(2 * (t_d - t)));
+          totalEnergy += localEnergy;
+
+          // Electric field torque
+          // Energy = -1/2 * efield * cos^2(t - efieldAngle)
+          // Torque = -efield * sin(2 * (t - efieldAngle))
+          if (config.efield > 0) {
+            torque -= config.efield * Math.sin(2 * (t - config.efieldAngle));
+          }
+
+          // Thermal noise
+          let noise = (Math.random() - 0.5) * config.temp * 2.0;
+
+          // Velocity coupling (Vorticity rotate directors)
+          let flowCoupling = 0;
+          if (config.mode === 'active') {
+            // vorticity w = 0.5 * (dv_y/dx - dv_x/dy)
+            let duY_dx = (uY[idx(x + 1, y)] - uY[idx(x - 1, y)]) * 0.5;
+            let duX_dy = (uX[idx(x, y + 1)] - uX[idx(x, y - 1)]) * 0.5;
+            let vorticity = 0.5 * (duY_dx - duX_dy);
+            
+            // simple flow alignment parameter (rotates molecules with shear)
+            let duX_dx = (uX[idx(x + 1, y)] - uX[idx(x - 1, y)]) * 0.5;
+            let duY_dy = (uY[idx(x, y + 1)] - uY[idx(x, y - 1)]) * 0.5;
+            let shearRate = 0.5 * (duY_dx + duX_dy);
+            
+            flowCoupling = vorticity + 0.8 * (shearRate * Math.cos(2 * t) - 0.5 * (duX_dx - duY_dy) * Math.sin(2 * t));
+          }
+
+          // Update angle
+          let delta = config.elastic * torque + flowCoupling + noise;
+          newTheta[currIdx] = (t + delta + 2 * Math.PI) % Math.PI; // mod Pi head-tail symmetry
+        }
+      }
+
+      theta.set(newTheta);
+
+      // Active Nematics hydrodynamics: calculate active forces
+      if (config.mode === 'active') {
+        let activeForceSum = 0;
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            // Q tensor elements: Qxx = cos(2t)/2, Qxy = sin(2t)/2
+            let qxx = (idxLoc) => Math.cos(2 * theta[idxLoc]) * 0.5;
+            let qxy = (idxLoc) => Math.sin(2 * theta[idxLoc]) * 0.5;
+
+            // Divergence of Q-tensor: active force f = alpha * div(Q)
+            // fx = alpha * (dQxx/dx + dQxy/dy)
+            // fy = alpha * (dQxy/dx - dQxx/dy) (using Qyy = -Qxx)
+            let c = idx(x, y);
+            let r = idx(x + 1, y);
+            let l = idx(x - 1, y);
+            let d = idx(x, y + 1);
+            let u = idx(x, y - 1);
+
+            let dqxx_dx = (qxx(r) - qxx(l)) * 0.5;
+            let dqxy_dy = (qxy(d) - qxy(u)) * 0.5;
+            let dqxy_dx = (qxy(r) - qxy(l)) * 0.5;
+            let dqxx_dy = (qxx(d) - qxx(u)) * 0.5;
+
+            fX[c] = config.activeStress * (dqxx_dx + dqxy_dy);
+            fY[c] = config.activeStress * (dqxy_dx - dqxx_dy);
+          }
+        }
+
+        // Dissolve flow forces into velocity field (Stokes relaxation with drag/damping)
+        let totalSpeed = 0;
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            let c = idx(x, y);
+            let r = idx(x + 1, y);
+            let l = idx(x - 1, y);
+            let d = idx(x, y + 1);
+            let u = idx(x, y - 1);
+
+            // Viscous diffusion + Active driving force - drag friction
+            let new_uX = uX[c] + 0.1 * (uX[r] + uX[l] + uX[u] + uX[d] - 4 * uX[c]) + 0.2 * fX[c] - 0.08 * uX[c];
+            let new_uY = uY[c] + 0.1 * (uY[r] + uY[l] + uY[u] + uY[d] - 4 * uY[c]) + 0.2 * fY[c] - 0.08 * uY[c];
+
+            uX[c] = new_uX;
+            uY[c] = new_uY;
+            totalSpeed += Math.sqrt(new_uX * new_uX + new_uY * new_uY);
+          }
+        }
+        document.getElementById('active-flow').innerText = (totalSpeed / (N * N) * 10).toFixed(2);
+      } else {
+        document.getElementById('active-flow').innerText = "0.00";
+      }
+
+      // Calculate local order parameter S & system state metrics
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          let c = idx(x, y);
+          let t = theta[c];
+          let sSum = 
+            Math.cos(2 * (theta[idx(x + 1, y)] - t)) +
+            Math.cos(2 * (theta[idx(x - 1, y)] - t)) +
+            Math.cos(2 * (theta[idx(x, y + 1)] - t)) +
+            Math.cos(2 * (theta[idx(x, y - 1)] - t));
+          orderS[c] = Math.max(0, sSum / 4.0);
+          totalOrder += orderS[c];
+        }
+      }
+
+      let avgOrder = totalOrder / (N * N);
+      document.getElementById('order-param').innerText = avgOrder.toFixed(2);
+      document.getElementById('free-energy').innerText = (totalEnergy / 100).toFixed(2);
+
+      updateAudioNodes(avgOrder);
+    }
+
+    // Find and track disclinations (topological defects)
+    function trackDefects() {
+      defectList = [];
+      
+      // We look at plaquettes (2x2 loops)
+      for (let y = 0; y < N - 1; y++) {
+        for (let x = 0; x < N - 1; x++) {
+          // Plaquette indices:
+          // c00 -- c10
+          //  |      |
+          // c01 -- c11
+          let t00 = theta[idx(x, y)];
+          let t10 = theta[idx(x + 1, y)];
+          let t11 = theta[idx(x + 1, y + 1)];
+          let t01 = theta[idx(x, y + 1)];
+
+          // Calculate wrapped angle differences around the loop (modulo Pi)
+          let diff = (a, b) => {
+            let d = a - b;
+            // Wrap to [-pi/2, pi/2]
+            return d - Math.PI * Math.round(d / Math.PI);
+          };
+
+          let d1 = diff(t10, t00);
+          let d2 = diff(t11, t10);
+          let d3 = diff(t01, t11);
+          let d4 = diff(t00, t01);
+
+          let winding = d1 + d2 + d3 + d4;
+          let charge = winding / (2 * Math.PI);
+
+          // Charge will be close to +0.5 or -0.5
+          if (Math.abs(charge) > 0.25) {
+            defectList.push({
+              x: x + 0.5,
+              y: y + 0.5,
+              charge: charge > 0 ? 0.5 : -0.5
+            });
+          }
+        }
+      }
+
+      document.getElementById('defect-count').innerText = defectList.length;
+
+      // Trigger Web Audio Annihilation Chime
+      if (defectList.length < prevDefectCount && config.audio) {
+        // Find which defect disappeared by checking centroids or simply playing sound
+        // We trigger sound for the last known position or center
+        triggerAnnihilationSound(0.5, 0.5);
+      }
+      prevDefectCount = defectList.length;
+    }
+
+    // Force dissolve defects by applying alignment field
+    function clearDefects() {
+      // Temporarily pump up the elastic coupling and uniform electric field to force align
+      let oldElastic = config.elastic;
+      let oldEfield = config.efield;
+      config.elastic = 0.7;
+      config.efield = 1.0;
+      config.efieldAngle = 0;
+      setTimeout(() => {
+        config.elastic = oldElastic;
+        config.efield = oldEfield;
+      }, 500);
+    }
+
+    // Genuine Michel-Lévy color retardance approximation
+    // R is retardance in nm. Returns rgb string.
+    function getBirefringenceColor(R, intensity) {
+      if (R <= 0) return {r:0, g:0, b:0};
+      
+      // White light transmission peaks through crossed polarizers: T = sin^2(pi*R/lambda)
+      // Wavelength channels
+      let r_val = Math.sin((Math.PI * R) / 640);
+      let g_val = Math.sin((Math.PI * R) / 540);
+      let b_val = Math.sin((Math.PI * R) / 450);
+
+      r_val = r_val * r_val * intensity;
+      g_val = g_val * g_val * intensity;
+      b_val = b_val * b_val * intensity;
+
+      // Add a slight leakage background for realism
+      let leakage = 0.03 * intensity;
+      let r = Math.min(255, Math.round(255 * (r_val + leakage)));
+      let g = Math.min(255, Math.round(255 * (g_val + leakage)));
+      let b = Math.min(255, Math.round(255 * (b_val + leakage)));
+
+      return {r, g, b};
+    }
+
+    // Render loop
+    function render() {
+      const cellW = canvas.width / N;
+      const cellH = canvas.height / N;
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          let c = idx(x, y);
+          let t = theta[c];
+          let px = x * cellW;
+          let py = y * cellH;
+
+          // Order parameter S drops to 0 at defect cores, reducing local birefringence
+          let s = orderS[c];
+
+          if (config.viewMode === 'schlieren' || config.viewMode === 'combined') {
+            // Schlieren Texture: Intensity depends on orientation relative to polarizer angle phi
+            // I = sin^2(2 * (theta - phi))
+            let intensity = Math.sin(2 * (t - config.polarizer));
+            intensity = intensity * intensity * s; // drop to black at defects
+
+            let color = getBirefringenceColor(config.retardance, intensity);
+            ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+            ctx.fillRect(px, py, cellW + 0.5, cellH + 0.5);
+          } 
+          else if (config.viewMode === 'angle') {
+            // Map angle theta [0, PI] to color wheel HSL
+            let hue = (t / Math.PI) * 360;
+            ctx.fillStyle = `hsl(${hue}, 90%, ${Math.round(45 * s)}%)`;
+            ctx.fillRect(px, py, cellW + 0.5, cellH + 0.5);
+          }
+        }
+      }
+
+      // Draw Directors (Vector/Line overlay)
+      if (config.viewMode === 'directors' || config.viewMode === 'combined') {
+        const step = 2; // draw every 2nd cell for clarity
+        ctx.strokeStyle = config.viewMode === 'combined' ? 'rgba(255,255,255,0.45)' : 'rgba(0,255,255,0.7)';
+        ctx.lineWidth = 1.5;
+
+        for (let y = 0; y < N; y += step) {
+          for (let x = 0; x < N; x += step) {
+            let c = idx(x, y);
+            let t = theta[c];
+            let px = (x + 0.5) * cellW;
+            let py = (y + 0.5) * cellH;
+
+            let length = cellW * 0.8;
+            let dx = Math.cos(t) * length;
+            let dy = Math.sin(t) * length;
+
+            ctx.beginPath();
+            ctx.moveTo(px - dx, py - dy);
+            ctx.lineTo(px + dx, py + dy);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw defects (highlight cores)
+      defectList.forEach(d => {
+        let px = d.x * cellW;
+        let py = d.y * cellH;
+        let radius = cellW * 1.5;
+
+        ctx.lineWidth = 2.5;
+        if (d.charge > 0) {
+          // +1/2 Defect: Comet shape, highlighted in red/magenta
+          ctx.strokeStyle = 'hsl(320, 100%, 55%)';
+          ctx.beginPath();
+          ctx.arc(px, py, radius, 0, 2 * Math.PI);
+          ctx.stroke();
+          // Draw orientation tail
+          let t = theta[idx(Math.floor(d.x), Math.floor(d.y))];
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + Math.cos(t) * radius * 1.8, py + Math.sin(t) * radius * 1.8);
+          ctx.stroke();
+        } else {
+          // -1/2 Defect: Triangular symmetry, highlighted in cyan
+          ctx.strokeStyle = 'hsl(180, 100%, 48%)';
+          ctx.beginPath();
+          ctx.arc(px, py, radius, 0, 2 * Math.PI);
+          ctx.stroke();
+          
+          // Draw three small outward spokes
+          let t = theta[idx(Math.floor(d.x), Math.floor(d.y))];
+          for (let i = 0; i < 3; i++) {
+            let angle = t + (i * 2 * Math.PI) / 3;
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(px + Math.cos(angle) * radius * 1.5, py + Math.sin(angle) * radius * 1.5);
+            ctx.stroke();
+          }
+        }
+      });
+    }
+
+    // Web Audio Synthesizer functions
+    function toggleAudio() {
+      const btn = document.getElementById('audio-toggle');
+      if (!audioCtx) {
+        initAudio();
+      }
+
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+        config.audio = true;
+        btn.classList.add('active');
+        btn.innerText = 'mute audio';
+      } else {
+        audioCtx.suspend();
+        config.audio = false;
+        btn.classList.remove('active');
+        btn.innerText = 'enable audio';
+      }
+    }
+
+    function initAudio() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // 1. Drone Oscillator (sawtooth + resonant lowpass)
+      orderOsc = audioCtx.createOscillator();
+      orderOsc.type = 'triangle';
+      orderOsc.frequency.setValueAtTime(65.41, audioCtx.currentTime); // C2 Note
+      
+      droneFilter = audioCtx.createBiquadFilter();
+      droneFilter.type = 'lowpass';
+      droneFilter.Q.value = 10.0;
+      droneFilter.frequency.setValueAtTime(150, audioCtx.currentTime);
+
+      orderGain = audioCtx.createGain();
+      orderGain.gain.setValueAtTime(0.0, audioCtx.currentTime); // Start silent
+
+      orderOsc.connect(droneFilter);
+      droneFilter.connect(orderGain);
+      orderGain.connect(audioCtx.destination);
+      orderOsc.start();
+
+      // 2. Noise source (White noise generator representing thermal molecular motion)
+      let bufferSize = 2 * audioCtx.sampleRate;
+      let noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      let output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+
+      noiseNode = audioCtx.createBufferSource();
+      noiseNode.buffer = noiseBuffer;
+      noiseNode.loop = true;
+
+      noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(300, audioCtx.currentTime);
+      noiseFilter.Q.value = 1.5;
+
+      noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.005, audioCtx.currentTime);
+
+      noiseNode.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noiseNode.start();
+    }
+
+    function updateAudioNodes(avgOrder) {
+      if (!audioCtx || audioCtx.state === 'suspended') return;
+
+      // Map Order Parameter S to Drone
+      // As order increases, volume increases, frequency stabilizes
+      let baseGain = 0.12 * avgOrder;
+      orderGain.gain.setTargetAtTime(baseGain, audioCtx.currentTime, 0.1);
+
+      // Low-pass filter frequency maps to order parameter (opens up as system aligns)
+      let filterFreq = 120 + avgOrder * 350;
+      droneFilter.frequency.setTargetAtTime(filterFreq, audioCtx.currentTime, 0.15);
+
+      // Pitch slightly tracks elastic stress / active flow speed
+      let speedFactor = parseFloat(document.getElementById('active-flow').innerText);
+      let pitchMod = 65.41 + speedFactor * 4.0;
+      orderOsc.frequency.setTargetAtTime(pitchMod, audioCtx.currentTime, 0.2);
+
+      // Noise gain maps to Temperature slider
+      let nGain = 0.002 + config.temp * 0.03;
+      noiseGain.gain.setTargetAtTime(nGain, audioCtx.currentTime, 0.1);
+      
+      // Filter center maps to Efield
+      let noiseFilterFreq = 300 + config.efield * 400;
+      noiseFilter.frequency.setTargetAtTime(noiseFilterFreq, audioCtx.currentTime, 0.15);
+    }
+
+    function triggerAnnihilationSound(x, y) {
+      if (!audioCtx || audioCtx.state === 'suspended') return;
+
+      // FM Synth effect for topological defect annihilations
+      let carrier = audioCtx.createOscillator();
+      let modulator = audioCtx.createOscillator();
+      let modGain = audioCtx.createGain();
+      let gainNode = audioCtx.createGain();
+      let panner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+
+      carrier.type = 'sine';
+      modulator.type = 'sine';
+
+      // Pitch is mapped to the defect annihilation position
+      let noteFreq = 220 + (1 - y) * 440; // A3 to A4
+      carrier.frequency.setValueAtTime(noteFreq, audioCtx.currentTime);
+      modulator.frequency.setValueAtTime(noteFreq * 2.01, audioCtx.currentTime); // Harmonic ratio
+
+      modGain.gain.setValueAtTime(300, audioCtx.currentTime);
+      modGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 0.005);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+
+      modulator.connect(modGain);
+      modGain.connect(carrier.frequency);
+      carrier.connect(gainNode);
+
+      if (panner) {
+        panner.pan.setValueAtTime(x * 2 - 1, audioCtx.currentTime); // Stereo spacing
+        gainNode.connect(panner);
+        panner.connect(audioCtx.destination);
+      } else {
+        gainNode.connect(audioCtx.destination);
+      }
+
+      carrier.start();
+      modulator.start();
+
+      carrier.stop(audioCtx.currentTime + 0.65);
+      modulator.stop(audioCtx.currentTime + 0.65);
+    }
+
+    // Interactivity: mouse & touch alignment brush
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: ((clientX - rect.left) / rect.width) * N,
+        y: ((clientY - rect.top) / rect.height) * N
+      };
+    }
+
+    function startInteraction(e) {
+      isDrawing = true;
+      let coords = getCanvasCoords(e);
+      lastMouseX = coords.x;
+      lastMouseY = coords.y;
+      perturbLC(coords.x, coords.y, true); // initial perturbation/click seeds defects
+    }
+
+    function dragInteraction(e) {
+      if (!isDrawing) return;
+      let coords = getCanvasCoords(e);
+      let dx = coords.x - lastMouseX;
+      let dy = coords.y - lastMouseY;
+      
+      // Calculate drawing brush angle based on motion direction
+      if (dx * dx + dy * dy > 0.05) {
+        dragAngle = Math.atan2(dy, dx);
+        applyBrush(coords.x, coords.y, dragAngle);
+      }
+
+      lastMouseX = coords.x;
+      lastMouseY = coords.y;
+    }
+
+    function stopInteraction() {
+      isDrawing = false;
+    }
+
+    function applyBrush(cx, cy, angle) {
+      const radius = 4.0;
+      for (let y = -radius; y <= radius; y++) {
+        for (let x = -radius; x <= radius; x++) {
+          let gx = Math.round(cx + x);
+          let gy = Math.round(cy + y);
+          let distSq = x * x + y * y;
+          if (distSq <= radius * radius) {
+            let c = idx(gx, gy);
+            // Blend alignment angle into cell
+            let weight = 1.0 - Math.sqrt(distSq) / radius;
+            // mod Pi wrap
+            let curr = theta[c];
+            theta[c] = (curr * (1 - weight) + angle * weight + 2 * Math.PI) % Math.PI;
+            
+            // Generate minor flow from brush shear
+            if (config.mode === 'active') {
+              uX[c] += Math.cos(angle) * weight * 0.5;
+              uY[c] += Math.sin(angle) * weight * 0.5;
+            }
+          }
+        }
+      }
+    }
+
+    // Seed defects or draw localized disturbances on single click
+    function perturbLC(cx, cy, clickOnly = false) {
+      const gx = Math.round(cx);
+      const gy = Math.round(cy);
+      
+      if (clickOnly) {
+        // Tap perturbation: insert singular twist to nucleate +1/2 and -1/2 pairs
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            let c = idx(gx + dx, gy + dy);
+            // Spiral-like orientation field locally
+            theta[c] = (Math.atan2(dy, dx) + Math.PI / 2 + Math.PI) % Math.PI;
+          }
+        }
+      }
+    }
+
+    // Bind event listeners
+    canvas.addEventListener('mousedown', startInteraction);
+    canvas.addEventListener('mousemove', dragInteraction);
+    window.addEventListener('mouseup', stopInteraction);
+
+    canvas.addEventListener('touchstart', startInteraction, {passive: false});
+    canvas.addEventListener('touchmove', dragInteraction, {passive: false});
+    canvas.addEventListener('touchend', stopInteraction);
+
+    // Simulation & render scheduler loop
+    function loop() {
+      stepSimulation();
+      trackDefects();
+      render();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
