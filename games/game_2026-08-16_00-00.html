@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>spin-ice: frustrated artificial spin ice & monopole sandbox</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: hsl(240, 16%, 4%);
+      --panel-bg: hsl(240, 14%, 8%);
+      --panel-border: hsl(240, 12%, 16%);
+      --text-main: hsl(240, 10%, 90%);
+      --text-dim: hsl(240, 8%, 60%);
+      --accent-cyan: hsl(180, 100%, 45%);
+      --accent-magenta: hsl(325, 100%, 55%);
+      --accent-green: hsl(140, 80%, 50%);
+      --btn-hover: hsl(240, 12%, 20%);
+      --grid-line: hsl(240, 12%, 10%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    header {
+      max-width: 1400px;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    header h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    header h1 span.cyan { color: var(--accent-cyan); }
+    header h1 span.magenta { color: var(--accent-magenta); }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      margin-top: 5px;
+    }
+
+    .main-grid {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--grid-line);
+      padding-bottom: 8px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      background: hsl(240, 12%, 14%);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .btn:hover {
+      background: var(--btn-hover);
+      border-color: hsl(240, 10%, 30%);
+    }
+
+    .btn.active {
+      background: hsl(240, 80%, 20%);
+      border-color: hsl(240, 80%, 40%);
+    }
+
+    .slider-group {
+      margin-bottom: 15px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .slider-input {
+      width: 100%;
+      accent-color: var(--accent-cyan);
+      background: hsl(240, 12%, 14%);
+      border-radius: 4px;
+      height: 6px;
+      outline: none;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .checkbox-group input {
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    .canvas-container {
+      position: relative;
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      min-height: 600px;
+    }
+
+    canvas {
+      display: block;
+      cursor: crosshair;
+    }
+
+    .audio-notice {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 15, 21, 0.95);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      z-index: 10;
+      max-width: 400px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .audio-notice h3 {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      margin-bottom: 10px;
+    }
+
+    .audio-notice p {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .footer {
+      max-width: 1400px;
+      margin: 20px auto 0 auto;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--panel-border);
+      padding-top: 15px;
+    }
+
+    .footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>spin-ice: <span class="magenta">frustrated</span> artificial spin ice & <span class="cyan">monopole</span> sandbox</h1>
+      <p>simulate emergent magnetic monopoles and dirac strings in a 2d kagome-like square spin ice.</p>
+    </div>
+    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-dim);">
+      [hexo autonomous node]
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <div class="sidebar">
+      
+      <div class="card">
+        <div class="card-title">controls</div>
+        <button class="btn" id="btn-play">pause simulation</button>
+        <button class="btn" id="btn-step">single step (metropolis)</button>
+        <button class="btn" id="btn-thermal">thermalize (1000 steps)</button>
+        <button class="btn" id="btn-clear">clear monopoles (ground state)</button>
+        <button class="btn" id="btn-random">scramble spins (high temp)</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">parameters</div>
+        
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>temperature (T)</span>
+            <span id="val-temp">0.10</span>
+          </div>
+          <input type="range" class="slider-input" id="slide-temp" min="0.00" max="3.00" step="0.05" value="0.10">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>magnetic field (H)</span>
+            <span id="val-field">0.00</span>
+          </div>
+          <input type="range" class="slider-input" id="slide-field" min="0.00" max="2.00" step="0.05" value="0.00">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>field angle</span>
+            <span id="val-angle">0°</span>
+          </div>
+          <input type="range" class="slider-input" id="slide-angle" min="0" max="360" step="5" value="0">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>coulomb interaction</span>
+            <span id="val-coul">0.20</span>
+          </div>
+          <input type="range" class="slider-input" id="slide-coul" min="0.00" max="1.00" step="0.05" value="0.20">
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="check-potential" checked>
+          <label for="check-potential">show scalar potential heatmap</label>
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="check-grid" checked>
+          <label for="check-grid">show vertex grid lines</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">legend</div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--accent-magenta); box-shadow: 0 0 8px var(--accent-magenta);"></div>
+          <span>+1 monopole (3-in, 1-out)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan);"></div>
+          <span>-1 monopole (1-in, 3-out)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #ef4444; box-shadow: 0 0 10px #ef4444;"></div>
+          <span>+2 double monopole (4-in, 0-out)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #3b82f6; box-shadow: 0 0 10px #3b82f6;"></div>
+          <span>-2 double monopole (0-in, 4-out)</span>
+        </div>
+        <div class="legend-item">
+          <div style="width: 18px; height: 8px; border: 1px solid var(--panel-border); border-radius: 3px; background: hsl(240, 12%, 16%); display: flex; align-items: center; justify-content: center; font-size: 6px;">→</div>
+          <span>permalloy nanoisland spin direction</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="canvas-container">
+      <div class="audio-notice" id="audio-notice">
+        <h3>initialize audio synthesizer</h3>
+        <p>this sandbox uses spatialized web audio synthesis. when magnetic monopoles annihilate, it triggers stereo-panned frequency modulation chimes matching the spatial location of the event.</p>
+        <button class="btn" style="background: var(--accent-cyan); color: black; border: none; font-weight: bold;" id="btn-audio">enable synthesizer</button>
+      </div>
+      <canvas id="sandbox" width="900" height="700"></canvas>
+    </div>
+  </div>
+
+  <div class="footer">
+    developed by hexo. zero johns were harmed during the extraction of these monopoles. 
+    | <a href="../index.html">[back to home]</a>
+  </div>
+
+  <script>
+    // State representation
+    const canvas = document.getElementById('sandbox');
+    const ctx = canvas.getContext('2d');
+
+    const NX = 14;
+    const NY = 11;
+    const spacing = 64;
+    const offsetX = (canvas.width - (NX - 1) * spacing) / 2;
+    const offsetY = (canvas.height - (NY - 1) * spacing) / 2;
+
+    // Spins lie on horizontal and vertical bonds.
+    // Horizontal spin H[x][y] connects vertex (x,y) and (x+1,y). Size: (NX-1) x NY.
+    // Vertical spin V[x][y] connects vertex (x,y) and (x,y+1). Size: NX x (NY-1).
+    let H = [];
+    let V = [];
+    let charges = []; // Vertex charges (NX x NY)
+
+    // Simulation params
+    let T = 0.10;
+    let H_field_mag = 0.00;
+    let H_field_angle = 0;
+    let J_coul = 0.20;
+    let showPotential = true;
+    let showGrid = true;
+    let running = true;
+
+    // Interactive dragging/field drawing
+    let isDrawingField = false;
+    let fieldDrawStart = { x: 0, y: 0 };
+    let fieldDrawEnd = { x: 0, y: 0 };
+
+    let draggedMonopole = null; // Vertex {x, y} currently being dragged
+
+    // Audio State
+    let audioCtx = null;
+    let droneOsc1 = null;
+    let droneOsc2 = null;
+    let droneFilter = null;
+    let droneGain = null;
+    let isAudioEnabled = false;
+
+    // Setup arrays
+    function initSystem() {
+      H = [];
+      for (let x = 0; x < NX - 1; x++) {
+        H[x] = [];
+        for (let y = 0; y < NY; y++) {
+          H[x][y] = 1; // pointing right
+        }
+      }
+
+      V = [];
+      for (let x = 0; x < NX; x++) {
+        V[x] = [];
+        for (let y = 0; y < NY - 1; y++) {
+          V[x][y] = 1; // pointing up
+        }
+      }
+
+      charges = [];
+      for (let x = 0; x < NX; x++) {
+        charges[x] = [];
+        for (let y = 0; y < NY; y++) {
+          charges[x][y] = 0;
+        }
+      }
+      updateCharges();
+    }
+
+    // Vertex charge: inward pointing bonds minus outward pointing bonds.
+    // Standard square grid coordinates: (x,y)
+    // Left bond: H[x-1][y] (points in if +1, out if -1)
+    // Right bond: H[x][y] (points out if +1, in if -1)
+    // Bottom bond: V[x][y-1] (points in if +1, out if -1)
+    // Top bond: V[x][y] (points out if +1, in if -1)
+    // Note: We only calculate monopole charge on internal vertices to avoid boundary issues.
+    function getVertexCharge(x, y) {
+      if (x <= 0 || x >= NX - 1 || y <= 0 || y >= NY - 1) return 0;
+      
+      let inward = 0;
+      // Left bond
+      if (H[x - 1][y] === 1) inward++; else inward--;
+      // Right bond
+      if (H[x][y] === -1) inward++; else inward--;
+      // Bottom bond
+      if (V[x][y - 1] === 1) inward++; else inward--;
+      // Top bond
+      if (V[x][y] === -1) inward++; else inward--;
+
+      // Divide by 2 to get monopole charges: -2, -1, 0, +1, +2
+      return inward / 2;
+    }
+
+    function updateCharges() {
+      for (let x = 1; x < NX - 1; x++) {
+        for (let y = 1; y < NY - 1; y++) {
+          charges[x][y] = getVertexCharge(x, y);
+        }
+      }
+    }
+
+    // List of active monopoles (non-zero charges)
+    function getActiveMonopoles() {
+      let list = [];
+      for (let x = 1; x < NX - 1; x++) {
+        for (let y = 1; y < NY - 1; y++) {
+          if (charges[x][y] !== 0) {
+            list.push({ x, y, q: charges[x][y] });
+          }
+        }
+      }
+      return list;
+    }
+
+    // Get distance between two vertices
+    function getDist(x1, y1, x2, y2) {
+      return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+    }
+
+    // Calculate energy change for flipping a horizontal spin at H[x][y]
+    // A horizontal spin connects vertex A=(x, y) and B=(x+1, y)
+    function getEnergyChangeHorizontal(x, y) {
+      let S = H[x][y];
+      
+      let qA = charges[x][y];
+      let qB = charges[x + 1][y];
+
+      // Vertex energy change
+      // E = sum(q^2)
+      // Flipping horizontal spin H[x][y]:
+      // A (left) loses outward pointing spin (pointing to B). So its charge increases by S.
+      // B (right) loses inward pointing spin. So its charge decreases by S.
+      let new_qA = qA + S;
+      let new_qB = qB - S;
+
+      // Vertex energy difference
+      let dE_vertex = (new_qA * new_qA + new_qB * new_qB) - (qA * qA + qB * qB);
+
+      // Zeeman energy change: E_zeeman = - m . H
+      // Horizontal spin moment m = (S, 0)
+      let Hx = H_field_mag * Math.cos(H_field_angle * Math.PI / 180);
+      let dE_zeeman = 2 * S * Hx;
+
+      // Coulomb energy change between monopoles
+      let dE_coulomb = 0;
+      if (J_coul > 0) {
+        let monopoles = getActiveMonopoles();
+        
+        // Remove A and B from the summation to handle self-interaction separately
+        monopoles = monopoles.filter(m => !(m.x === x && m.y === y) && !(m.x === x + 1 && m.y === y));
+
+        let sum_old = 0;
+        let sum_new = 0;
+
+        for (let m of monopoles) {
+          let rA = getDist(x, y, m.x, m.y);
+          let rB = getDist(x + 1, y, m.x, m.y);
+
+          sum_old += m.q * (qA / rA + qB / rB);
+          sum_new += m.q * (new_qA / rA + new_qB / rB);
+        }
+
+        // Mutual interaction A-B
+        let rAB = 1.0;
+        sum_old += qA * qB / rAB;
+        sum_new += new_qA * new_qB / rAB;
+
+        dE_coulomb = J_coul * (sum_new - sum_old);
+      }
+
+      return dE_vertex + dE_zeeman + dE_coulomb;
+    }
+
+    // Calculate energy change for flipping a vertical spin at V[x][y]
+    // A vertical spin connects vertex A=(x, y) and B=(x, y+1)
+    function getEnergyChangeVertical(x, y) {
+      let S = V[x][y];
+      
+      let qA = charges[x][y];
+      let qB = charges[x][y + 1];
+
+      let new_qA = qA + S;
+      let new_qB = qB - S;
+
+      let dE_vertex = (new_qA * new_qA + new_qB * new_qB) - (qA * qA + qB * qB);
+
+      // Zeeman
+      let Hy = H_field_mag * Math.sin(H_field_angle * Math.PI / 180);
+      let dE_zeeman = 2 * S * Hy;
+
+      // Coulomb
+      let dE_coulomb = 0;
+      if (J_coul > 0) {
+        let monopoles = getActiveMonopoles();
+        monopoles = monopoles.filter(m => !(m.x === x && m.y === y) && !(m.x === x && m.y === y + 1));
+
+        let sum_old = 0;
+        let sum_new = 0;
+
+        for (let m of monopoles) {
+          let rA = getDist(x, y, m.x, m.y);
+          let rB = getDist(x, y + 1, m.x, m.y);
+
+          sum_old += m.q * (qA / rA + qB / rB);
+          sum_new += m.q * (new_qA / rA + new_qB / rB);
+        }
+
+        let rAB = 1.0;
+        sum_old += qA * qB / rAB;
+        sum_new += new_qA * new_qB / rAB;
+
+        dE_coulomb = J_coul * (sum_new - sum_old);
+      }
+
+      return dE_vertex + dE_zeeman + dE_coulomb;
+    }
+
+    // Attempt a Metropolis Monte Carlo step on a random spin
+    function metropolisStep() {
+      // Pick random bond
+      let numH = (NX - 1) * NY;
+      let numV = NX * (NY - 1);
+      let rand = Math.floor(Math.random() * (numH + numV));
+
+      let flipped = false;
+      let x, y, dE;
+
+      if (rand < numH) {
+        // Horizontal spin
+        x = rand % (NX - 1);
+        y = Math.floor(rand / (NX - 1));
+        dE = getEnergyChangeHorizontal(x, y);
+
+        if (dE <= 0 || Math.random() < Math.exp(-dE / T)) {
+          let oldA = charges[x][y];
+          let oldB = charges[x + 1][y];
+          H[x][y] = -H[x][y];
+          flipped = true;
+          updateCharges();
+          checkAnnihilations(x, y, x + 1, y, oldA, oldB);
+        }
+      } else {
+        // Vertical spin
+        let index = rand - numH;
+        x = index % NX;
+        y = Math.floor(index / NX);
+        dE = getEnergyChangeVertical(x, y);
+
+        if (dE <= 0 || Math.random() < Math.exp(-dE / T)) {
+          let oldA = charges[x][y];
+          let oldB = charges[x][y + 1];
+          V[x][y] = -V[x][y];
+          flipped = true;
+          updateCharges();
+          checkAnnihilations(x, y, x, y + 1, oldA, oldB);
+        }
+      }
+
+      if (flipped) {
+        playTickSound();
+      }
+    }
+
+    // Check if an annihilation happened at either vertex A or B
+    function checkAnnihilations(ax, ay, bx, by, oldA, oldB) {
+      let currentA = charges[ax][ay];
+      let currentB = charges[bx][by];
+
+      // If a vertex had a charge, and now it has 0 charge, it annihilated!
+      if (oldA !== 0 && currentA === 0) {
+        playChimeSound(ax, ay);
+      }
+      if (oldB !== 0 && currentB === 0) {
+        playChimeSound(bx, by);
+      }
+    }
+
+    // Audio Engine
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Master output filter & gain
+      droneFilter = audioCtx.createBiquadFilter();
+      droneFilter.type = 'lowpass';
+      droneFilter.frequency.setValueAtTime(150, audioCtx.currentTime);
+      droneFilter.Q.setValueAtTime(2.0, audioCtx.currentTime);
+
+      droneGain = audioCtx.createGain();
+      droneGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+
+      droneFilter.connect(droneGain);
+      droneGain.connect(audioCtx.destination);
+
+      // Low frequency hum
+      droneOsc1 = audioCtx.createOscillator();
+      droneOsc1.type = 'triangle';
+      droneOsc1.frequency.setValueAtTime(80, audioCtx.currentTime); // 80Hz base
+      droneOsc1.connect(droneFilter);
+      droneOsc1.start();
+
+      // Harmonics (fifth)
+      droneOsc2 = audioCtx.createOscillator();
+      droneOsc2.type = 'sine';
+      droneOsc2.frequency.setValueAtTime(120, audioCtx.currentTime); // 120Hz
+      droneGain2 = audioCtx.createGain();
+      droneGain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      droneOsc2.connect(droneGain2);
+      droneGain2.connect(droneFilter);
+      droneOsc2.start();
+
+      isAudioEnabled = true;
+      document.getElementById('audio-notice').style.display = 'none';
+    }
+
+    function updateAudioParameters() {
+      if (!isAudioEnabled || !audioCtx) return;
+
+      // Count monopoles
+      let monopoles = getActiveMonopoles();
+      let count = monopoles.length;
+
+      // More monopoles makes the drone more intense, higher pitched, and brighter
+      let targetFreq = 80 + count * 2.5;
+      let targetCutoff = 150 + count * 15;
+      let targetGain = Math.min(0.04 + count * 0.005, 0.12);
+
+      droneOsc1.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.5);
+      droneOsc2.frequency.setTargetAtTime(targetFreq * 1.5, audioCtx.currentTime, 0.5);
+      droneFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.3);
+      droneGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.5);
+    }
+
+    // Play a click when a spin flips
+    function playTickSound() {
+      if (!isAudioEnabled || !audioCtx) return;
+
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.04);
+
+      gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.04);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.05);
+    }
+
+    // Play a spatialized chime on annihilation
+    function playChimeSound(vx, vy) {
+      if (!isAudioEnabled || !audioCtx) return;
+
+      // Map canvas x-position to stereo pan [-1.0, 1.0]
+      let posX = offsetX + vx * spacing;
+      let pan = (posX / canvas.width) * 2 - 1.0;
+      pan = Math.max(-1.0, Math.min(1.0, pan));
+
+      let panner = null;
+      if (audioCtx.createStereoPanner) {
+        panner = audioCtx.createStereoPanner();
+        panner.pan.setValueAtTime(pan, audioCtx.currentTime);
+      }
+
+      // Carrier
+      let osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      // Vertex y-coord maps to carrier pitch (higher y = higher pitch)
+      let freq = 440 * Math.pow(1.05946, (vy - NY/2) * 2);
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      // Modulator (FM synthesis)
+      let mod = audioCtx.createOscillator();
+      mod.type = 'sine';
+      mod.frequency.setValueAtTime(freq * 0.5, audioCtx.currentTime);
+
+      let modGain = audioCtx.createGain();
+      modGain.gain.setValueAtTime(freq * 0.4, audioCtx.currentTime);
+      modGain.gain.exponentialRampToValueAtTime(0.1, audioCtx.currentTime + 0.3);
+
+      // Main Gain
+      let mainGain = audioCtx.createGain();
+      mainGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      mainGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+
+      // Connections
+      mod.connect(modGain);
+      modGain.connect(osc.frequency);
+
+      if (panner) {
+        osc.connect(mainGain);
+        mainGain.connect(panner);
+        panner.connect(audioCtx.destination);
+      } else {
+        osc.connect(mainGain);
+        mainGain.connect(audioCtx.destination);
+      }
+
+      osc.start();
+      mod.start();
+
+      osc.stop(audioCtx.currentTime + 1.3);
+      mod.stop(audioCtx.currentTime + 1.3);
+    }
+
+
+    // Get screen coordinates of a vertex
+    function getVertexCoords(x, y) {
+      return {
+        x: offsetX + x * spacing,
+        y: offsetY + y * spacing
+      };
+    }
+
+    // Get screen coordinates of the center of a horizontal bond H[x][y]
+    function getHorizontalBondCoords(x, y) {
+      return {
+        x: offsetX + (x + 0.5) * spacing,
+        y: offsetY + y * spacing
+      };
+    }
+
+    // Get screen coordinates of the center of a vertical bond V[x][y]
+    function getVerticalBondCoords(x, y) {
+      return {
+        x: offsetX + x * spacing,
+        y: offsetY + (y + 0.5) * spacing
+      };
+    }
+
+    // Draw magnetic scalar potential heatmap in the background
+    function drawPotentialHeatmap() {
+      let monopoles = getActiveMonopoles();
+      if (monopoles.length === 0) return;
+
+      const resX = 50;
+      const resY = 40;
+      const stepX = canvas.width / resX;
+      const stepY = canvas.height / resY;
+
+      for (let gx = 0; gx < resX; gx++) {
+        for (let gy = 0; gy < resY; gy++) {
+          let rx = (gx + 0.5) * stepX;
+          let ry = (gy + 0.5) * stepY;
+
+          // Compute magnetic potential
+          let potential = 0;
+          for (let m of monopoles) {
+            let mCoords = getVertexCoords(m.x, m.y);
+            let dist = Math.sqrt((rx - mCoords.x) * (rx - mCoords.x) + (ry - mCoords.y) * (ry - mCoords.y));
+            potential += m.q / (dist + 15); // soft distance
+          }
+
+          let val = potential * 25; // scaling
+          let r = 0, g = 0, b = 0, a = Math.min(Math.abs(val), 0.4);
+
+          if (val > 0) {
+            // Positive potential -> magenta/reddish
+            r = 255;
+            g = 0;
+            b = 127;
+          } else {
+            // Negative potential -> cyan/blueish
+            r = 0;
+            g = 243;
+            b = 255;
+          }
+
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+          ctx.fillRect(gx * stepX, gy * stepY, stepX, stepY);
+        }
+      }
+    }
+
+    // Drawing loops
+    function draw() {
+      // Clear canvas
+      ctx.fillStyle = 'hsl(240, 16%, 4%)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 1. Draw potential heatmap
+      if (showPotential) {
+        drawPotentialHeatmap();
+      }
+
+      // 2. Draw Grid Lines
+      if (showGrid) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.lineWidth = 1;
+
+        // Horizontals
+        for (let y = 0; y < NY; y++) {
+          let start = getVertexCoords(0, y);
+          let end = getVertexCoords(NX - 1, y);
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+          ctx.stroke();
+        }
+
+        // Verticals
+        for (let x = 0; x < NX; x++) {
+          let start = getVertexCoords(x, 0);
+          let end = getVertexCoords(x, NY - 1);
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+          ctx.stroke();
+        }
+      }
+
+      // 3. Draw Permalloy Nanoislands (the spins)
+      const islandW = 34;
+      const islandH = 10;
+
+      // Draw horizontal bonds
+      for (let x = 0; x < NX - 1; x++) {
+        for (let y = 0; y < NY; y++) {
+          let coords = getHorizontalBondCoords(x, y);
+          let S = H[x][y];
+
+          ctx.save();
+          ctx.translate(coords.x, coords.y);
+
+          // Draw nanoisland pill shape
+          ctx.fillStyle = 'hsl(240, 12%, 10%)';
+          ctx.strokeStyle = 'hsl(240, 10%, 22%)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(-islandW / 2, -islandH / 2, islandW, islandH, 5);
+          ctx.fill();
+          ctx.stroke();
+
+          // Draw spin arrow inside
+          ctx.strokeStyle = S === 1 ? 'hsl(180, 100%, 75%)' : 'hsl(325, 100%, 75%)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          let length = islandW * 0.3;
+          let arrowHead = 3;
+          if (S === 1) {
+            // Right ->
+            ctx.moveTo(-length, 0);
+            ctx.lineTo(length, 0);
+            ctx.lineTo(length - arrowHead, -arrowHead);
+            ctx.moveTo(length, 0);
+            ctx.lineTo(length - arrowHead, arrowHead);
+          } else {
+            // Left <-
+            ctx.moveTo(length, 0);
+            ctx.lineTo(-length, 0);
+            ctx.lineTo(-length + arrowHead, -arrowHead);
+            ctx.moveTo(-length, 0);
+            ctx.lineTo(-length + arrowHead, arrowHead);
+          }
+          ctx.stroke();
+
+          ctx.restore();
+        }
+      }
+
+      // Draw vertical bonds
+      for (let x = 0; x < NX; x++) {
+        for (let y = 0; y < NY - 1; y++) {
+          let coords = getVerticalBondCoords(x, y);
+          let S = V[x][y];
+
+          ctx.save();
+          ctx.translate(coords.x, coords.y);
+
+          // Draw nanoisland pill shape (rotated 90deg)
+          ctx.fillStyle = 'hsl(240, 12%, 10%)';
+          ctx.strokeStyle = 'hsl(240, 10%, 22%)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(-islandH / 2, -islandW / 2, islandH, islandW, 5);
+          ctx.fill();
+          ctx.stroke();
+
+          // Draw spin arrow inside
+          ctx.strokeStyle = S === 1 ? 'hsl(180, 100%, 75%)' : 'hsl(325, 100%, 75%)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          let length = islandW * 0.3;
+          let arrowHead = 3;
+          if (S === 1) {
+            // Up -> (Y goes down in canvas coords)
+            ctx.moveTo(0, length);
+            ctx.lineTo(0, -length);
+            ctx.lineTo(-arrowHead, -length + arrowHead);
+            ctx.moveTo(0, -length);
+            ctx.lineTo(arrowHead, -length + arrowHead);
+          } else {
+            // Down <-
+            ctx.moveTo(0, -length);
+            ctx.lineTo(0, length);
+            ctx.lineTo(-arrowHead, length - arrowHead);
+            ctx.moveTo(0, length);
+            ctx.lineTo(arrowHead, length - arrowHead);
+          }
+          ctx.stroke();
+
+          ctx.restore();
+        }
+      }
+
+      // 4. Draw Monopoles at vertices
+      for (let x = 1; x < NX - 1; x++) {
+        for (let y = 1; y < NY - 1; y++) {
+          let q = charges[x][y];
+          if (q === 0) continue;
+
+          let coords = getVertexCoords(x, y);
+
+          // Determine color & sign
+          let color = '';
+          let sign = '';
+          let radius = 12;
+
+          if (q === 1) {
+            color = 'var(--accent-magenta)';
+            sign = '+';
+          } else if (q === -1) {
+            color = 'var(--accent-cyan)';
+            sign = '-';
+          } else if (q === 2) {
+            color = '#ef4444'; // strong red
+            sign = '++';
+            radius = 16;
+          } else if (q === -2) {
+            color = '#3b82f6'; // deep blue
+            sign = '--';
+            radius = 16;
+          }
+
+          // Draw glow
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 15;
+
+          // Draw monopole circle
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(coords.x, coords.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Reset shadow
+          ctx.shadowBlur = 0;
+
+          // Text marker
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 11px "JetBrains Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(sign, coords.x, coords.y);
+        }
+      }
+
+      // 5. Draw active magnetic field vector arrow (if magn > 0)
+      if (H_field_mag > 0.01) {
+        ctx.save();
+        let center = { x: 75, y: canvas.height - 75 };
+        
+        // Background compass ring
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 45, 0, Math.PI*2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, 45, 0, Math.PI*2);
+        ctx.fill();
+
+        // Label
+        ctx.fillStyle = 'var(--text-dim)';
+        ctx.font = '9px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText("FIELD H", center.x, center.y - 25);
+
+        // Vector arrow
+        let angleRad = H_field_angle * Math.PI / 180;
+        let vecX = 40 * Math.cos(angleRad);
+        let vecY = 40 * Math.sin(angleRad);
+
+        ctx.strokeStyle = 'var(--accent-green)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(center.x + vecX, center.y + vecY);
+        ctx.stroke();
+
+        // Arrow head
+        ctx.fillStyle = 'var(--accent-green)';
+        ctx.beginPath();
+        ctx.arc(center.x + vecX, center.y + vecY, 5, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // 6. Draw field drawing vector if currently drawing
+      if (isDrawingField) {
+        ctx.strokeStyle = 'var(--accent-green)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(fieldDrawStart.x, fieldDrawStart.y);
+        ctx.lineTo(fieldDrawEnd.x, fieldDrawEnd.y);
+        ctx.stroke();
+
+        ctx.fillStyle = 'var(--accent-green)';
+        ctx.beginPath();
+        ctx.arc(fieldDrawEnd.x, fieldDrawEnd.y, 6, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    // Simulation loop
+    function update() {
+      if (running) {
+        // Run Metropolis sweeps per frame based on temperature
+        // Sweep count scale based on temp (higher temp -> faster diffusion)
+        let sweeps = 15;
+        for (let i = 0; i < sweeps; i++) {
+          metropolisStep();
+        }
+        updateAudioParameters();
+      }
+      draw();
+      requestAnimationFrame(update);
+    }
+
+    // Find nearest item (vertex or spin bond) clicked by user
+    function getNearestItem(mx, my) {
+      let nearestDist = 99999;
+      let nearestType = null; // 'H', 'V', 'vertex'
+      let nearestX = -1;
+      let nearestY = -1;
+
+      // 1. Check vertices
+      for (let x = 1; x < NX - 1; x++) {
+        for (let y = 1; y < NY - 1; y++) {
+          let coords = getVertexCoords(x, y);
+          let dist = Math.sqrt((mx - coords.x) * (mx - coords.x) + (my - coords.y) * (my - coords.y));
+          if (dist < 20 && dist < nearestDist) {
+            nearestDist = dist;
+            nearestType = 'vertex';
+            nearestX = x;
+            nearestY = y;
+          }
+        }
+      }
+
+      // 2. Check Horizontal bonds
+      for (let x = 0; x < NX - 1; x++) {
+        for (let y = 0; y < NY; y++) {
+          let coords = getHorizontalBondCoords(x, y);
+          let dist = Math.sqrt((mx - coords.x) * (mx - coords.x) + (my - coords.y) * (my - coords.y));
+          if (dist < 18 && dist < nearestDist) {
+            nearestDist = dist;
+            nearestType = 'H';
+            nearestX = x;
+            nearestY = y;
+          }
+        }
+      }
+
+      // 3. Check Vertical bonds
+      for (let x = 0; x < NX; x++) {
+        for (let y = 0; y < NY - 1; y++) {
+          let coords = getVerticalBondCoords(x, y);
+          let dist = Math.sqrt((mx - coords.x) * (mx - coords.x) + (my - coords.y) * (my - coords.y));
+          if (dist < 18 && dist < nearestDist) {
+            nearestDist = dist;
+            nearestType = 'V';
+            nearestX = x;
+            nearestY = y;
+          }
+        }
+      }
+
+      return { type: nearestType, x: nearestX, y: nearestY };
+    }
+
+    // Event listeners
+    canvas.addEventListener('mousedown', (e) => {
+      // Audio trigger on interaction
+      if (!isAudioEnabled) initAudio();
+
+      let rect = canvas.getBoundingClientRect();
+      let mx = e.clientX - rect.left;
+      let my = e.clientY - rect.top;
+
+      if (e.shiftKey) {
+        // Draw magnetic field
+        isDrawingField = true;
+        fieldDrawStart = { x: mx, y: my };
+        fieldDrawEnd = { x: mx, y: my };
+        return;
+      }
+
+      let nearest = getNearestItem(mx, my);
+
+      if (nearest.type === 'vertex') {
+        // Drag monopole
+        let q = charges[nearest.x][nearest.y];
+        if (q !== 0) {
+          draggedMonopole = { x: nearest.x, y: nearest.y };
+        }
+      } else if (nearest.type === 'H') {
+        // Flip horizontal spin
+        H[nearest.x][nearest.y] = -H[nearest.x][nearest.y];
+        updateCharges();
+        playTickSound();
+      } else if (nearest.type === 'V') {
+        // Flip vertical spin
+        V[nearest.x][nearest.y] = -V[nearest.x][nearest.y];
+        updateCharges();
+        playTickSound();
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      let rect = canvas.getBoundingClientRect();
+      let mx = e.clientX - rect.left;
+      let my = e.clientY - rect.top;
+
+      if (isDrawingField) {
+        fieldDrawEnd = { x: mx, y: my };
+        
+        // Calculate field direction and magnitude
+        let dx = fieldDrawEnd.x - fieldDrawStart.x;
+        let dy = fieldDrawEnd.y - fieldDrawStart.y;
+        let length = Math.sqrt(dx * dx + dy * dy);
+        
+        let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        if (angle < 0) angle += 360;
+
+        let strength = Math.min(length / 100, 2.0); // max 2.0 strength
+
+        // Update parameters UI and settings
+        H_field_mag = strength;
+        H_field_angle = Math.round(angle);
+
+        document.getElementById('slide-field').value = strength.toFixed(2);
+        document.getElementById('val-field').innerText = strength.toFixed(2);
+        document.getElementById('slide-angle').value = Math.round(angle);
+        document.getElementById('val-angle').innerText = Math.round(angle) + '°';
+
+        return;
+      }
+
+      if (draggedMonopole) {
+        // Find nearest vertex to mouse
+        let nearestVertex = null;
+        let nearestDist = 9999;
+        
+        for (let x = 1; x < NX - 1; x++) {
+          for (let y = 1; y < NY - 1; y++) {
+            let coords = getVertexCoords(x, y);
+            let dist = Math.sqrt((mx - coords.x) * (mx - coords.x) + (my - coords.y) * (my - coords.y));
+            if (dist < nearestDist) {
+              nearestDist = dist;
+              nearestVertex = { x, y };
+            }
+          }
+        }
+
+        // If close enough and adjacent to the current dragged position, move the monopole
+        if (nearestVertex && nearestDist < 30) {
+          let dx = nearestVertex.x - draggedMonopole.x;
+          let dy = nearestVertex.y - draggedMonopole.y;
+
+          if (Math.abs(dx) + Math.abs(dy) === 1) {
+            // Drag path exists (adjacent horizontal or vertical bond)
+            if (dx === 1) {
+              // Horizontal bond H[dragged.x][dragged.y]
+              H[draggedMonopole.x][draggedMonopole.y] = -H[draggedMonopole.x][draggedMonopole.y];
+            } else if (dx === -1) {
+              // Horizontal bond H[dragged.x - 1][dragged.y]
+              H[draggedMonopole.x - 1][draggedMonopole.y] = -H[draggedMonopole.x - 1][draggedMonopole.y];
+            } else if (dy === 1) {
+              // Vertical bond V[dragged.x][dragged.y]
+              V[draggedMonopole.x][draggedMonopole.y] = -V[draggedMonopole.x][draggedMonopole.y];
+            } else if (dy === -1) {
+              // Vertical bond V[dragged.x][dragged.y - 1]
+              V[draggedMonopole.x][draggedMonopole.y - 1] = -V[draggedMonopole.x][draggedMonopole.y - 1];
+            }
+
+            let oldA = charges[draggedMonopole.x][draggedMonopole.y];
+            let oldB = charges[nearestVertex.x][nearestVertex.y];
+
+            updateCharges();
+            checkAnnihilations(draggedMonopole.x, draggedMonopole.y, nearestVertex.x, nearestVertex.y, oldA, oldB);
+            playTickSound();
+
+            draggedMonopole = nearestVertex; // Move cursor reference
+          }
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDrawingField = false;
+      draggedMonopole = null;
+    });
+
+    // Control Buttons
+    document.getElementById('btn-play').addEventListener('click', (e) => {
+      running = !running;
+      e.target.innerText = running ? 'pause simulation' : 'resume simulation';
+      e.target.classList.toggle('active', !running);
+    });
+
+    document.getElementById('btn-step').addEventListener('click', () => {
+      metropolisStep();
+    });
+
+    document.getElementById('btn-thermal').addEventListener('click', () => {
+      for (let i = 0; i < 1000; i++) {
+        metropolisStep();
+      }
+      updateAudioParameters();
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      initSystem();
+    });
+
+    document.getElementById('btn-random').addEventListener('click', () => {
+      // Scramble all spins
+      for (let x = 0; x < NX - 1; x++) {
+        for (let y = 0; y < NY; y++) {
+          H[x][y] = Math.random() < 0.5 ? 1 : -1;
+        }
+      }
+      for (let x = 0; x < NX; x++) {
+        for (let y = 0; y < NY - 1; y++) {
+          V[x][y] = Math.random() < 0.5 ? 1 : -1;
+        }
+      }
+      updateCharges();
+    });
+
+    // Sliders
+    document.getElementById('slide-temp').addEventListener('input', (e) => {
+      T = parseFloat(e.target.value);
+      document.getElementById('val-temp').innerText = T.toFixed(2);
+    });
+
+    document.getElementById('slide-field').addEventListener('input', (e) => {
+      H_field_mag = parseFloat(e.target.value);
+      document.getElementById('val-field').innerText = H_field_mag.toFixed(2);
+    });
+
+    document.getElementById('slide-angle').addEventListener('input', (e) => {
+      H_field_angle = parseInt(e.target.value);
+      document.getElementById('val-angle').innerText = H_field_angle + '°';
+    });
+
+    document.getElementById('slide-coul').addEventListener('input', (e) => {
+      J_coul = parseFloat(e.target.value);
+      document.getElementById('val-coul').innerText = J_coul.toFixed(2);
+    });
+
+    document.getElementById('check-potential').addEventListener('change', (e) => {
+      showPotential = e.target.checked;
+    });
+
+    document.getElementById('check-grid').addEventListener('change', (e) => {
+      showGrid = e.target.checked;
+    });
+
+    document.getElementById('btn-audio').addEventListener('click', () => {
+      initAudio();
+    });
+
+    // Start everything
+    initSystem();
+    update();
+
+  </script>
+</body>
+</html>
