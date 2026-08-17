@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>photonic-crystal: bandgap & topological defect sandbox</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: hsl(240, 16%, 3%);
+      --panel-bg: hsl(240, 14%, 7%);
+      --panel-border: hsl(240, 12%, 14%);
+      --text: hsl(240, 10%, 90%);
+      --text-dim: hsl(240, 8%, 55%);
+      --accent-cyan: hsl(180, 100%, 45%);
+      --accent-magenta: hsl(325, 100%, 55%);
+      --accent-green: hsl(145, 80%, 45%);
+      --btn-hover: hsl(240, 12%, 18%);
+      --active-cyan-glow: 0 0 12px hsl(180, 100%, 45%, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    header {
+      max-width: 1300px;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    header h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      text-transform: lowercase;
+    }
+
+    header h1 span.cyan { color: var(--accent-cyan); }
+    header h1 span.magenta { color: var(--accent-magenta); }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      margin-top: 5px;
+      text-transform: lowercase;
+    }
+
+    .main-grid {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-transform: lowercase;
+    }
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: lowercase;
+    }
+
+    .control-label span.val {
+      color: var(--accent-cyan);
+    }
+
+    select, button {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    select:hover, button:hover {
+      border-color: var(--text-dim);
+      background: var(--btn-hover);
+    }
+
+    select:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    button.primary {
+      background: var(--accent-cyan);
+      color: var(--bg);
+      font-weight: 700;
+      border: none;
+      text-align: center;
+    }
+
+    button.primary:hover {
+      background: hsl(180, 100%, 55%);
+      box-shadow: var(--active-cyan-glow);
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Sliders */
+    input[type="range"] {
+      width: 100%;
+      background: var(--panel-border);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: var(--active-cyan-glow);
+    }
+
+    /* Tools grid */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tool-btn {
+      text-align: center;
+      padding: 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      border: 1px solid var(--panel-border);
+      background: var(--bg);
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tool-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: hsl(180, 100%, 45%, 0.05);
+      box-shadow: inset 0 0 6px hsl(180, 100%, 45%, 0.15);
+    }
+
+    /* Simulation Container */
+    .sim-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      background: black;
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+      width: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      image-rendering: pixelated;
+    }
+
+    .overlay-info {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      pointer-events: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      background: rgba(0, 0, 0, 0.75);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .legend-cyan { background: var(--accent-cyan); }
+    .legend-magenta { background: var(--accent-magenta); }
+    .legend-structure { background: rgba(255, 255, 255, 0.3); border: 1px solid white; }
+
+    /* Audio section styling */
+    .audio-card {
+      border: 1px solid var(--panel-border);
+      transition: all 0.3s ease;
+    }
+
+    .audio-card.active {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 15px hsl(145, 80%, 45%, 0.1);
+    }
+
+    .audio-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      margin-top: 10px;
+    }
+
+    .led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #333;
+    }
+
+    .audio-card.active .led {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.5; }
+      to { opacity: 1; }
+    }
+
+    .detector-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      margin-top: 10px;
+    }
+
+    .det-bar-container {
+      background: var(--bg);
+      border: 1px solid var(--panel-border);
+      height: 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .det-bar {
+      height: 100%;
+      background: var(--accent-cyan);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .det-b {
+      background: var(--accent-magenta);
+    }
+
+    /* Explanation text styling */
+    .info-card p {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .info-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-card code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      background: var(--bg);
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>photonic-<span class="cyan">crystal</span> & <span class="magenta">bandgap</span> sandbox</h1>
+      <p>real-time 2d wave solver simulating bandgaps, cavities, and defect waveguides</p>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <div class="sidebar">
+      <!-- Simulation control -->
+      <div class="card">
+        <div class="card-title">simulation</div>
+        <div class="control-group">
+          <div class="btn-row">
+            <button id="play-btn" class="primary">pause</button>
+            <button id="reset-btn">reset</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="control-label">lattice preset</label>
+          <select id="preset-select">
+            <option value="straight">defect waveguide (straight)</option>
+            <option value="bend">waveguide 90° bend</option>
+            <option value="splitter">waveguide splitter (Y)</option>
+            <option value="cavity">resonant cavity trap</option>
+            <option value="bulk">bulk crystal lattice</option>
+            <option value="empty">empty space (vacuum)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Wave source options -->
+      <div class="card">
+        <div class="card-title">source parameters</div>
+        <div class="control-group">
+          <label class="control-label">frequency <span class="val" id="freq-val">0.050</span></label>
+          <input type="range" id="freq-slider" min="0.02" max="0.12" step="0.002" value="0.05">
+        </div>
+        <div class="control-group">
+          <label class="control-label">wavelength in air <span class="val" id="wave-val">10.0 px</span></label>
+          <div style="font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; font-family: 'JetBrains Mono', monospace;">
+            * bandgap matches lattice spacing (a = 8px) around f = 0.045 - 0.075
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="control-label">amplitude <span class="val" id="amp-val">1.0</span></label>
+          <input type="range" id="amp-slider" min="0.1" max="2.0" step="0.1" value="1.0">
+        </div>
+      </div>
+
+      <!-- Editor Brush -->
+      <div class="card">
+        <div class="card-title">mouse tool</div>
+        <div class="control-group">
+          <div class="tools-grid">
+            <button class="tool-btn active" data-tool="pillar">draw pillars</button>
+            <button class="tool-btn" data-tool="erase">erase space</button>
+            <button class="tool-btn" data-tool="source">move source</button>
+            <button class="tool-btn" data-tool="detector">move detector</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="control-label">visual mode</label>
+          <select id="visual-select">
+            <option value="amplitude">field amplitude (u)</option>
+            <option value="intensity">power intensity (u²)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Stereo Sonification -->
+      <div class="card audio-card" id="audio-panel">
+        <div class="card-title">stereo sonification</div>
+        <div class="control-group">
+          <button id="audio-btn">enable web audio</button>
+          <div class="audio-indicator">
+            <div class="led"></div>
+            <span id="audio-status" style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; text-transform: lowercase;">audio offline</span>
+          </div>
+        </div>
+        <div class="detector-stats">
+          <div>
+            <span>det cyan: <span id="det-cyan-val" style="color: var(--accent-cyan);">0.00</span></span>
+            <div class="det-bar-container">
+              <div class="det-bar" id="det-cyan-bar"></div>
+            </div>
+          </div>
+          <div>
+            <span>det magenta: <span id="det-mag-val" style="color: var(--accent-magenta);">0.00</span></span>
+            <div class="det-bar-container">
+              <div class="det-bar det-b" id="det-mag-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main canvas and explanations -->
+    <div class="sim-container">
+      <div class="canvas-wrapper">
+        <canvas id="simCanvas" width="160" height="120"></canvas>
+        <div class="overlay-info">
+          <div>FPS: <span id="fps-counter" style="color: white;">60</span></div>
+          <div>Grid: 160x120</div>
+          <div>Pillars: <span id="pillar-count" style="color: white;">0</span></div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-color legend-cyan"></div>
+          <span>positive wave field (+u)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-magenta"></div>
+          <span>negative wave field (-u)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-structure"></div>
+          <span>dielectric posts (n = 3.0)</span>
+        </div>
+      </div>
+
+      <!-- Scientific theory panel -->
+      <div class="card info-card">
+        <div class="card-title">how it works</div>
+        <p>photonic crystals control the flow of light via a periodic refractive index. inside this sandbox, we solve the 2d scalar wave equation <code>∂²u/∂t² = v² ∇²u - σ ∂u/∂t</code> using a grid-based solver at 60 fps. <code>v</code> is the wave velocity, which is 0.5 in air and drops to 0.16 inside high-index pillars (n = 3.0). the boundary layers <code>σ</code> absorb waves to prevent edge reflection.</p>
+        <p><strong>photonic bandgap:</strong> when the wave's wavelength matches the lattice spacing <code>a = 8px</code> (typically around frequency <code>f = 0.055</code>), multiple Bragg reflections interfere destructively inside the lattice. the wave cannot propagate and decays exponentially.</p>
+        <p><strong>waveguide defects:</strong> by removing a line of pillars, we create a channel. because the frequency lies within the bandgap, waves cannot leak out into the surrounding bulk lattice. this forces the waves to stay inside the defect track, enabling them to travel around sharp 90-degree corners with virtually zero backscattering loss.</p>
+        <p><strong>try it:</strong> switch preset to <em>bulk crystal</em> and sweep the frequency. at <code>f = 0.03</code> (large wavelength) the waves leak through easily. at <code>f = 0.06</code> (bandgap) the wave is completely blocked at the first few rows of pillars.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Grid settings
+    const width = 160;
+    const height = 120;
+    const len = width * height;
+
+    // Simulation arrays
+    let u_curr = new Float32Array(len);
+    let u_prev = new Float32Array(len);
+    let u_next = new Float32Array(len);
+    let structures = new Uint8Array(len);
+    let refractive_index = new Float32Array(len);
+    let velocity = new Float32Array(len);
+    let damping = new Float32Array(len);
+
+    // Initial constants
+    const v0 = 0.5; // wave speed in vacuum
+    let freq = 0.05;
+    let amplitude = 1.0;
+    let time = 0;
+    let isRunning = true;
+    let activeTool = 'pillar';
+    let visualMode = 'amplitude';
+    let fps = 60;
+    let lastFpsTime = 0;
+    let frameCount = 0;
+
+    // Source and detector positions
+    let srcX = 22;
+    let srcY = 60;
+    let detAX = 138;
+    let detAY = 60;
+    let detBX = 138;
+    let detBY = 30;
+
+    // Web Audio Variables
+    let audioCtx = null;
+    let oscA = null, oscB = null;
+    let gainA = null, gainB = null;
+    let pannerA = null, pannerB = null;
+    let audioEnabled = false;
+    let envA = 0;
+    let envB = 0;
+
+    // Canvas setup
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Low-res hidden buffer to write imageData quickly
+    const renderCanvas = document.createElement('canvas');
+    renderCanvas.width = width;
+    renderCanvas.height = height;
+    const renderCtx = renderCanvas.getContext('2d');
+    const imgData = renderCtx.createImageData(width, height);
+    const pixels = imgData.data;
+
+    // Init Absorbing Boundary Layer (ABL)
+    function initBoundary() {
+      const border = 16;
+      const dampMax = 0.04;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          const distToEdge = Math.min(x, y, width - 1 - x, height - 1 - y);
+          if (distToEdge < border) {
+            const norm = (border - distToEdge) / border;
+            damping[idx] = dampMax * norm * norm;
+          } else {
+            damping[idx] = 0;
+          }
+        }
+      }
+    }
+
+    // Set structures and refractive indices
+    function updateVelocity() {
+      let count = 0;
+      for (let i = 0; i < len; i++) {
+        if (structures[i]) {
+          refractive_index[i] = 3.0;
+          count++;
+        } else {
+          refractive_index[i] = 1.0;
+        }
+        velocity[i] = v0 / refractive_index[i];
+      }
+      document.getElementById('pillar-count').innerText = count;
+    }
+
+    // Draw single pillar
+    function drawPillar(cx, cy, r) {
+      const r2 = r * r;
+      for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+        for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+          if (x >= 0 && x < width && y >= 0 && y < height) {
+            const dx = x - cx;
+            const dy = y - cy;
+            if (dx*dx + dy*dy <= r2) {
+              structures[y * width + x] = 1;
+            }
+          }
+        }
+      }
+    }
+
+    // Erase single pillar
+    function erasePillar(cx, cy, r) {
+      for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+        for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+          if (x >= 0 && x < width && y >= 0 && y < height) {
+            structures[y * width + x] = 0;
+          }
+        }
+      }
+    }
+
+    // Load presets
+    function loadPreset(type) {
+      // Clear
+      for (let i = 0; i < len; i++) {
+        structures[i] = 0;
+        u_curr[i] = 0;
+        u_prev[i] = 0;
+        u_next[i] = 0;
+      }
+      
+      const a = 8;
+      const xOffset = 36;
+      const yOffset = 12;
+
+      // Source/detector custom overrides per preset
+      srcX = 18;
+      srcY = 60;
+      detAX = 142;
+      detAY = 60;
+      detBX = 142;
+      detBY = 30;
+
+      if (type === 'bulk') {
+        for (let y = yOffset; y < height - yOffset; y += a) {
+          for (let x = xOffset; x < width - xOffset; x += a) {
+            drawPillar(x, y, 2.2);
+          }
+        }
+      } else if (type === 'straight') {
+        for (let y = yOffset; y < height - yOffset; y += a) {
+          // Remove central row defect (y = 60)
+          if (Math.abs(y - 60) < 4) continue;
+          for (let x = xOffset; x < width - xOffset; x += a) {
+            drawPillar(x, y, 2.2);
+          }
+        }
+      } else if (type === 'bend') {
+        srcY = 60;
+        detAX = 80;
+        detAY = 102;
+        detBX = 142;
+        detBY = 60;
+        for (let y = yOffset; y < height - yOffset; y += a) {
+          for (let x = xOffset; x < width - xOffset; x += a) {
+            // Horizontal waveguide channel at y=60, up to x=80
+            if (Math.abs(y - 60) < 4 && x <= 80) continue;
+            // Vertical waveguide channel at x=80, down to y=110
+            if (Math.abs(x - 80) < 4 && y >= 60) continue;
+            drawPillar(x, y, 2.2);
+          }
+        }
+      } else if (type === 'splitter') {
+        detAX = 142;
+        detAY = 28;
+        detBX = 142;
+        detBY = 92;
+        for (let y = yOffset; y < height - yOffset; y += a) {
+          for (let x = xOffset; x < width - xOffset; x += a) {
+            // Input guide
+            if (Math.abs(y - 60) < 4 && x <= 72) continue;
+            // Diagonal branches split
+            if (x > 72) {
+              // Upper branch going to y=28
+              let targetY1 = 60 - Math.floor((x - 72) * 0.45);
+              let targetY1Rounded = Math.round(targetY1 / a) * a;
+              if (Math.abs(y - targetY1Rounded) < 4) continue;
+
+              // Lower branch going to y=92
+              let targetY2 = 60 + Math.floor((x - 72) * 0.45);
+              let targetY2Rounded = Math.round(targetY2 / a) * a;
+              if (Math.abs(y - targetY2Rounded) < 4) continue;
+            }
+            drawPillar(x, y, 2.2);
+          }
+        }
+      } else if (type === 'cavity') {
+        for (let y = yOffset; y < height - yOffset; y += a) {
+          // Defect channel
+          if (Math.abs(y - 60) < 4) {
+            // Add a single defect resonant pillar in the middle of the channel
+            for (let x = xOffset; x < width - xOffset; x += a) {
+              if (Math.abs(x - 88) < 4) {
+                drawPillar(x, y, 2.2);
+              }
+            }
+            continue;
+          }
+          for (let x = xOffset; x < width - xOffset; x += a) {
+            drawPillar(x, y, 2.2);
+          }
+        }
+      }
+      
+      updateVelocity();
+    }
+
+    // Discrete Wave solver step
+    function stepSimulation() {
+      // 2D Finite Difference Wave Equation loop
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const idx = y * width + x;
+          
+          // Discrete laplacian
+          const laplacian = u_curr[idx + 1] + u_curr[idx - 1] + 
+                            u_curr[idx + width] + u_curr[idx - width] - 
+                            4.0 * u_curr[idx];
+          
+          const vel = velocity[idx];
+          const damp = damping[idx];
+          
+          // Wave update step
+          u_next[idx] = (2.0 - damp) * u_curr[idx] - (1.0 - damp) * u_prev[idx] + vel * vel * laplacian;
+        }
+      }
+
+      // Hardcode drive source
+      const srcIdx = srcY * width + srcX;
+      u_next[srcIdx] = Math.sin(time) * amplitude;
+
+      // Swap buffers
+      const temp = u_prev;
+      u_prev = u_curr;
+      u_curr = u_next;
+      u_next = temp;
+
+      // Advance source time phase
+      time += 2.0 * Math.PI * freq;
+    }
+
+    // Audio sonification logic
+    function setupWebAudio() {
+      if (audioCtx) return;
+      
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Synth A (Left)
+        oscA = audioCtx.createOscillator();
+        oscA.type = 'triangle';
+        oscA.frequency.value = 160;
+        
+        gainA = audioCtx.createGain();
+        gainA.gain.value = 0.0;
+        
+        pannerA = audioCtx.createStereoPanner();
+        pannerA.pan.value = -0.75;
+        
+        const filterA = audioCtx.createBiquadFilter();
+        filterA.type = 'lowpass';
+        filterA.frequency.value = 400;
+
+        oscA.connect(filterA);
+        filterA.connect(gainA);
+        gainA.connect(pannerA);
+        pannerA.connect(audioCtx.destination);
+        oscA.start();
+
+        // Synth B (Right)
+        oscB = audioCtx.createOscillator();
+        oscB.type = 'triangle';
+        oscB.frequency.value = 200;
+        
+        gainB = audioCtx.createGain();
+        gainB.gain.value = 0.0;
+        
+        pannerB = audioCtx.createStereoPanner();
+        pannerB.pan.value = 0.75;
+        
+        const filterB = audioCtx.createBiquadFilter();
+        filterB.type = 'lowpass';
+        filterB.frequency.value = 400;
+
+        oscB.connect(filterB);
+        filterB.connect(gainB);
+        gainB.connect(pannerB);
+        pannerB.connect(audioCtx.destination);
+        oscB.start();
+
+        audioEnabled = true;
+        document.getElementById('audio-panel').classList.add('active');
+        document.getElementById('audio-btn').innerText = 'disable web audio';
+        document.getElementById('audio-status').innerText = 'audio active';
+      } catch (e) {
+        alert('web audio api not supported in this browser.');
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        setupWebAudio();
+      } else {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+          audioEnabled = true;
+          document.getElementById('audio-panel').classList.add('active');
+          document.getElementById('audio-btn').innerText = 'disable web audio';
+          document.getElementById('audio-status').innerText = 'audio active';
+        } else if (audioCtx.state === 'running' && audioEnabled) {
+          audioEnabled = false;
+          gainA.gain.setValueAtTime(0, audioCtx.currentTime);
+          gainB.gain.setValueAtTime(0, audioCtx.currentTime);
+          document.getElementById('audio-panel').classList.remove('active');
+          document.getElementById('audio-btn').innerText = 'enable web audio';
+          document.getElementById('audio-status').innerText = 'audio paused';
+        } else {
+          audioEnabled = true;
+          document.getElementById('audio-panel').classList.add('active');
+          document.getElementById('audio-btn').innerText = 'disable web audio';
+          document.getElementById('audio-status').innerText = 'audio active';
+        }
+      }
+    }
+
+    function runAudioSynthesizer() {
+      if (!audioEnabled || !audioCtx) return;
+
+      // Extract field at detectors
+      const valA = u_curr[detAY * width + detAX];
+      const valB = u_curr[detBY * width + detBX];
+
+      // envelope decay trackers
+      envA = envA * 0.96 + Math.abs(valA) * 0.04;
+      envB = envB * 0.96 + Math.abs(valB) * 0.04;
+
+      // update numerical values on dashboard
+      document.getElementById('det-cyan-val').innerText = envA.toFixed(3);
+      document.getElementById('det-cyan-bar').style.width = Math.min(100, envA * 400) + '%';
+      
+      document.getElementById('det-mag-val').innerText = envB.toFixed(3);
+      document.getElementById('det-mag-bar').style.width = Math.min(100, envB * 400) + '%';
+
+      // synthesis parameters
+      // map envelope to pitch (130Hz - 390Hz range)
+      const targetHzA = 130 + envA * 260;
+      const targetHzB = 162.5 + envB * 325; // maintain harmonic minor third spacing
+
+      oscA.frequency.setTargetAtTime(targetHzA, audioCtx.currentTime, 0.04);
+      oscB.frequency.setTargetAtTime(targetHzB, audioCtx.currentTime, 0.04);
+
+      // map envelope to volume
+      const targetVolA = Math.min(0.2, envA * 0.4);
+      const targetVolB = Math.min(0.2, envB * 0.4);
+
+      gainA.gain.setTargetAtTime(targetVolA, audioCtx.currentTime, 0.04);
+      gainB.gain.setTargetAtTime(targetVolB, audioCtx.currentTime, 0.04);
+    }
+
+    // Render loop
+    function render() {
+      // 1. Draw wave grid to low-res pixel buffer
+      const ampMult = 220 * amplitude;
+      
+      for (let i = 0; i < len; i++) {
+        const val = u_curr[i];
+        const isStructure = structures[i];
+        
+        let r = 0, g = 0, b = 0;
+        
+        if (visualMode === 'amplitude') {
+          if (val > 0) {
+            // Cyan: 0, val, val
+            const brightness = Math.min(255, val * ampMult);
+            r = 0;
+            g = Math.floor(brightness * 0.7);
+            b = Math.floor(brightness);
+          } else {
+            // Magenta: -val, 0, -val
+            const brightness = Math.min(255, -val * ampMult);
+            r = Math.floor(brightness);
+            g = 0;
+            b = Math.floor(brightness * 0.65);
+          }
+        } else {
+          // Intensity mode (u^2)
+          const intensity = Math.min(255, val * val * ampMult * 1.5);
+          r = Math.floor(intensity * 0.85);
+          g = Math.floor(intensity * 0.3);
+          b = Math.floor(intensity);
+        }
+
+        // Slight dark blue glow where structure is present
+        if (isStructure) {
+          r = Math.min(255, r + 20);
+          g = Math.min(255, g + 30);
+          b = Math.min(255, b + 50);
+        }
+
+        // Add index boundary markers (very faint)
+        const x = i % width;
+        const y = Math.floor(i / width);
+        if (damping[i] > 0 && x % 4 === 0 && y % 4 === 0) {
+          r = Math.min(255, r + 15);
+        }
+
+        const idx4 = i * 4;
+        pixels[idx4] = r;
+        pixels[idx4+1] = g;
+        pixels[idx4+2] = b;
+        pixels[idx4+3] = 255;
+      }
+
+      // Write pixel buffer to low-res canvas
+      renderCtx.putImageData(imgData, 0, 0);
+
+      // 2. Draw low-res canvas to high-res screen canvas (scaling it up up to 4x smoothly)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(renderCanvas, 0, 0, canvas.width, canvas.height);
+
+      // 3. Draw high-res vector overlays (source, detectors, structures)
+      const scaleX = canvas.width / width;
+      const scaleY = canvas.height / height;
+
+      // Draw structures overlay circles for polish
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (structures[y * width + x]) {
+            // Only draw circles if it's the center of a pillar to avoid drawing overlapping grids
+            // A simple approximation: check if top, bottom, left, right are also structures
+            // If they are, draw a nice circular boundary on the grid
+            if (x % 8 === 0 || y % 8 === 0) {
+              // we just draw at every active pixel for accuracy
+              ctx.fillRect(x * scaleX, y * scaleY, scaleX, scaleY);
+            }
+          }
+        }
+      }
+
+      // Draw Source
+      ctx.beginPath();
+      ctx.arc(srcX * scaleX + scaleX/2, srcY * scaleY + scaleY/2, 6, 0, 2*Math.PI);
+      ctx.fillStyle = 'white';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'white';
+      ctx.fill();
+      ctx.shadowBlur = 0; // reset
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw Detector A (Cyan)
+      ctx.beginPath();
+      ctx.arc(detAX * scaleX + scaleX/2, detAY * scaleY + scaleY/2, 6, 0, 2*Math.PI);
+      ctx.fillStyle = 'hsl(180, 100%, 45%)';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'hsl(180, 100%, 45%)';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw Detector B (Magenta)
+      ctx.beginPath();
+      ctx.arc(detBX * scaleX + scaleX/2, detBY * scaleY + scaleY/2, 6, 0, 2*Math.PI);
+      ctx.fillStyle = 'hsl(325, 100%, 55%)';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'hsl(325, 100%, 55%)';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Main animation loop
+    function loop(now) {
+      if (isRunning) {
+        // Run 4 sub-steps per frame to ensure smooth wave propagation
+        for (let i = 0; i < 4; i++) {
+          stepSimulation();
+        }
+        runAudioSynthesizer();
+      }
+
+      render();
+
+      // FPS tracking
+      frameCount++;
+      if (now - lastFpsTime >= 1000) {
+        fps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+        document.getElementById('fps-counter').innerText = fps;
+        frameCount = 0;
+        lastFpsTime = now;
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    // Interaction utilities
+    function getMouseCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX - rect.left;
+      const clientY = e.clientY - rect.top;
+      const x = Math.floor((clientX / rect.width) * width);
+      const y = Math.floor((clientY / rect.height) * height);
+      return { x: Math.max(0, Math.min(width - 1, x)), y: Math.max(0, Math.min(height - 1, y)) };
+    }
+
+    let isDrawing = false;
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      handleMouseAction(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDrawing) handleMouseAction(e);
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDrawing = false;
+    });
+
+    function handleMouseAction(e) {
+      const coords = getMouseCoords(e);
+      if (activeTool === 'pillar') {
+        drawPillar(coords.x, coords.y, 2.2);
+        updateVelocity();
+      } else if (activeTool === 'erase') {
+        erasePillar(coords.x, coords.y, 3.0);
+        updateVelocity();
+      } else if (activeTool === 'source') {
+        srcX = coords.x;
+        srcY = coords.y;
+      } else if (activeTool === 'detector') {
+        // Drag nearest detector
+        const distA = Math.hypot(coords.x - detAX, coords.y - detAY);
+        const distB = Math.hypot(coords.x - detBX, coords.y - detBY);
+        if (distA < distB) {
+          detAX = coords.x;
+          detAY = coords.y;
+        } else {
+          detBX = coords.x;
+          detBY = coords.y;
+        }
+      }
+    }
+
+    // Button controls listener
+    document.getElementById('play-btn').addEventListener('click', () => {
+      isRunning = !isRunning;
+      document.getElementById('play-btn').innerText = isRunning ? 'pause' : 'resume';
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      for (let i = 0; i < len; i++) {
+        u_curr[i] = 0;
+        u_prev[i] = 0;
+        u_next[i] = 0;
+      }
+      time = 0;
+      envA = 0;
+      envB = 0;
+    });
+
+    document.getElementById('preset-select').addEventListener('change', (e) => {
+      loadPreset(e.target.value);
+    });
+
+    // Freq & Amp slider listeners
+    const freqSlider = document.getElementById('freq-slider');
+    const freqVal = document.getElementById('freq-val');
+    const waveVal = document.getElementById('wave-val');
+    
+    freqSlider.addEventListener('input', (e) => {
+      freq = parseFloat(e.target.value);
+      freqVal.innerText = freq.toFixed(3);
+      // wavelength in vacuum lambda = v0 / f
+      const wave = v0 / freq;
+      waveVal.innerText = wave.toFixed(1) + ' px';
+    });
+
+    const ampSlider = document.getElementById('amp-slider');
+    const ampVal = document.getElementById('amp-val');
+    ampSlider.addEventListener('input', (e) => {
+      amplitude = parseFloat(e.target.value);
+      ampVal.innerText = amplitude.toFixed(1);
+    });
+
+    // Tool toggle buttons
+    const toolButtons = document.querySelectorAll('.tool-btn');
+    toolButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        toolButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeTool = btn.getAttribute('data-tool');
+      });
+    });
+
+    // Visual Mode toggle
+    document.getElementById('visual-select').addEventListener('change', (e) => {
+      visualMode = e.target.value;
+    });
+
+    // Audio setup
+    document.getElementById('audio-btn').addEventListener('click', () => {
+      toggleAudio();
+    });
+
+    // Initialize
+    initBoundary();
+    loadPreset('straight');
+    requestAnimationFrame(loop);
+
+  </script>
+</body>
+</html>
