@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>graphene-dirac: relativistic electron & klein tunneling sandbox</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: hsl(230, 20%, 4%);
+      --panel-bg: hsl(230, 16%, 8%);
+      --panel-border: hsl(230, 12%, 16%);
+      --text: hsl(230, 10%, 92%);
+      --text-dim: hsl(230, 8%, 60%);
+      --accent-cyan: hsl(180, 100%, 50%);
+      --accent-amber: hsl(35, 100%, 55%);
+      --accent-magenta: hsl(320, 100%, 60%);
+      --accent-green: hsl(145, 80%, 50%);
+      --btn-hover: hsl(230, 12%, 20%);
+      --active-cyan-glow: 0 0 12px hsl(180, 100%, 50%, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    header {
+      max-width: 1300px;
+      margin: 0 auto 20px auto;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    header h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      text-transform: lowercase;
+    }
+
+    header h1 span.cyan { color: var(--accent-cyan); }
+    header h1 span.amber { color: var(--accent-amber); }
+
+    header p {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      margin-top: 5px;
+      text-transform: lowercase;
+    }
+
+    .main-grid {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-transform: lowercase;
+    }
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: lowercase;
+    }
+
+    .control-label span.val {
+      color: var(--accent-cyan);
+    }
+
+    .control-label span.amber-val {
+      color: var(--accent-amber);
+    }
+
+    select, button {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    select:hover, button:hover {
+      border-color: var(--text-dim);
+      background: var(--btn-hover);
+    }
+
+    select:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    button.primary {
+      background: var(--accent-cyan);
+      color: var(--bg);
+      font-weight: 700;
+      border: none;
+      text-align: center;
+    }
+
+    button.primary:hover {
+      background: hsl(180, 100%, 60%);
+      box-shadow: var(--active-cyan-glow);
+    }
+
+    button.secondary {
+      background: var(--accent-amber);
+      color: var(--bg);
+      font-weight: 700;
+      border: none;
+      text-align: center;
+    }
+
+    button.secondary:hover {
+      background: hsl(35, 100%, 65%);
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Sliders */
+    input[type="range"] {
+      width: 100%;
+      background: var(--panel-border);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: var(--active-cyan-glow);
+    }
+
+    /* Tools grid */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .tool-btn {
+      text-align: center;
+      padding: 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      border: 1px solid var(--panel-border);
+      background: var(--bg);
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tool-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: hsl(180, 100%, 50%, 0.05);
+      box-shadow: inset 0 0 6px hsl(180, 100%, 50%, 0.15);
+    }
+
+    /* Simulation Container */
+    .sim-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      background: black;
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+      width: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      image-rendering: pixelated;
+    }
+
+    .overlay-info {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      pointer-events: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .legend-cyan { background: var(--accent-cyan); }
+    .legend-amber { background: var(--accent-amber); }
+    .legend-magenta { background: var(--accent-magenta); }
+    .legend-subA { background: var(--accent-magenta); }
+    .legend-subB { background: var(--accent-cyan); }
+
+    /* Audio section styling */
+    .audio-card {
+      border: 1px solid var(--panel-border);
+      transition: all 0.3s ease;
+    }
+
+    .audio-card.active {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 15px hsl(145, 80%, 50%, 0.1);
+    }
+
+    .audio-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      margin-top: 10px;
+    }
+
+    .led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #333;
+    }
+
+    .audio-card.active .led {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 0.5; }
+      to { opacity: 1; }
+    }
+
+    .detector-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      margin-top: 10px;
+    }
+
+    .det-bar-container {
+      background: var(--bg);
+      border: 1px solid var(--panel-border);
+      height: 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .det-bar {
+      height: 100%;
+      background: var(--accent-cyan);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .det-b {
+      background: var(--accent-magenta);
+    }
+
+    /* Explanation text styling */
+    .info-card p {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .info-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-card code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      background: var(--bg);
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>graphene-<span class="cyan">dirac</span>: relativistic <span class="amber">electron</span> sandbox</h1>
+      <p>simulating massless dirac fermions, klein tunneling, and negative refraction in graphene</p>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <div class="sidebar">
+      <!-- Simulation control -->
+      <div class="card">
+        <div class="card-title">simulation</div>
+        <div class="control-group">
+          <div class="btn-row">
+            <button id="play-btn" class="primary">pause</button>
+            <button id="reset-btn">reset</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <button id="fire-btn" class="secondary" style="text-align: center;">fire wave packet</button>
+        </div>
+        <div class="control-group">
+          <label class="control-label">preset scenario</label>
+          <select id="preset-select">
+            <option value="klein">klein tunneling (flat barrier)</option>
+            <option value="veselago">veselago flat lens (p-n junction)</option>
+            <option value="dot">quantum dot (circular trap)</option>
+            <option value="qpc">quantum point contact (slit)</option>
+            <option value="waveguide">graphene waveguide</option>
+            <option value="empty">empty space</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Source options -->
+      <div class="card">
+        <div class="card-title">source parameters</div>
+        <div class="control-group">
+          <label class="control-label">source mode</label>
+          <select id="mode-select">
+            <option value="packet">single wave packet</option>
+            <option value="continuous">continuous wave driver</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-label">electron energy <span class="val" id="energy-val">0.18</span></label>
+          <input type="range" id="energy-slider" min="0.08" max="0.35" step="0.01" value="0.18">
+        </div>
+        <div class="control-group">
+          <label class="control-label">incident angle <span class="val" id="angle-val">0°</span></label>
+          <input type="range" id="angle-slider" min="-75" max="75" step="5" value="0">
+        </div>
+        <div class="control-group">
+          <label class="control-label">packet width <span class="val" id="width-val">12 px</span></label>
+          <input type="range" id="width-slider" min="6" max="24" step="1" value="12">
+        </div>
+      </div>
+
+      <!-- Potential Gate -->
+      <div class="card">
+        <div class="card-title">gate potential</div>
+        <div class="control-group">
+          <label class="control-label">barrier height <span class="amber-val" id="pot-val">0.36</span></label>
+          <input type="range" id="pot-slider" min="-0.70" max="0.70" step="0.02" value="0.36">
+        </div>
+        <div class="control-group">
+          <button id="clear-pot-btn">clear all barriers</button>
+        </div>
+      </div>
+
+      <!-- Editor Brush -->
+      <div class="card">
+        <div class="card-title">mouse tool</div>
+        <div class="control-group">
+          <div class="tools-grid">
+            <button class="tool-btn active" data-tool="draw">draw gate</button>
+            <button class="tool-btn" data-tool="erase">erase gate</button>
+            <button class="tool-btn" data-tool="source">move source</button>
+            <button class="tool-btn" data-tool="detector">move detector</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="control-label">visualization</label>
+          <select id="visual-select">
+            <option value="probability">probability density (|ψ|²)</option>
+            <option value="polarization">sublattice polarization</option>
+            <option value="phase">sublattice A phase</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Stereo Sonification -->
+      <div class="card audio-card" id="audio-panel">
+        <div class="card-title">stereo sonification</div>
+        <div class="control-group">
+          <button id="audio-btn">enable web audio</button>
+          <div class="audio-indicator">
+            <div class="led"></div>
+            <span id="audio-status" style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; text-transform: lowercase;">audio offline</span>
+          </div>
+        </div>
+        <div class="detector-stats">
+          <div>
+            <span>det cyan: <span id="det-cyan-val" style="color: var(--accent-cyan);">0.00</span></span>
+            <div class="det-bar-container">
+              <div class="det-bar" id="det-cyan-bar"></div>
+            </div>
+          </div>
+          <div>
+            <span>det magenta: <span id="det-mag-val" style="color: var(--accent-magenta);">0.00</span></span>
+            <div class="det-bar-container">
+              <div class="det-bar det-b" id="det-mag-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main canvas and explanations -->
+    <div class="sim-container">
+      <div class="canvas-wrapper">
+        <canvas id="simCanvas" width="160" height="120"></canvas>
+        <div class="overlay-info">
+          <div>FPS: <span id="fps-counter" style="color: white;">60</span></div>
+          <div>Grid: 160x120</div>
+          <div>Solver: Massless Dirac (Heun RK2)</div>
+        </div>
+      </div>
+
+      <div class="legend" id="standard-legend">
+        <div class="legend-item">
+          <div class="legend-color legend-cyan"></div>
+          <span>probability density (|ψ|²)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-amber"></div>
+          <span>positive gate potential (+V)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: hsl(240, 100%, 50%); border: 1px solid white;"></div>
+          <span>negative gate potential (-V)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: rgba(255,255,255,0.4);"></div>
+          <span>quantum probability current dust</span>
+        </div>
+      </div>
+
+      <div class="legend" id="polarization-legend" style="display: none;">
+        <div class="legend-item">
+          <div class="legend-color legend-subA"></div>
+          <span>sublattice A polarization (+1.0)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-subB"></div>
+          <span>sublattice B polarization (-1.0)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-amber"></div>
+          <span>gate potential barrier</span>
+        </div>
+      </div>
+
+      <!-- Scientific theory panel -->
+      <div class="card info-card">
+        <div class="card-title">physics behind the sandbox</div>
+        <p>electrons in graphene behave like 2d massless relativistic fermions described by the dirac equation <code>H = v_F σ · p</code>, rather than the standard schrödinger equation. because they have no mass, they cannot be brought to rest, and their energy spectrum is linear (formining dirac cones). here we solve the 2d coupled dirac spinor components <code>ψ_A</code> and <code>ψ_B</code> (sublattice amplitudes) in real-time at 60 fps.</p>
+        <p><strong>klein tunneling paradox:</strong> when a relativistic quantum particle hits a potential barrier <code>V &gt; E</code>, it doesn't decay exponentially like normal particles. instead, the barrier states match the negative-energy states (the valence band), allowing the electron to cross the barrier as a hole. at normal incidence (<code>angle = 0</code>), transmission is exactly 100% regardless of barrier height or thickness. try it by aiming the wave packet straight through the barrier!</p>
+        <p><strong>veselago flat lens:</strong> by applying a electrostatic step potential of <code>V = 2E</code>, the effective refractive index on the right becomes <code>n = (E - V)/E = -1</code>. this negative index bends waves backward across the normal. a diverging point source at the left is refracted backward at the boundary and converges to a clean focal point on the right. switch to the <em>veselago flat lens</em> preset and check out the focal point!</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Grid parameters
+    const W = 160;
+    const H = 120;
+    const len = W * H;
+
+    // Dirac fields
+    let R_A = new Float32Array(len);
+    let I_A = new Float32Array(len);
+    let R_B = new Float32Array(len);
+    let I_B = new Float32Array(len);
+
+    // Intermediate step buffers
+    let tmp_R_A = new Float32Array(len);
+    let tmp_I_A = new Float32Array(len);
+    let tmp_R_B = new Float32Array(len);
+    let tmp_I_B = new Float32Array(len);
+
+    let dR_A = new Float32Array(len);
+    let dI_A = new Float32Array(len);
+    let dR_B = new Float32Array(len);
+    let dI_B = new Float32Array(len);
+
+    let tmp_dR_A = new Float32Array(len);
+    let tmp_dI_A = new Float32Array(len);
+    let tmp_dR_B = new Float32Array(len);
+    let tmp_dI_B = new Float32Array(len);
+
+    // Potential and boundary absorption
+    let V = new Float32Array(len);
+    let sigma = new Float32Array(len);
+
+    // Simulation params
+    const v_F = 0.5; // Fermi velocity
+    const dt = 0.25; // time step (satisfying CFL condition dt < 1/(v_F*sqrt(2)))
+    let isRunning = true;
+    let sourceMode = 'packet';
+    let energy = 0.18;
+    let angle = 0;
+    let packetWidth = 12;
+    let barrierHeight = 0.36;
+    let activeTool = 'draw';
+    let visualMode = 'probability';
+
+    // Source and detector coordinates
+    let srcX = 30;
+    let srcY = 60;
+    let detAX = 130;
+    let detAY = 60;
+    let detBX = 130;
+    let detBY = 30;
+
+    let sourceTime = 0;
+    let frameCount = 0;
+    let lastFpsTime = 0;
+    let fps = 60;
+
+    // Current dust particles
+    const particles = [];
+    const numParticles = 200;
+    for (let i = 0; i < numParticles; i++) {
+      particles.push({ x: Math.random() * W, y: Math.random() * H, life: Math.random() * 80 });
+    }
+
+    // Audio setup
+    let audioCtx = null;
+    let oscA = null, oscB = null;
+    let gainA = null, gainB = null;
+    let pannerA = null, pannerB = null;
+    let audioEnabled = false;
+    let envA = 0, envB = 0;
+
+    // Canvas configuration
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const renderCanvas = document.createElement('canvas');
+    renderCanvas.width = W;
+    renderCanvas.height = H;
+    const renderCtx = renderCanvas.getContext('2d');
+    const imgData = renderCtx.createImageData(W, H);
+    const pixels = imgData.data;
+
+    // Initialize absorbing boundary layer
+    function initABL() {
+      const border = 15;
+      const maxSigma = 0.25;
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          const dist = Math.min(x, y, W - 1 - x, H - 1 - y);
+          if (dist < border) {
+            const norm = (border - dist) / border;
+            sigma[idx] = maxSigma * norm * norm;
+          } else {
+            sigma[idx] = 0;
+          }
+        }
+      }
+    }
+
+    // Clear wave function
+    function clearWaves() {
+      for (let i = 0; i < len; i++) {
+        R_A[i] = 0; I_A[i] = 0;
+        R_B[i] = 0; I_B[i] = 0;
+      }
+      sourceTime = 0;
+      envA = 0;
+      envB = 0;
+    }
+
+    // Fire Gaussian wave packet from source position
+    function firePacket() {
+      clearWaves();
+      const k = energy / v_F;
+      const rad = (angle * Math.PI) / 180;
+      const kx = k * Math.cos(rad);
+      const ky = k * Math.sin(rad);
+
+      const w = packetWidth;
+      const w2 = w * w;
+
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          // compute gaussian envelope
+          const dx = x - srcX;
+          const dy = y - srcY;
+          const g = Math.exp(-(dx * dx + dy * dy) / (2 * w2));
+          if (g > 0.001) {
+            const phase = kx * dx + ky * dy;
+            // Sublattice A spinor amplitude
+            R_A[idx] = g * Math.cos(phase);
+            I_A[idx] = g * Math.sin(phase);
+            // Sublattice B spinor amplitude (phase shifted by emission angle)
+            R_B[idx] = g * Math.cos(phase + rad);
+            I_B[idx] = g * Math.sin(phase + rad);
+          }
+        }
+      }
+    }
+
+    // Load gate preset scenario
+    function loadPreset(type) {
+      // Clear barriers
+      for (let i = 0; i < len; i++) V[i] = 0;
+
+      if (type === 'klein') {
+        sourceMode = 'packet';
+        srcX = 30; srcY = 60;
+        detAX = 120; detAY = 60;
+        detBX = 120; detBY = 30;
+        barrierHeight = 0.36;
+        document.getElementById('pot-slider').value = 0.36;
+        document.getElementById('pot-val').innerText = '0.36';
+        
+        // draw a vertical flat barrier
+        const startX = 72;
+        const endX = 88;
+        for (let y = 0; y < H; y++) {
+          for (let x = startX; x <= endX; x++) {
+            V[y * W + x] = barrierHeight;
+          }
+        }
+        firePacket();
+      } else if (type === 'veselago') {
+        sourceMode = 'continuous';
+        srcX = 32; srcY = 60;
+        detAX = 118; detAY = 60;
+        detBX = 118; detBY = 30;
+        barrierHeight = 2.0 * energy; // n = -1 matching
+        document.getElementById('pot-slider').value = barrierHeight.toFixed(2);
+        document.getElementById('pot-val').innerText = barrierHeight.toFixed(2);
+
+        // draw p-n junction boundary (right half is high potential)
+        const startX = 75;
+        for (let y = 0; y < H; y++) {
+          for (let x = startX; x < W; x++) {
+            V[y * W + x] = barrierHeight;
+          }
+        }
+        clearWaves();
+      } else if (type === 'dot') {
+        sourceMode = 'packet';
+        srcX = 30; srcY = 60;
+        detAX = 80; detAY = 60;
+        detBX = 120; detBY = 40;
+        barrierHeight = 0.45;
+        document.getElementById('pot-slider').value = 0.45;
+        document.getElementById('pot-val').innerText = '0.45';
+
+        // draw circular barrier (radius 22)
+        const cx = 80, cy = 60, r = 22, r2 = r*r;
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            const dx = x - cx;
+            const dy = y - cy;
+            if (dx*dx + dy*dy <= r2) {
+              V[y * W + x] = barrierHeight;
+            }
+          }
+        }
+        firePacket();
+      } else if (type === 'qpc') {
+        sourceMode = 'packet';
+        srcX = 30; srcY = 60;
+        detAX = 120; detAY = 60;
+        detBX = 120; detBY = 30;
+        barrierHeight = 0.50;
+        document.getElementById('pot-slider').value = 0.50;
+        document.getElementById('pot-val').innerText = '0.50';
+
+        // draw split gate with vertical wall and gap in the middle
+        const xPos = 75;
+        const gap = 16;
+        for (let y = 0; y < H; y++) {
+          if (Math.abs(y - 60) >= gap / 2) {
+            for (let dx = 0; dx < 6; dx++) {
+              V[y * W + (xPos + dx)] = barrierHeight;
+            }
+          }
+        }
+        firePacket();
+      } else if (type === 'waveguide') {
+        sourceMode = 'continuous';
+        srcX = 25; srcY = 60;
+        detAX = 135; detAY = 60;
+        detBX = 135; detBY = 30;
+        barrierHeight = 0.50;
+        document.getElementById('pot-slider').value = 0.50;
+        document.getElementById('pot-val').innerText = '0.50';
+
+        // horizontal channel of width 20, high potential elsewhere
+        for (let y = 0; y < H; y++) {
+          if (Math.abs(y - 60) > 12) {
+            for (let x = 15; x < W - 15; x++) {
+              V[y * W + x] = barrierHeight;
+            }
+          }
+        }
+        clearWaves();
+      } else if (type === 'empty') {
+        sourceMode = 'packet';
+        srcX = 30; srcY = 60;
+        detAX = 120; detAY = 60;
+        detBX = 120; detBY = 30;
+        firePacket();
+      }
+
+      document.getElementById('mode-select').value = sourceMode;
+    }
+
+    // Helper: HSL to RGB converter
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      h /= 360;
+      if (s === 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [Math.floor(r * 255), Math.floor(g * 255), Math.floor(b * 255)];
+    }
+
+    // Compute space derivatives for the 2D Dirac equation
+    function computeDerivatives(R_A_in, I_A_in, R_B_in, I_B_in, out_dR_A, out_dI_A, out_dR_B, out_dI_B) {
+      // Loop over grid (excluding boundary edge pixels to prevent index error)
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          const idx = y * W + x;
+
+          // Central differences for derivatives
+          const dR_B_dx = (R_B_in[idx + 1] - R_B_in[idx - 1]) * 0.5;
+          const dI_B_dy = (I_B_in[idx + W] - I_B_in[idx - W]) * 0.5;
+
+          const dI_B_dx = (I_B_in[idx + 1] - I_B_in[idx - 1]) * 0.5;
+          const dR_B_dy = (R_B_in[idx + W] - R_B_in[idx - W]) * 0.5;
+
+          const dR_A_dx = (R_A_in[idx + 1] - R_A_in[idx - 1]) * 0.5;
+          const dI_A_dy = (I_A_in[idx + W] - I_A_in[idx - W]) * 0.5;
+
+          const dI_A_dx = (I_A_in[idx + 1] - I_A_in[idx - 1]) * 0.5;
+          const dR_A_dy = (R_A_in[idx + W] - R_A_in[idx - W]) * 0.5;
+
+          const pot = V[idx];
+          const damp = sigma[idx];
+
+          // 2D Massless Dirac Equation evolution step:
+          // dR_A = -v_F * (dR_B/dx + dI_B/dy) + V * I_A - sigma * R_A
+          out_dR_A[idx] = -v_F * (dR_B_dx + dI_B_dy) + pot * I_A_in[idx] - damp * R_A_in[idx];
+
+          // dI_A = -v_F * (dI_B/dx - dR_B/dy) - V * R_A - sigma * I_A
+          out_dI_A[idx] = -v_F * (dI_B_dx - dR_B_dy) - pot * R_A_in[idx] - damp * I_A_in[idx];
+
+          // dR_B = -v_F * (dR_A/dx - dI_A/dy) + V * I_B - sigma * R_B
+          out_dR_B[idx] = -v_F * (dR_A_dx - dI_A_dy) + pot * I_B_in[idx] - damp * R_B_in[idx];
+
+          // dI_B = -v_F * (dI_A/dx + dR_A/dy) - V * R_B - sigma * I_B
+          out_dI_B[idx] = -v_F * (dI_A_dx + dR_A_dy) - pot * R_B_in[idx] - damp * I_B_in[idx];
+        }
+      }
+    }
+
+    // Perform one step of numerical integration using Heun's method (RK2)
+    function stepSimulation() {
+      // Step 1: derivatives at current state
+      computeDerivatives(R_A, I_A, R_B, I_B, dR_A, dI_A, dR_B, dI_B);
+
+      // Step 2: intermediate state
+      for (let i = 0; i < len; i++) {
+        tmp_R_A[i] = R_A[i] + dt * dR_A[i];
+        tmp_I_A[i] = I_A[i] + dt * dI_A[i];
+        tmp_R_B[i] = R_B[i] + dt * dR_B[i];
+        tmp_I_B[i] = I_B[i] + dt * dI_B[i];
+      }
+
+      // Step 3: derivatives at intermediate state
+      computeDerivatives(tmp_R_A, tmp_I_A, tmp_R_B, tmp_I_B, tmp_dR_A, tmp_dI_A, tmp_dR_B, tmp_dI_B);
+
+      // Step 4: combine steps
+      for (let i = 0; i < len; i++) {
+        R_A[i] += (dt * 0.5) * (dR_A[i] + tmp_dR_A[i]);
+        I_A[i] += (dt * 0.5) * (dI_A[i] + tmp_dI_A[i]);
+        R_B[i] += (dt * 0.5) * (dR_B[i] + tmp_dR_B[i]);
+        I_B[i] += (dt * 0.5) * (dI_B[i] + tmp_dI_B[i]);
+      }
+
+      // Apply continuous wave driver if active
+      if (sourceMode === 'continuous') {
+        const srcIdx = srcY * W + srcX;
+        const rad = (angle * Math.PI) / 180;
+        
+        R_A[srcIdx] = amplitudeFactor() * Math.cos(sourceTime);
+        I_A[srcIdx] = amplitudeFactor() * Math.sin(sourceTime);
+        R_B[srcIdx] = amplitudeFactor() * Math.cos(sourceTime + rad);
+        I_B[srcIdx] = amplitudeFactor() * Math.sin(sourceTime + rad);
+
+        sourceTime += energy * dt;
+      }
+    }
+
+    function amplitudeFactor() {
+      // Scale source amplitude slightly depending on frequency for visual clarity
+      return 1.5;
+    }
+
+    // Quantum probability current trace simulation
+    function updateParticles() {
+      for (let p of particles) {
+        const px = Math.floor(p.x);
+        const py = Math.floor(p.y);
+
+        if (px >= 0 && px < W && py >= 0 && py < H) {
+          const idx = py * W + px;
+          const ra = R_A[idx];
+          const ia = I_A[idx];
+          const rb = R_B[idx];
+          const ib = I_B[idx];
+
+          // probability current vector components: Jx = ra * rb + ia * ib, Jy = ra * ib - ia * rb
+          const jx = ra * rb + ia * ib;
+          const jy = ra * ib - ia * rb;
+          const speed = Math.hypot(jx, jy);
+
+          if (speed > 1e-4) {
+            p.x += (jx / speed) * 0.7;
+            p.y += (jy / speed) * 0.7;
+          } else {
+            p.x += (Math.random() - 0.5) * 0.15;
+            p.y += (Math.random() - 0.5) * 0.15;
+          }
+
+          const prob = ra * ra + ia * ia + rb * rb + ib * ib;
+          p.life -= 0.4;
+
+          // respawn dead or out of bound particles
+          if (p.x < 0 || p.x >= W || p.y < 0 || p.y >= H || p.life <= 0 || prob < 0.0005) {
+            respawnParticle(p);
+          }
+        } else {
+          respawnParticle(p);
+        }
+      }
+    }
+
+    function respawnParticle(p) {
+      if (Math.random() < 0.7) {
+        // try spawning in region with high wave density
+        const rx = Math.floor(Math.random() * W);
+        const ry = Math.floor(Math.random() * H);
+        const idx = ry * W + rx;
+        const density = R_A[idx]*R_A[idx] + I_A[idx]*I_A[idx];
+        if (density > 0.005) {
+          p.x = rx + Math.random();
+          p.y = ry + Math.random();
+          p.life = 40 + Math.random() * 40;
+          return;
+        }
+      }
+      // fallback near source
+      p.x = srcX + (Math.random() - 0.5) * 6;
+      p.y = srcY + (Math.random() - 0.5) * 6;
+      p.life = 40 + Math.random() * 40;
+    }
+
+    // Audio sonification system
+    function setupWebAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Left probe (Cyan detector)
+        oscA = audioCtx.createOscillator();
+        oscA.type = 'triangle';
+        oscA.frequency.value = 110;
+        gainA = audioCtx.createGain();
+        gainA.gain.value = 0.0;
+        pannerA = audioCtx.createStereoPanner();
+        pannerA.pan.value = -0.7;
+
+        // Bandpass filter to make synth pads warm
+        const filterA = audioCtx.createBiquadFilter();
+        filterA.type = 'lowpass';
+        filterA.frequency.value = 350;
+
+        oscA.connect(filterA);
+        filterA.connect(gainA);
+        gainA.connect(pannerA);
+        pannerA.connect(audioCtx.destination);
+        oscA.start();
+
+        // Right probe (Magenta detector)
+        oscB = audioCtx.createOscillator();
+        oscB.type = 'triangle';
+        oscB.frequency.value = 137.5; // harmonic minor spacing
+        gainB = audioCtx.createGain();
+        gainB.gain.value = 0.0;
+        pannerB = audioCtx.createStereoPanner();
+        pannerB.pan.value = 0.7;
+
+        const filterB = audioCtx.createBiquadFilter();
+        filterB.type = 'lowpass';
+        filterB.frequency.value = 350;
+
+        oscB.connect(filterB);
+        filterB.connect(gainB);
+        gainB.connect(pannerB);
+        pannerB.connect(audioCtx.destination);
+        oscB.start();
+
+        audioEnabled = true;
+        document.getElementById('audio-panel').classList.add('active');
+        document.getElementById('audio-btn').innerText = 'disable web audio';
+        document.getElementById('audio-status').innerText = 'audio active';
+      } catch(e) {
+        alert('web audio API not supported.');
+      }
+    }
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        setupWebAudio();
+      } else {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+          audioEnabled = true;
+          document.getElementById('audio-panel').classList.add('active');
+          document.getElementById('audio-btn').innerText = 'disable web audio';
+          document.getElementById('audio-status').innerText = 'audio active';
+        } else if (audioCtx.state === 'running' && audioEnabled) {
+          audioEnabled = false;
+          gainA.gain.setValueAtTime(0, audioCtx.currentTime);
+          gainB.gain.setValueAtTime(0, audioCtx.currentTime);
+          document.getElementById('audio-panel').classList.remove('active');
+          document.getElementById('audio-btn').innerText = 'enable web audio';
+          document.getElementById('audio-status').innerText = 'audio paused';
+        } else {
+          audioEnabled = true;
+          document.getElementById('audio-panel').classList.add('active');
+          document.getElementById('audio-btn').innerText = 'disable web audio';
+          document.getElementById('audio-status').innerText = 'audio active';
+        }
+      }
+    }
+
+    function runAudioSynthesizer() {
+      if (!audioEnabled || !audioCtx) return;
+
+      const idxA = detAY * W + detAX;
+      const idxB = detBY * W + detBX;
+
+      const valA = R_A[idxA]*R_A[idxA] + I_A[idxA]*I_A[idxA] + R_B[idxA]*R_B[idxA] + I_B[idxA]*I_B[idxA];
+      const valB = R_A[idxB]*R_A[idxB] + I_A[idxB]*I_A[idxB] + R_B[idxB]*R_B[idxB] + I_B[idxB]*I_B[idxB];
+
+      envA = envA * 0.95 + valA * 0.05;
+      envB = envB * 0.95 + valB * 0.05;
+
+      document.getElementById('det-cyan-val').innerText = envA.toFixed(3);
+      document.getElementById('det-cyan-bar').style.width = Math.min(100, envA * 300) + '%';
+      document.getElementById('det-mag-val').innerText = envB.toFixed(3);
+      document.getElementById('det-mag-bar').style.width = Math.min(100, envB * 300) + '%';
+
+      // map amplitude to pitch (110Hz to 330Hz)
+      const pitchA = 110 + envA * 220;
+      const pitchB = 137.5 + envB * 275;
+
+      oscA.frequency.setTargetAtTime(pitchA, audioCtx.currentTime, 0.03);
+      oscB.frequency.setTargetAtTime(pitchB, audioCtx.currentTime, 0.03);
+
+      // map amplitude to volume
+      const volA = Math.min(0.25, envA * 0.4);
+      const volB = Math.min(0.25, envB * 0.4);
+
+      gainA.gain.setTargetAtTime(volA, audioCtx.currentTime, 0.03);
+      gainB.gain.setTargetAtTime(volB, audioCtx.currentTime, 0.03);
+    }
+
+    // Draw simulation frame
+    function render() {
+      const ampMult = 260; // amplitude factor
+
+      for (let i = 0; i < len; i++) {
+        const ra = R_A[i];
+        const ia = I_A[i];
+        const rb = R_B[i];
+        const ib = I_B[i];
+
+        const pA = ra * ra + ia * ia;
+        const pB = rb * rb + ib * ib;
+        const prob = pA + pB;
+
+        let r = 0, g = 0, b = 0;
+
+        if (visualMode === 'probability') {
+          // Neon cyan glow
+          const val = Math.min(1.0, prob * ampMult);
+          if (val < 0.2) {
+            const f = val / 0.2;
+            r = Math.floor(f * 20); g = 0; b = Math.floor(f * 70);
+          } else if (val < 0.7) {
+            const f = (val - 0.2) / 0.5;
+            r = 0; g = Math.floor(30 + f * 180); b = Math.floor(70 + f * 165);
+          } else {
+            const f = (val - 0.7) / 0.3;
+            r = Math.floor(f * 255); g = Math.floor(210 + f * 45); b = 255;
+          }
+        } else if (visualMode === 'polarization') {
+          // Sublattice polarization: P = (pA - pB) / (pA + pB)
+          const diff = pA - pB;
+          const total = pA + pB;
+          const val = Math.min(1.0, total * ampMult);
+          if (val > 0.02) {
+            const pol = diff / (total + 1e-6); // -1 to 1
+            if (pol > 0) {
+              r = Math.floor(val * 255 * pol); g = 0; b = Math.floor(val * 50 * (1 - pol));
+            } else {
+              r = Math.floor(val * 50 * (1 + pol)); g = 0; b = Math.floor(val * 255 * (-pol));
+            }
+          }
+        } else if (visualMode === 'phase') {
+          // Phase of subarray A
+          const phase = Math.atan2(ia, ra);
+          const total = pA + pB;
+          const val = Math.min(1.0, total * ampMult);
+          if (val > 0.02) {
+            const hue = ((phase + Math.PI) / (2 * Math.PI)) * 360;
+            const rgb = hslToRgb(hue, 1.0, 0.4 * val);
+            r = rgb[0]; g = rgb[1]; b = rgb[2];
+          }
+        }
+
+        // Draw barrier overlay (amber / positive potential, deep blue / negative potential)
+        const pot = V[i];
+        if (Math.abs(pot) > 0.005) {
+          const alpha = Math.min(0.55, Math.abs(pot) * 0.8);
+          // amber if positive, deep blue-purple if negative
+          const targetR = pot > 0 ? 255 : 30;
+          const targetG = pot > 0 ? 110 : 0;
+          const targetB = pot > 0 ? 0 : 255;
+
+          r = Math.floor(r * (1 - alpha) + targetR * alpha);
+          g = Math.floor(g * (1 - alpha) + targetG * alpha);
+          b = Math.floor(b * (1 - alpha) + targetB * alpha);
+        }
+
+        // Draw boundary absorbing layer grid dots
+        const x = i % W;
+        const y = Math.floor(i / W);
+        if (sigma[i] > 0 && x % 4 === 0 && y % 4 === 0) {
+          r = Math.min(255, r + 15);
+          g = Math.min(255, g + 15);
+          b = Math.min(255, b + 30);
+        }
+
+        const idx4 = i * 4;
+        pixels[idx4] = r;
+        pixels[idx4+1] = g;
+        pixels[idx4+2] = b;
+        pixels[idx4+3] = 255;
+      }
+
+      renderCtx.putImageData(imgData, 0, 0);
+
+      // Upscale sharply to the high-res canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(renderCanvas, 0, 0, canvas.width, canvas.height);
+
+      const scaleX = canvas.width / W;
+      const scaleY = canvas.height / H;
+
+      // Draw quantum current dust particles
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      for (let p of particles) {
+        ctx.fillRect(p.x * scaleX, p.y * scaleY, 2, 2);
+      }
+
+      // Draw Source
+      ctx.beginPath();
+      ctx.arc(srcX * scaleX + scaleX/2, srcY * scaleY + scaleY/2, 6, 0, 2*Math.PI);
+      ctx.fillStyle = 'white';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'white';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw Detector A (Cyan)
+      ctx.beginPath();
+      ctx.arc(detAX * scaleX + scaleX/2, detAY * scaleY + scaleY/2, 6, 0, 2*Math.PI);
+      ctx.fillStyle = 'hsl(180, 100%, 50%)';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'hsl(180, 100%, 50%)';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Draw Detector B (Magenta)
+      ctx.beginPath();
+      ctx.arc(detBX * scaleX + scaleX/2, detBY * scaleY + scaleY/2, 6, 0, 2*Math.PI);
+      ctx.fillStyle = 'hsl(320, 100%, 60%)';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'hsl(320, 100%, 60%)';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Main game loop
+    function loop(now) {
+      if (isRunning) {
+        // Run 3 steps per frame for smooth wave propagation
+        for (let s = 0; s < 3; s++) {
+          stepSimulation();
+        }
+        updateParticles();
+        runAudioSynthesizer();
+      }
+
+      render();
+
+      frameCount++;
+      if (now - lastFpsTime >= 1000) {
+        fps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+        document.getElementById('fps-counter').innerText = fps;
+        frameCount = 0;
+        lastFpsTime = now;
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    // Mouse Interaction
+    function getMouseCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX - rect.left;
+      const clientY = e.clientY - rect.top;
+      const x = Math.floor((clientX / rect.width) * W);
+      const y = Math.floor((clientY / rect.height) * H);
+      return { x: Math.max(0, Math.min(W - 1, x)), y: Math.max(0, Math.min(H - 1, y)) };
+    }
+
+    let isDrawing = false;
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      handleMouseAction(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDrawing) handleMouseAction(e);
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDrawing = false;
+    });
+
+    function handleMouseAction(e) {
+      const coords = getMouseCoords(e);
+      if (activeTool === 'draw') {
+        // draw barrier with radius 3.5
+        drawBarrierCircle(coords.x, coords.y, 4, barrierHeight);
+      } else if (activeTool === 'erase') {
+        drawBarrierCircle(coords.x, coords.y, 5, 0.0);
+      } else if (activeTool === 'source') {
+        srcX = coords.x;
+        srcY = coords.y;
+        if (sourceMode === 'packet') firePacket();
+      } else if (activeTool === 'detector') {
+        // drag nearest detector
+        const distA = Math.hypot(coords.x - detAX, coords.y - detAY);
+        const distB = Math.hypot(coords.x - detBX, coords.y - detBY);
+        if (distA < distB) {
+          detAX = coords.x; detAY = coords.y;
+        } else {
+          detBX = coords.x; detBY = coords.y;
+        }
+      }
+    }
+
+    function drawBarrierCircle(cx, cy, r, val) {
+      const r2 = r * r;
+      for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+        for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+          if (x >= 0 && x < W && y >= 0 && y < H) {
+            const dx = x - cx;
+            const dy = y - cy;
+            if (dx*dx + dy*dy <= r2) {
+              V[y * W + x] = val;
+            }
+          }
+        }
+      }
+    }
+
+    // UI Listeners
+    document.getElementById('play-btn').addEventListener('click', () => {
+      isRunning = !isRunning;
+      document.getElementById('play-btn').innerText = isRunning ? 'pause' : 'resume';
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      clearWaves();
+      if (sourceMode === 'packet') firePacket();
+    });
+
+    document.getElementById('fire-btn').addEventListener('click', () => {
+      firePacket();
+    });
+
+    document.getElementById('preset-select').addEventListener('change', (e) => {
+      loadPreset(e.target.value);
+    });
+
+    document.getElementById('mode-select').addEventListener('change', (e) => {
+      sourceMode = e.target.value;
+      clearWaves();
+      if (sourceMode === 'packet') firePacket();
+    });
+
+    // sliders
+    const energySlider = document.getElementById('energy-slider');
+    const energyVal = document.getElementById('energy-val');
+    energySlider.addEventListener('input', (e) => {
+      energy = parseFloat(e.target.value);
+      energyVal.innerText = energy.toFixed(2);
+      clearWaves();
+      if (sourceMode === 'packet') firePacket();
+    });
+
+    const angleSlider = document.getElementById('angle-slider');
+    const angleVal = document.getElementById('angle-val');
+    angleSlider.addEventListener('input', (e) => {
+      angle = parseInt(e.target.value);
+      angleVal.innerText = angle + '°';
+      clearWaves();
+      if (sourceMode === 'packet') firePacket();
+    });
+
+    const widthSlider = document.getElementById('width-slider');
+    const widthVal = document.getElementById('width-val');
+    widthSlider.addEventListener('input', (e) => {
+      packetWidth = parseInt(e.target.value);
+      widthVal.innerText = packetWidth + ' px';
+      clearWaves();
+      if (sourceMode === 'packet') firePacket();
+    });
+
+    const potSlider = document.getElementById('pot-slider');
+    const potVal = document.getElementById('pot-val');
+    potSlider.addEventListener('input', (e) => {
+      barrierHeight = parseFloat(e.target.value);
+      potVal.innerText = barrierHeight.toFixed(2);
+      // scale active potentials dynamically to match slider
+      // Find the preset type to selectively update barriers
+      const presetType = document.getElementById('preset-select').value;
+      if (presetType === 'klein') {
+        const startX = 72; const endX = 88;
+        for (let y = 0; y < H; y++) {
+          for (let x = startX; x <= endX; x++) {
+            V[y * W + x] = barrierHeight;
+          }
+        }
+      } else if (presetType === 'veselago') {
+        const startX = 75;
+        for (let y = 0; y < H; y++) {
+          for (let x = startX; x < W; x++) {
+            V[y * W + x] = barrierHeight;
+          }
+        }
+      } else if (presetType === 'dot') {
+        const cx = 80, cy = 60, r = 22, r2 = r*r;
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            const dx = x - cx; const dy = y - cy;
+            if (dx*dx + dy*dy <= r2) V[y * W + x] = barrierHeight;
+          }
+        }
+      } else if (presetType === 'qpc') {
+        const xPos = 75; const gap = 16;
+        for (let y = 0; y < H; y++) {
+          if (Math.abs(y - 60) >= gap / 2) {
+            for (let dx = 0; dx < 6; dx++) V[y * W + (xPos + dx)] = barrierHeight;
+          }
+        }
+      } else if (presetType === 'waveguide') {
+        for (let y = 0; y < H; y++) {
+          if (Math.abs(y - 60) > 12) {
+            for (let x = 15; x < W - 15; x++) V[y * W + x] = barrierHeight;
+          }
+        }
+      }
+    });
+
+    document.getElementById('clear-pot-btn').addEventListener('click', () => {
+      for (let i = 0; i < len; i++) V[i] = 0;
+    });
+
+    // tool buttons
+    const toolButtons = document.querySelectorAll('.tool-btn');
+    toolButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        toolButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeTool = btn.getAttribute('data-tool');
+      });
+    });
+
+    // visualization toggle
+    document.getElementById('visual-select').addEventListener('change', (e) => {
+      visualMode = e.target.value;
+      if (visualMode === 'polarization') {
+        document.getElementById('standard-legend').style.display = 'none';
+        document.getElementById('polarization-legend').style.display = 'flex';
+      } else {
+        document.getElementById('standard-legend').style.display = 'flex';
+        document.getElementById('polarization-legend').style.display = 'none';
+      }
+    });
+
+    // audio button
+    document.getElementById('audio-btn').addEventListener('click', () => {
+      toggleAudio();
+    });
+
+    // Initial load
+    initABL();
+    loadPreset('klein');
+    requestAnimationFrame(loop);
+
+  </script>
+</body>
+</html>
