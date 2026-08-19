@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skyrmion Spin-Torque Sandbox</title>
+  <style>
+    body {
+      background: #05050a;
+      color: #e2e8f0;
+      font-family: 'Courier New', Courier, monospace;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #00f3ff;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+      margin-bottom: 10px;
+      font-size: 24px;
+      text-align: center;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 20px;
+      text-align: center;
+      max-width: 800px;
+      line-height: 1.4;
+    }
+    .main-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      max-width: 1200px;
+      width: 100%;
+    }
+    .panel {
+      background: rgba(10, 10, 20, 0.85);
+      border: 1px solid #00f3ff;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+      border-radius: 4px;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 600px;
+    }
+    canvas {
+      background: #000;
+      border: 2px solid #00f3ff;
+      border-radius: 4px;
+      cursor: crosshair;
+      image-rendering: pixelated;
+      max-width: 100%;
+    }
+    .controls {
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .control-group {
+      border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+      padding-bottom: 10px;
+    }
+    .control-group:last-child {
+      border-bottom: none;
+    }
+    h3 {
+      color: #ff007f;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #bbb;
+    }
+    .value-display {
+      color: #00f3ff;
+      font-weight: bold;
+    }
+    input[type="range"] {
+      width: 100%;
+      background: #1a1a2e;
+      accent-color: #ff007f;
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    button {
+      background: #111;
+      color: #00f3ff;
+      border: 1px solid #00f3ff;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+    }
+    button:hover {
+      background: #00f3ff;
+      color: #000;
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+    }
+    button.active {
+      background: #ff007f;
+      border-color: #ff007f;
+      color: #fff;
+    }
+    .select-style {
+      background: #111;
+      color: #00f3ff;
+      border: 1px solid #00f3ff;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 4px;
+      width: 100%;
+      border-radius: 2px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+    .stats {
+      margin-top: 15px;
+      font-size: 11px;
+      color: #aaa;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .stat-box {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px dashed rgba(0, 243, 255, 0.2);
+      padding: 6px;
+      border-radius: 2px;
+    }
+    .stat-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 2px;
+    }
+    .stat-val {
+      font-size: 13px;
+      color: #00f3ff;
+      font-weight: bold;
+    }
+    .info-panel {
+      margin-top: 20px;
+      max-width: 940px;
+      width: 100%;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #bbb;
+    }
+    .info-panel h2 {
+      color: #00f3ff;
+      border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+      padding-bottom: 5px;
+      font-size: 16px;
+      margin-top: 0;
+    }
+    .info-panel p {
+      margin-bottom: 12px;
+    }
+    .info-panel ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+    .info-panel li {
+      margin-bottom: 6px;
+    }
+    .back-link {
+      margin-top: 30px;
+      color: #ff007f;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 12px;
+      transition: color 0.2s;
+    }
+    .back-link:hover {
+      color: #00f3ff;
+      text-decoration: underline;
+    }
+    .instruction-tag {
+      background: rgba(255, 0, 127, 0.1);
+      border: 1px solid rgba(255, 0, 127, 0.3);
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #ff80bf;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>SKYRMION SPIN-TORQUE SANDBOX</h1>
+  <div class="subtitle">
+    interactive micromagnetic simulation of magnetic skyrmions — topologically protected spin textures. drive them using spin-polarized currents, collide them, or drag them with a magnetic probe.
+  </div>
+
+  <div class="main-container">
+    <!-- Left Column: Controls -->
+    <div class="panel controls">
+      <div class="control-group">
+        <h3>Presets</h3>
+        <div class="btn-grid">
+          <button onclick="loadPreset('single')">Single Skyrmion</button>
+          <button onclick="loadPreset('lattice')">Skyrmion Lattice</button>
+          <button onclick="loadPreset('racetrack')">Racetrack Memory</button>
+          <button onclick="loadPreset('collider')">Skyrmion Collider</button>
+          <button onclick="loadPreset('domainwall')">Domain Wall</button>
+          <button onclick="loadPreset('random')">Chaos/Spin Glass</button>
+        </div>
+        <button style="width: 100%; margin-top: 5px;" onclick="clearAllSpins()">Reset to Ferromagnet</button>
+      </div>
+
+      <div class="control-group">
+        <h3>Material Parameters</h3>
+        
+        <label>Exchange J <span class="value-display" id="val-J">1.00</span></label>
+        <input type="range" id="param-J" min="0" max="2" step="0.05" value="1.00" oninput="updateParam('J', this.value)">
+
+        <label>DMI D <span class="value-display" id="val-D">0.36</span></label>
+        <input type="range" id="param-D" min="0" max="1" step="0.01" value="0.36" oninput="updateParam('D', this.value)">
+
+        <label>Anisotropy K <span class="value-display" id="val-K">0.12</span></label>
+        <input type="range" id="param-K" min="0" max="0.5" step="0.01" value="0.12" oninput="updateParam('K', this.value)">
+
+        <label>Ext Field B_z <span class="value-display" id="val-B">0.035</span></label>
+        <input type="range" id="param-B" min="-0.1" max="0.1" step="0.005" value="0.035" oninput="updateParam('B', this.value)">
+      </div>
+
+      <div class="control-group">
+        <h3>Spin Torque & Dynamics</h3>
+        
+        <label>Damping &alpha; <span class="value-display" id="val-alpha">0.15</span></label>
+        <input type="range" id="param-alpha" min="0.01" max="1" step="0.01" value="0.15" oninput="updateParam('alpha', this.value)">
+
+        <label>Current u_x <span class="value-display" id="val-ux">0.00</span></label>
+        <input type="range" id="param-ux" min="-0.5" max="0.5" step="0.02" value="0.00" oninput="updateParam('ux', this.value)">
+
+        <label>Non-Adiabatic &beta; <span class="value-display" id="val-beta">0.08</span></label>
+        <input type="range" id="param-beta" min="0" max="0.5" step="0.01" value="0.08" oninput="updateParam('beta', this.value)">
+      </div>
+
+      <div class="control-group">
+        <h3>Brush Tool</h3>
+        <select class="select-style" id="brush-type">
+          <option value="tip-attract">Magnetic Tip (Attract / Create)</option>
+          <option value="tip-repel">Magnetic Tip (Repel / Destroy)</option>
+          <option value="defect">Draw Defect Obstacle</option>
+          <option value="erase-defect">Erase Defect</option>
+        </select>
+        <label>Brush Size <span class="value-display" id="val-brushSize">3</span></label>
+        <input type="range" id="param-brushSize" min="1" max="8" step="1" value="3" oninput="document.getElementById('val-brushSize').innerText=this.value; brushRadius=parseInt(this.value);">
+      </div>
+    </div>
+
+    <!-- Right Column: Visualization & Canvas -->
+    <div class="panel canvas-container">
+      <div style="display: flex; gap: 10px; margin-bottom: 10px; width: 100%; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-pause" onclick="togglePause()">Pause</button>
+          <button onclick="stepSim()">Step</button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <label style="margin: 0; font-size: 11px;">View:</label>
+          <select class="select-style" id="view-mode" style="margin: 0; width: 140px;" onchange="viewMode = this.value;">
+            <option value="spin">Spin Orientation</option>
+            <option value="topological">Topological Charge</option>
+            <option value="out-of-plane">Out-of-Plane (S_z)</option>
+            <option value="energy">Local Energy Density</option>
+          </select>
+        </div>
+      </div>
+
+      <canvas id="simCanvas" width="900" height="600"></canvas>
+
+      <div class="instruction-tag">
+        ⌨️ <strong>keyboard controls:</strong> press and hold <strong>arrow keys</strong> to apply temporary spin currents and drive skyrmions!
+      </div>
+
+      <div style="display: flex; gap: 20px; width: 100%; margin-top: 10px; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" id="check-arrows" checked onchange="showArrows = this.checked;">
+          <label for="check-arrows" style="margin: 0; cursor: pointer;">Overlay Spin Arrows</label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" id="check-audio" onchange="toggleAudio(this.checked);">
+          <label for="check-audio" style="margin: 0; cursor: pointer; color: #ff007f;">Enable Audio Sonification</label>
+        </div>
+        <div style="flex: 1; text-align: right;">
+          <span style="font-size: 11px; color: #888;">DMI Type:</span>
+          <select class="select-style" id="dmi-type" style="width: 100px; margin: 0; display: inline-block;" onchange="dmiType = this.value;">
+            <option value="neel">N&eacute;el (Interfacial)</option>
+            <option value="bloch">Bloch (Bulk)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-title">Topological Charge (Winding Q)</div>
+          <div class="stat-val" id="stat-charge">-0.00</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">Estimated Skyrmion Count</div>
+          <div class="stat-val" id="stat-skyrmions">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">Mean Magnetization &lt;S_z&gt;</div>
+          <div class="stat-val" id="stat-sz">0.99</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-title">Integrator Status</div>
+          <div class="stat-val" style="color: #0f0;">Heun RK2 (Stable)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel info-panel">
+    <h2>PHYSICS & INTERACTION GUIDE</h2>
+    <p>
+      This simulation solves the <strong>Landau-Lifshitz-Gilbert (LLG) equation</strong> augmented with <strong>Spin-Transfer Torque (STT)</strong> terms. It models a two-dimensional magnetic thin film where local atomic spins interact via quantum exchange, spin-orbit induced Dzyaloshinskii-Moriya interactions (DMI), magnetic anisotropy, and an external magnetic field.
+    </p>
+    <p><strong>Key Phenomena to Explore:</strong></p>
+    <ul>
+      <li><strong>Skyrmion Stability:</strong> Toggle between the <em>Single Skyrmion</em> and <em>Reset to Ferromagnet</em>. If you decrease DMI (D) below ~0.25, the skyrmions collapse into the background ferromagnetic state. If you increase DMI above ~0.45 or lower the magnetic field (B_z), skyrmions will stretch and expand into a labyrinth of helical magnetic stripes.</li>
+      <li><strong>Skyrmion Hall Effect:</strong> Apply horizontal spin current using the <code>Current u_x</code> slider or the Left/Right Arrow keys. Due to their topological charge (Q &approx; -1), the skyrmions do not move straight; they get deflected diagonally. This transverse deflection is the Magnus-like topological Hall effect of skyrmions.</li>
+      <li><strong>Racetrack Memory Guide:</strong> Click the <em>Racetrack Memory</em> preset. The grey horizontal stripes are non-magnetic defects (impurities painted on the track) which create a physical channel. Apply current pulses using the arrow keys to watch skyrmions slide down the track. When they hit the channel boundaries, the boundary repulsion counteracts the Skyrmion Hall deflection, guiding them straight!</li>
+      <li><strong>Topological Charge (Winding Number):</strong> Select the <em>Topological Charge</em> view mode. You will see red/blue rings representing localized chiral winding. The total winding number (displayed in the stats) stays close to integers (e.g. -1.0 per skyrmion), reflecting its topological protection against continuous deformations.</li>
+      <li><strong>Sonification:</strong> Enable audio. Move your cursor over the canvas. The pitch and timbre of the synthesizer are dynamically modulated by the local spin vector $(S_x, S_y, S_z)$ and topological charge density directly under the cursor, letting you "hear" the magnetic structure.</li>
+    </ul>
+  </div>
+
+  <a href="../index.html" class="back-link">&lt;&lt; back to home</a>
+
+  <script>
+    // Physics Grid Configuration
+    const Nx = 90;
+    const Ny = 60;
+    const N = Nx * Ny;
+    const scale = 10; // 10px per grid site
+
+    // Spin components
+    let sx = new Float32Array(N);
+    let sy = new Float32Array(N);
+    let sz = new Float32Array(N);
+
+    // Intermediate states for Heun (RK2) integrator
+    let temp_sx = new Float32Array(N);
+    let temp_sy = new Float32Array(N);
+    let temp_sz = new Float32Array(N);
+
+    let k1_x = new Float32Array(N);
+    let k1_y = new Float32Array(N);
+    let k1_z = new Float32Array(N);
+
+    // Effective fields
+    let bx = new Float32Array(N);
+    let by = new Float32Array(N);
+    let bz = new Float32Array(N);
+
+    // Material defects (0 = magnetic, 1 = non-magnetic defect)
+    let defect = new Uint8Array(N);
+
+    // Simulation Parameters (adjustable in UI)
+    let J = 1.0;          // Exchange strength
+    let D = 0.36;         // DMI strength
+    let K = 0.12;         // Perpendicular Anisotropy
+    let B_ext = 0.035;    // External magnetic field along +z
+    let alpha = 0.15;     // Gilbert damping parameter
+    let beta = 0.08;      // Non-adiabatic spin torque parameter
+    let ux = 0.0;         // Applied electron current speed x
+    let uy = 0.0;         // Applied electron current speed y
+    let dt = 0.08;        // Integrator time step (safe for these parameters)
+    let stepsPerFrame = 5;// Physics steps per animation frame
+
+    // Interactive States
+    let isPaused = false;
+    let viewMode = 'spin'; // spin, topological, out-of-plane, energy
+    let dmiType = 'neel';  // neel (interfacial), bloch (bulk)
+    let showArrows = true;
+    let brushRadius = 3;
+
+    // Mouse Interaction
+    let mouseActive = false;
+    let mouseGridX = 0;
+    let mouseGridY = 0;
+    let mouseButton = 0; // 0: left, 2: right
+
+    // Web Audio Variables
+    let audioCtx = null;
+    let carrierOsc = null;
+    let modOsc = null;
+    let modGain = null;
+    let filterNode = null;
+    let mainGain = null;
+    let audioEnabled = false;
+
+    // Canvas Setup
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Init values
+    function clearSpins() {
+      for (let i = 0; i < N; i++) {
+        sx[i] = 0.0;
+        sy[i] = 0.0;
+        sz[i] = 1.0; // aligned with B_ext (+z)
+      }
+    }
+
+    function clearDefects() {
+      defect.fill(0);
+    }
+
+    function clearAllSpins() {
+      clearSpins();
+      clearDefects();
+    }
+
+    // Single skyrmion generator
+    function generateSkyrmion(xc, yc, radius, type = 'neel', sign = -1) {
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          let dx = x - xc;
+          let dy = y - yc;
+          let r = Math.sqrt(dx*dx + dy*dy);
+          if (r < radius) {
+            let theta = Math.PI * (1.0 - r / radius);
+            let phi = Math.atan2(dy, dx);
+            let idx = y * Nx + x;
+            
+            if (defect[idx]) continue;
+
+            if (type === 'neel') {
+              sx[idx] = Math.sin(theta) * Math.cos(phi);
+              sy[idx] = Math.sin(theta) * Math.sin(phi);
+            } else {
+              // Bloch type (in-plane components rotated by 90 degrees)
+              sx[idx] = -Math.sin(theta) * Math.sin(phi);
+              sy[idx] = Math.sin(theta) * Math.cos(phi);
+            }
+            sz[idx] = Math.cos(theta) * sign;
+            
+            // Normalize
+            let len = Math.sqrt(sx[idx]*sx[idx] + sy[idx]*sy[idx] + sz[idx]*sz[idx]);
+            sx[idx] /= len;
+            sy[idx] /= len;
+            sz[idx] /= len;
+          }
+        }
+      }
+    }
+
+    // Presets Loader
+    function loadPreset(name) {
+      clearSpins();
+      clearDefects();
+      document.getElementById('param-ux').value = 0.0;
+      document.getElementById('val-ux').innerText = "0.00";
+      ux = 0.0;
+      uy = 0.0;
+
+      if (name === 'single') {
+        D = 0.36; K = 0.12; B_ext = 0.035;
+        syncSliders();
+        generateSkyrmion(Nx / 2, Ny / 2, 7, dmiType);
+      } 
+      else if (name === 'lattice') {
+        D = 0.38; K = 0.12; B_ext = 0.032;
+        syncSliders();
+        let spacingX = 14;
+        let spacingY = 12;
+        let row = 0;
+        for (let y = 4; y < Ny - 4; y += spacingY) {
+          let offset = (row % 2 === 0) ? 0 : spacingX / 2;
+          for (let x = 4 + offset; x < Nx - 4; x += spacingX) {
+            generateSkyrmion(x, y, 5.5, dmiType);
+          }
+          row++;
+        }
+      } 
+      else if (name === 'racetrack') {
+        D = 0.36; K = 0.11; B_ext = 0.032;
+        syncSliders();
+        // Draw horizontal track barriers (defects)
+        let barrierH = 18;
+        for (let y = 0; y < Ny; y++) {
+          for (let x = 0; x < Nx; x++) {
+            let idx = y * Nx + x;
+            if (y < barrierH || y >= Ny - barrierH) {
+              defect[idx] = 1;
+            }
+          }
+        }
+        // Spawn 3 skyrmions along the track
+        let cy = Ny / 2;
+        generateSkyrmion(Nx * 0.2, cy, 6.5, dmiType);
+        generateSkyrmion(Nx * 0.5, cy, 6.5, dmiType);
+        generateSkyrmion(Nx * 0.8, cy, 6.5, dmiType);
+      } 
+      else if (name === 'collider') {
+        D = 0.36; K = 0.12; B_ext = 0.036;
+        syncSliders();
+        // Spawn two skyrmions offset vertically, we can drive them into each other
+        generateSkyrmion(Nx * 0.3, Ny / 2 - 4, 7, dmiType);
+        generateSkyrmion(Nx * 0.7, Ny / 2 + 4, 7, dmiType);
+      }
+      else if (name === 'domainwall') {
+        D = 0.36; K = 0.10; B_ext = 0.0;
+        syncSliders();
+        // Left half points down, right half points up
+        for (let y = 0; y < Ny; y++) {
+          for (let x = 0; x < Nx; x++) {
+            let idx = y * Nx + x;
+            if (x < Nx / 2) {
+              sx[idx] = 0; sy[idx] = 0; sz[idx] = -1.0;
+            } else {
+              sx[idx] = 0; sy[idx] = 0; sz[idx] = 1.0;
+            }
+          }
+        }
+      }
+      else if (name === 'random') {
+        D = 0.38; K = 0.12; B_ext = 0.01;
+        syncSliders();
+        for (let i = 0; i < N; i++) {
+          let theta = Math.random() * Math.PI;
+          let phi = Math.random() * 2 * Math.PI;
+          sx[i] = Math.sin(theta) * Math.cos(phi);
+          sy[i] = Math.sin(theta) * Math.sin(phi);
+          sz[i] = Math.cos(theta);
+        }
+      }
+    }
+
+    function syncSliders() {
+      document.getElementById('param-J').value = J;
+      document.getElementById('val-J').innerText = J.toFixed(2);
+      document.getElementById('param-D').value = D;
+      document.getElementById('val-D').innerText = D.toFixed(2);
+      document.getElementById('param-K').value = K;
+      document.getElementById('val-K').innerText = K.toFixed(2);
+      document.getElementById('param-B').value = B_ext;
+      document.getElementById('val-B').innerText = B_ext.toFixed(3);
+      document.getElementById('param-alpha').value = alpha;
+      document.getElementById('val-alpha').innerText = alpha.toFixed(2);
+      document.getElementById('param-beta').value = beta;
+      document.getElementById('val-beta').innerText = beta.toFixed(2);
+    }
+
+    function updateParam(name, val) {
+      let num = parseFloat(val);
+      if (name === 'J') J = num;
+      if (name === 'D') D = num;
+      if (name === 'K') K = num;
+      if (name === 'B') B_ext = num;
+      if (name === 'alpha') alpha = num;
+      if (name === 'beta') beta = num;
+      if (name === 'ux') ux = num;
+      
+      document.getElementById('val-' + name).innerText = (name === 'B') ? num.toFixed(3) : num.toFixed(2);
+    }
+
+    // Effective Field Solver
+    // Out-of-bounds spin is assumed to be in ferromagnetic background state: (0, 0, 1)
+    function computeEffectiveField(stateX, stateY, stateZ, outBx, outBy, outBz) {
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const idx = y * Nx + x;
+          
+          if (defect[idx]) {
+            outBx[idx] = 0;
+            outBy[idx] = 0;
+            outBz[idx] = 0;
+            continue;
+          }
+
+          // Fetch neighbors (with boundary handling: clamp to ferromagnetic vacuum)
+          let idx_r = idx + 1;
+          let sx_r = (x < Nx - 1 && !defect[idx_r]) ? stateX[idx_r] : 0.0;
+          let sy_r = (x < Nx - 1 && !defect[idx_r]) ? stateY[idx_r] : 0.0;
+          let sz_r = (x < Nx - 1 && !defect[idx_r]) ? stateZ[idx_r] : 1.0;
+
+          let idx_l = idx - 1;
+          let sx_l = (x > 0 && !defect[idx_l]) ? stateX[idx_l] : 0.0;
+          let sy_l = (x > 0 && !defect[idx_l]) ? stateY[idx_l] : 0.0;
+          let sz_l = (x > 0 && !defect[idx_l]) ? stateZ[idx_l] : 1.0;
+
+          let idx_d = idx + Nx;
+          let sx_d = (y < Ny - 1 && !defect[idx_d]) ? stateX[idx_d] : 0.0;
+          let sy_d = (y < Ny - 1 && !defect[idx_d]) ? stateY[idx_d] : 0.0;
+          let sz_d = (y < Ny - 1 && !defect[idx_d]) ? stateZ[idx_d] : 1.0;
+
+          let idx_u = idx - Nx;
+          let sx_u = (y > 0 && !defect[idx_u]) ? stateX[idx_u] : 0.0;
+          let sy_u = (y > 0 && !defect[idx_u]) ? stateY[idx_u] : 0.0;
+          let sz_u = (y > 0 && !defect[idx_u]) ? stateZ[idx_u] : 1.0;
+
+          // 1. Quantum Exchange field
+          let ex_x = J * (sx_r + sx_l + sx_d + sx_u);
+          let ex_y = J * (sy_r + sy_l + sy_d + sy_u);
+          let ex_z = J * (sz_r + sz_l + sz_d + sz_u);
+
+          // 2. Dzyaloshinskii-Moriya Interaction (DMI) field
+          let dmi_x = 0.0, dmi_y = 0.0, dmi_z = 0.0;
+          if (dmiType === 'neel') {
+            // Néel type (interfacial DMI)
+            dmi_x = D * (sz_r - sz_l);
+            dmi_y = D * (sz_d - sz_u);
+            dmi_z = -D * ((sx_r - sx_l) + (sy_d - sy_u));
+          } else {
+            // Bloch type (bulk DMI)
+            dmi_x = D * (sz_d - sz_u);
+            dmi_y = -D * (sz_r - sz_l);
+            dmi_z = D * ((sx_d - sx_u) - (sy_r - sy_l));
+          }
+
+          // 3. Zeeman Field (External homogeneous field + brush field tip)
+          let total_bz = B_ext;
+          let total_bx = 0.0;
+          let total_by = 0.0;
+          
+          if (mouseActive) {
+            let dx = x - mouseGridX;
+            let dy = y - mouseGridY;
+            let distSq = dx*dx + dy*dy;
+            if (distSq < brushRadius * brushRadius) {
+              if (mouseButton === 0) { // Left click: local field tip pointing down (attracts/creates skyrmion)
+                total_bz += -0.5; // strong local magnetic field in -z
+              } else if (mouseButton === 2) { // Right click: strong field pointing up (destroys skyrmion)
+                total_bz += 0.6;
+              }
+            }
+          }
+
+          // 4. Perpendicular Magnetocrystalline Anisotropy
+          let ani_z = 2.0 * K * stateZ[idx];
+
+          // Combine effective fields
+          outBx[idx] = ex_x + dmi_x + total_bx;
+          outBy[idx] = ex_y + dmi_y + total_by;
+          outBz[idx] = ex_z + dmi_z + total_bz + ani_z;
+        }
+      }
+    }
+
+    // Heun RK2 Integrator Step
+    function stepLLG() {
+      // Step 1: Compute derivative k1 at current state (sx, sy, sz)
+      computeEffectiveField(sx, sy, sz, bx, by, bz);
+
+      const damping_factor = 1.0 / (1.0 + alpha * alpha);
+
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const idx = y * Nx + x;
+          if (defect[idx]) continue;
+
+          let s_x = sx[idx];
+          let s_y = sy[idx];
+          let s_z = sz[idx];
+
+          let b_x = bx[idx];
+          let b_y = by[idx];
+          let b_z = bz[idx];
+
+          // Precession & Damping torques: S x B & S x (S x B)
+          let vx = s_y * b_z - s_z * b_y;
+          let vy = s_z * b_x - s_x * b_z;
+          let vz = s_x * b_y - s_y * b_x;
+
+          let wx = s_y * vz - s_z * vy;
+          let wy = s_z * vx - s_x * vz;
+          let wz = s_x * vy - s_y * vx;
+
+          let llg_x = -damping_factor * (vx + alpha * wx);
+          let llg_y = -damping_factor * (vy + alpha * wy);
+          let llg_z = -damping_factor * (vz + alpha * wz);
+
+          // Spin-Transfer Torque (STT) calculations
+          // Compute gradients: S'_x = (S_r - S_l)/2, S'_y = (S_d - S_u)/2
+          let sx_r = (x < Nx - 1 && !defect[idx + 1]) ? sx[idx + 1] : s_x;
+          let sy_r = (x < Nx - 1 && !defect[idx + 1]) ? sy[idx + 1] : s_y;
+          let sz_r = (x < Nx - 1 && !defect[idx + 1]) ? sz[idx + 1] : s_z;
+
+          let sx_l = (x > 0 && !defect[idx - 1]) ? sx[idx - 1] : s_x;
+          let sy_l = (x > 0 && !defect[idx - 1]) ? sy[idx - 1] : s_y;
+          let sz_l = (x > 0 && !defect[idx - 1]) ? sz[idx - 1] : s_z;
+
+          let sx_d = (y < Ny - 1 && !defect[idx + Nx]) ? sx[idx + Nx] : s_x;
+          let sy_d = (y < Ny - 1 && !defect[idx + Nx]) ? sy[idx + Nx] : s_y;
+          let sz_d = (y < Ny - 1 && !defect[idx + Nx]) ? sz[idx + Nx] : s_z;
+
+          let sx_u = (y > 0 && !defect[idx - Nx]) ? sx[idx - Nx] : s_x;
+          let sy_u = (y > 0 && !defect[idx - Nx]) ? sy[idx - Nx] : s_y;
+          let sz_u = (y > 0 && !defect[idx - Nx]) ? sz[idx - Nx] : s_z;
+
+          let gradx_x = 0.5 * (sx_r - sx_l);
+          let gradx_y = 0.5 * (sy_r - sy_l);
+          let gradx_z = 0.5 * (sz_r - sz_l);
+
+          let grady_x = 0.5 * (sx_d - sx_u);
+          let grady_y = 0.5 * (sy_d - sy_u);
+          let grady_z = 0.5 * (sz_d - sz_u);
+
+          // Spin current drift term: D_drift = u_x * S'_x + u_y * S'_y
+          let drift_x = ux * gradx_x + uy * grady_x;
+          let drift_y = ux * gradx_y + uy * grady_y;
+          let drift_z = ux * gradx_z + uy * grady_z;
+
+          // STT = -drift + beta * (S x drift)
+          let s_cross_d_x = s_y * drift_z - s_z * drift_y;
+          let s_cross_d_y = s_z * drift_x - s_x * drift_z;
+          let s_cross_d_z = s_x * drift_y - s_y * drift_x;
+
+          let stt_x = -drift_x + beta * s_cross_d_x;
+          let stt_y = -drift_y + beta * s_cross_d_y;
+          let stt_z = -drift_z + beta * s_cross_d_z;
+
+          k1_x[idx] = llg_x + stt_x;
+          k1_y[idx] = llg_y + stt_y;
+          k1_z[idx] = llg_z + stt_z;
+
+          // Intermediate Euler step
+          let tx = s_x + dt * k1_x[idx];
+          let ty = s_y + dt * k1_y[idx];
+          let tz = s_z + dt * k1_z[idx];
+          let len = Math.sqrt(tx*tx + ty*ty + tz*tz);
+          if (len > 0) { tx /= len; ty /= len; tz /= len; }
+          temp_sx[idx] = tx;
+          temp_sy[idx] = ty;
+          temp_sz[idx] = tz;
+        }
+      }
+
+      // Step 2: Compute effective field B' at the temporary state
+      computeEffectiveField(temp_sx, temp_sy, temp_sz, bx, by, bz);
+
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const idx = y * Nx + x;
+          if (defect[idx]) continue;
+
+          let s_x = temp_sx[idx];
+          let s_y = temp_sy[idx];
+          let s_z = temp_sz[idx];
+
+          let b_x = bx[idx];
+          let b_y = by[idx];
+          let b_z = bz[idx];
+
+          let vx = s_y * b_z - s_z * b_y;
+          let vy = s_z * b_x - s_x * b_z;
+          let vz = s_x * b_y - s_y * b_x;
+
+          let wx = s_y * vz - s_z * vy;
+          let wy = s_z * vx - s_x * vz;
+          let wz = s_x * vy - s_y * vx;
+
+          let llg_x = -damping_factor * (vx + alpha * wx);
+          let llg_y = -damping_factor * (vy + alpha * wy);
+          let llg_z = -damping_factor * (vz + alpha * wz);
+
+          // Temp gradients
+          let sx_r = (x < Nx - 1 && !defect[idx + 1]) ? temp_sx[idx + 1] : s_x;
+          let sy_r = (x < Nx - 1 && !defect[idx + 1]) ? temp_sy[idx + 1] : s_y;
+          let sz_r = (x < Nx - 1 && !defect[idx + 1]) ? temp_sz[idx + 1] : s_z;
+
+          let sx_l = (x > 0 && !defect[idx - 1]) ? temp_sx[idx - 1] : s_x;
+          let sy_l = (x > 0 && !defect[idx - 1]) ? temp_sy[idx - 1] : s_y;
+          let sz_l = (x > 0 && !defect[idx - 1]) ? temp_sz[idx - 1] : s_z;
+
+          let sx_d = (y < Ny - 1 && !defect[idx + Nx]) ? temp_sx[idx + Nx] : s_x;
+          let sy_d = (y < Ny - 1 && !defect[idx + Nx]) ? temp_sy[idx + Nx] : s_y;
+          let sz_d = (y < Ny - 1 && !defect[idx + Nx]) ? temp_sz[idx + Nx] : s_z;
+
+          let sx_u = (y > 0 && !defect[idx - Nx]) ? temp_sx[idx - Nx] : s_x;
+          let sy_u = (y > 0 && !defect[idx - Nx]) ? temp_sy[idx - Nx] : s_y;
+          let sz_u = (y > 0 && !defect[idx - Nx]) ? temp_sz[idx - Nx] : s_z;
+
+          let gradx_x = 0.5 * (sx_r - sx_l);
+          let gradx_y = 0.5 * (sy_r - sy_l);
+          let gradx_z = 0.5 * (sz_r - sz_l);
+
+          let grady_x = 0.5 * (sx_d - sx_u);
+          let grady_y = 0.5 * (sy_d - sy_u);
+          let grady_z = 0.5 * (sz_d - sz_u);
+
+          let drift_x = ux * gradx_x + uy * grady_x;
+          let drift_y = ux * gradx_y + uy * grady_y;
+          let drift_z = ux * gradx_z + uy * grady_z;
+
+          let s_cross_d_x = s_y * drift_z - s_z * drift_y;
+          let s_cross_d_y = s_z * drift_x - s_x * drift_z;
+          let s_cross_d_z = s_x * drift_y - s_y * drift_x;
+
+          let stt_x = -drift_x + beta * s_cross_d_x;
+          let stt_y = -drift_y + beta * s_cross_d_y;
+          let stt_z = -drift_z + beta * s_cross_d_z;
+
+          let k2_x = llg_x + stt_x;
+          let k2_y = llg_y + stt_y;
+          let k2_z = llg_z + stt_z;
+
+          // Final update: S = S + dt/2 * (k1 + k2)
+          let fx = sx[idx] + 0.5 * dt * (k1_x[idx] + k2_x);
+          let fy = sy[idx] + 0.5 * dt * (k1_y[idx] + k2_y);
+          let fz = sz[idx] + 0.5 * dt * (k1_z[idx] + k2_z);
+
+          // Force normalization to prevent numerical magnitude drift
+          let len = Math.sqrt(fx*fx + fy*fy + fz*fz);
+          if (len > 0) {
+            fx /= len; fy /= len; fz /= len;
+          } else {
+            fx = 0.0; fy = 0.0; fz = 1.0;
+          }
+
+          sx[idx] = fx;
+          sy[idx] = fy;
+          sz[idx] = fz;
+        }
+      }
+    }
+
+    // Color conversion helpers
+    function hsvToRgb(h, s, v) {
+      let r, g, b;
+      let i = Math.floor(h * 6);
+      let f = h * 6 - i;
+      let p = v * (1 - s);
+      let q = v * (1 - f * s);
+      let t = v * (1 - (1 - f) * s);
+      switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+      }
+      return [Math.floor(r * 255), Math.floor(g * 255), Math.floor(b * 255)];
+    }
+
+    // Render loop
+    function draw() {
+      // Create image data for high-speed rendering
+      const imgData = ctx.createImageData(canvas.width, canvas.height);
+      const data = imgData.data;
+
+      // Draw background/cells
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const idx = y * Nx + x;
+
+          let r = 0, g = 0, b = 0;
+
+          if (defect[idx]) {
+            // Draw gray defect boundary
+            r = 60; g = 60; b = 70;
+          } else {
+            let s_x = sx[idx];
+            let s_y = sy[idx];
+            let s_z = sz[idx];
+
+            if (viewMode === 'spin') {
+              // Custom neon spin direction mapping
+              let angle = Math.atan2(s_y, s_x);
+              let h = (angle + Math.PI) / (2 * Math.PI);
+              let s_perp = Math.sqrt(s_x*s_x + s_y*s_y);
+
+              // Get directional color
+              let [rd, gd, bd] = hsvToRgb(h, 1.0, 1.0);
+
+              if (s_z > 0) {
+                // Blend from dark navy background (sz = 1) to pure spectral color (sz = 0)
+                let f = s_perp;
+                r = Math.floor(5 * (1 - f) + rd * f);
+                g = Math.floor(5 * (1 - f) + gd * f);
+                b = Math.floor(30 * (1 - f) + bd * f);
+              } else {
+                // Blend from pure spectral color (sz = 0) to bright yellow core (sz = -1)
+                let f = -s_z; // runs 0 to 1
+                r = Math.floor(rd * (1 - f) + 255 * f);
+                g = Math.floor(gd * (1 - f) + 245 * f);
+                b = Math.floor(bd * (1 - f) + 110 * f);
+              }
+            } 
+            else if (viewMode === 'topological') {
+              // Draw topological charge density
+              // Compute central derivatives
+              let sx_r = (x < Nx - 1) ? sx[idx + 1] : s_x;
+              let sy_r = (x < Nx - 1) ? sy[idx + 1] : s_y;
+              let sz_r = (x < Nx - 1) ? sz[idx + 1] : s_z;
+              let sx_l = (x > 0) ? sx[idx - 1] : s_x;
+              let sy_l = (x > 0) ? sy[idx - 1] : s_y;
+              let sz_l = (x > 0) ? sz[idx - 1] : s_z;
+              let sx_d = (y < Ny - 1) ? sx[idx + Nx] : s_x;
+              let sy_d = (y < Ny - 1) ? sy[idx + Nx] : s_y;
+              let sz_d = (y < Ny - 1) ? sz[idx + Nx] : s_z;
+              let sx_u = (y > 0) ? sx[idx - Nx] : s_x;
+              let sy_u = (y > 0) ? sy[idx - Nx] : s_y;
+              let sz_u = (y > 0) ? sz[idx - Nx] : s_z;
+
+              let kx_x = 0.5 * (sx_r - sx_l);
+              let kx_y = 0.5 * (sy_r - sy_l);
+              let kx_z = 0.5 * (sz_r - sz_l);
+
+              let ky_x = 0.5 * (sx_d - sx_u);
+              let ky_y = 0.5 * (sy_d - sy_u);
+              let ky_z = 0.5 * (sz_d - sz_u);
+
+              // Cross product of derivatives: d_x S x d_y S
+              let cx = kx_y * ky_z - kx_z * ky_y;
+              let cy = kx_z * ky_x - kx_x * ky_z;
+              let cz = kx_x * ky_y - kx_y * ky_x;
+
+              // q = S . (d_x S x d_y S) / (4*pi)
+              let q = (s_x * cx + s_y * cy + s_z * cz) / (4 * Math.PI);
+              
+              // Map negative charge to red/magenta, positive to blue/cyan
+              let q_scaled = Math.min(1.0, Math.max(-1.0, q * 80.0));
+              if (q_scaled < 0) {
+                r = Math.floor(-q_scaled * 255);
+                g = 0;
+                b = Math.floor(-q_scaled * 128);
+              } else {
+                r = 0;
+                g = Math.floor(q_scaled * 128);
+                b = Math.floor(q_scaled * 255);
+              }
+              // Add a bit of background structure
+              r = Math.max(10, r);
+              g = Math.max(10, g);
+              b = Math.max(20, b);
+            }
+            else if (viewMode === 'out-of-plane') {
+              // Simple out-of-plane S_z viewer: Red is +z, Blue is -z
+              let val = s_z; // runs -1 to 1
+              if (val > 0) {
+                r = Math.floor(val * 200);
+                g = 10;
+                b = 10;
+              } else {
+                r = 10;
+                g = 10;
+                b = Math.floor(-val * 255);
+              }
+            }
+            else if (viewMode === 'energy') {
+              // Local energy density: exchange, DMI, Zeeman, anisotropy
+              let sx_r = (x < Nx - 1) ? sx[idx + 1] : s_x;
+              let sy_r = (x < Nx - 1) ? sy[idx + 1] : s_y;
+              let sz_r = (x < Nx - 1) ? sz[idx + 1] : s_z;
+              let sx_d = (y < Ny - 1) ? sx[idx + Nx] : s_x;
+              let sy_d = (y < Ny - 1) ? sy[idx + Nx] : s_y;
+              let sz_d = (y < Ny - 1) ? sz[idx + Nx] : s_z;
+
+              // Simple local energy density calculation
+              let E_ex = -J * (s_x * sx_r + s_y * sy_r + s_z * sz_r + s_x * sx_d + s_y * sy_d + s_z * sz_d);
+              let E_z = -B_ext * s_z;
+              let E_ani = -K * s_z * s_z;
+              let E_tot = E_ex + E_z + E_ani;
+              
+              // Normalize for display
+              let val = (E_tot + 2.5) / 5.0; // scale
+              r = Math.floor(Math.max(0, Math.min(255, val * 255)));
+              g = Math.floor(Math.max(0, Math.min(255, val * 128)));
+              b = Math.floor(Math.max(0, Math.min(255, (1 - val) * 200)));
+            }
+          }
+
+          // Write to pixel buffer (each grid cell is scale x scale)
+          for (let cy = 0; cy < scale; cy++) {
+            for (let cx = 0; cx < scale; cx++) {
+              const pxIdx = ((y * scale + cy) * canvas.width + (x * scale + cx)) * 4;
+              data[pxIdx] = r;
+              data[pxIdx + 1] = g;
+              data[pxIdx + 2] = b;
+              data[pxIdx + 3] = 255;
+            }
+          }
+        }
+      }
+
+      ctx.putImageData(imgData, 0, 0);
+
+      // Draw Arrow Overlay
+      if (showArrows && viewMode === 'spin') {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 1;
+        const arrowSpacing = 3; // every 3 cells
+        for (let y = 1; y < Ny; y += arrowSpacing) {
+          for (let x = 1; x < Nx; x += arrowSpacing) {
+            const idx = y * Nx + x;
+            if (defect[idx]) continue;
+
+            let s_x = sx[idx];
+            let s_y = sy[idx];
+            let s_perp = Math.sqrt(s_x*s_x + s_y*s_y);
+
+            if (s_perp > 0.15) {
+              const cx = x * scale + scale / 2;
+              const cy = y * scale + scale / 2;
+              const len = (scale * 1.2) * s_perp;
+
+              const dx = (s_x / s_perp) * len;
+              const dy = (s_y / s_perp) * len;
+
+              ctx.beginPath();
+              ctx.moveTo(cx - dx / 2, cy - dy / 2);
+              ctx.lineTo(cx + dx / 2, cy + dy / 2);
+              ctx.stroke();
+
+              // Draw tiny arrow head
+              const angle = Math.atan2(dy, dx);
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+              ctx.beginPath();
+              ctx.arc(cx + dx / 2, cy + dy / 2, 1.5, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          }
+        }
+      }
+
+      // Draw local magnetic probe tip if mouse active
+      if (mouseActive && (mouseButton === 0 || mouseButton === 2)) {
+        ctx.strokeStyle = (mouseButton === 0) ? '#ff007f' : '#00f3ff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(mouseGridX * scale + scale/2, mouseGridY * scale + scale/2, brushRadius * scale, 0, 2*Math.PI);
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.fill();
+      }
+    }
+
+    // Compute stats
+    function updateStats() {
+      let totalQ = 0.0;
+      let sumSz = 0.0;
+      let magCount = 0;
+
+      for (let y = 0; y < Ny; y++) {
+        for (let x = 0; x < Nx; x++) {
+          const idx = y * Nx + x;
+          if (defect[idx]) continue;
+
+          let s_x = sx[idx];
+          let s_y = sy[idx];
+          let s_z = sz[idx];
+
+          sumSz += s_z;
+          magCount++;
+
+          // Topological winding charge density
+          let sx_r = (x < Nx - 1) ? sx[idx + 1] : s_x;
+          let sy_r = (x < Nx - 1) ? sy[idx + 1] : s_y;
+          let sz_r = (x < Nx - 1) ? sz[idx + 1] : s_z;
+          let sx_l = (x > 0) ? sx[idx - 1] : s_x;
+          let sy_l = (x > 0) ? sy[idx - 1] : s_y;
+          let sz_l = (x > 0) ? sz[idx - 1] : s_z;
+          let sx_d = (y < Ny - 1) ? sx[idx + Nx] : s_x;
+          let sy_d = (y < Ny - 1) ? sy[idx + Nx] : s_y;
+          let sz_d = (y < Ny - 1) ? sz[idx + Nx] : s_z;
+          let sx_u = (y > 0) ? sx[idx - Nx] : s_x;
+          let sy_u = (y > 0) ? sy[idx - Nx] : s_y;
+          let sz_u = (y > 0) ? sz[idx - Nx] : s_z;
+
+          let kx_x = 0.5 * (sx_r - sx_l);
+          let kx_y = 0.5 * (sy_r - sy_l);
+          let kx_z = 0.5 * (sz_r - sz_l);
+
+          let ky_x = 0.5 * (sx_d - sx_u);
+          let ky_y = 0.5 * (sy_d - sy_u);
+          let ky_z = 0.5 * (sz_d - sz_u);
+
+          let cx = kx_y * ky_z - kx_z * ky_y;
+          let cy = kx_z * ky_x - kx_x * ky_z;
+          let cz = kx_x * ky_y - kx_y * ky_x;
+
+          let q = (s_x * cx + s_y * cy + s_z * cz) / (4 * Math.PI);
+          totalQ += q;
+        }
+      }
+
+      const meanSz = sumSz / magCount;
+      // Estimate skyrmions: each has roughly Q = -1
+      // If winding is positive, we count absolute value
+      let estSkyrmions = Math.round(Math.abs(totalQ));
+
+      document.getElementById('stat-charge').innerText = totalQ.toFixed(3);
+      document.getElementById('stat-skyrmions').innerText = estSkyrmions;
+      document.getElementById('stat-sz').innerText = meanSz.toFixed(3);
+
+      // Sonification parameter updates
+      if (audioEnabled && audioCtx) {
+        updateSonifier();
+      }
+    }
+
+    // Audio Sonification Engine
+    function initAudio() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Carrier Oscillator: standard sine
+        carrierOsc = audioCtx.createOscillator();
+        carrierOsc.type = 'sine';
+        carrierOsc.frequency.setValueAtTime(220, audioCtx.currentTime);
+
+        // Modulator Oscillator: creates metallic frequency modulation (FM)
+        modOsc = audioCtx.createOscillator();
+        modOsc.type = 'triangle';
+        modOsc.frequency.setValueAtTime(30, audioCtx.currentTime);
+
+        modGain = audioCtx.createGain();
+        modGain.gain.setValueAtTime(80, audioCtx.currentTime);
+
+        // Filter: lowpass to make it warm
+        filterNode = audioCtx.createBiquadFilter();
+        filterNode.type = 'lowpass';
+        filterNode.frequency.setValueAtTime(800, audioCtx.currentTime);
+
+        // Main gain
+        mainGain = audioCtx.createGain();
+        mainGain.gain.setValueAtTime(0.0, audioCtx.currentTime); // silent initially
+
+        // Connections
+        modOsc.connect(modGain);
+        modGain.connect(carrierOsc.frequency);
+        carrierOsc.connect(filterNode);
+        filterNode.connect(mainGain);
+        mainGain.connect(audioCtx.destination);
+
+        carrierOsc.start();
+        modOsc.start();
+      } catch(e) {
+        console.error("Audio Context failed: ", e);
+      }
+    }
+
+    function toggleAudio(enabled) {
+      audioEnabled = enabled;
+      if (enabled && !audioCtx) {
+        initAudio();
+      }
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        mainGain.gain.setTargetAtTime(enabled ? 0.15 : 0.0, audioCtx.currentTime, 0.05);
+      }
+    }
+
+    function updateSonifier() {
+      if (!mouseActive || mouseGridX < 0 || mouseGridX >= Nx || mouseGridY < 0 || mouseGridY >= Ny) {
+        // Drone in the background if mouse not on canvas
+        carrierOsc.frequency.setTargetAtTime(120, audioCtx.currentTime, 0.1);
+        modOsc.frequency.setTargetAtTime(8, audioCtx.currentTime, 0.1);
+        modGain.gain.setTargetAtTime(10, audioCtx.currentTime, 0.1);
+        filterNode.frequency.setTargetAtTime(300, audioCtx.currentTime, 0.1);
+        return;
+      }
+
+      let idx = mouseGridY * Nx + mouseGridX;
+      if (defect[idx]) {
+        // Buzz noise for defect
+        carrierOsc.frequency.setTargetAtTime(90, audioCtx.currentTime, 0.05);
+        modOsc.frequency.setTargetAtTime(120, audioCtx.currentTime, 0.05);
+        modGain.gain.setTargetAtTime(150, audioCtx.currentTime, 0.05);
+        filterNode.frequency.setTargetAtTime(200, audioCtx.currentTime, 0.05);
+        return;
+      }
+
+      let s_x = sx[idx];
+      let s_y = sy[idx];
+      let s_z = sz[idx];
+      let s_perp = Math.sqrt(s_x*s_x + s_y*s_y);
+
+      // Pitch is inversely proportional to sz (pointing down = higher pitch)
+      let carrierFreq = 200 + 350 * (1.0 - s_z); // 200Hz to 900Hz
+      
+      // Modulator tracks the in-plane winding frequency
+      let modFreq = 5 + 95 * s_perp; // 5Hz to 100Hz
+      let index = 15 + 300 * s_perp;  // FM index
+
+      carrierOsc.frequency.setTargetAtTime(carrierFreq, audioCtx.currentTime, 0.05);
+      modOsc.frequency.setTargetAtTime(modFreq, audioCtx.currentTime, 0.05);
+      modGain.gain.setTargetAtTime(index, audioCtx.currentTime, 0.05);
+
+      // Map filter cutoff to in-plane components
+      let cutoff = 400 + 1000 * s_perp;
+      filterNode.frequency.setTargetAtTime(cutoff, audioCtx.currentTime, 0.05);
+    }
+
+    // Keyboard Current Driving Controls
+    let keysPressed = {};
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        keysPressed[e.key] = true;
+        updateCurrentFromKeys();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        keysPressed[e.key] = false;
+        updateCurrentFromKeys();
+      }
+    });
+
+    function updateCurrentFromKeys() {
+      let speed = 0.25;
+      let newUx = 0.0;
+      let newUy = 0.0;
+
+      // Note: electrons flow opposite to electric current.
+      // We drive the drift velocity vector (ux, uy).
+      if (keysPressed['ArrowLeft']) newUx = -speed;
+      if (keysPressed['ArrowRight']) newUx = speed;
+      if (keysPressed['ArrowUp']) newUy = -speed;
+      if (keysPressed['ArrowDown']) newUy = speed;
+
+      ux = newUx;
+      uy = newUy;
+
+      // Update UI sliders
+      document.getElementById('param-ux').value = ux;
+      document.getElementById('val-ux').innerText = ux.toFixed(2);
+    }
+
+    // Mouse Interactions
+    function getMouseGridPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX - rect.left;
+      const clientY = e.clientY - rect.top;
+      // Translate to grid indices
+      const x = Math.floor(clientX / (rect.width / Nx));
+      const y = Math.floor(clientY / (rect.height / Ny));
+      return { x: Math.max(0, Math.min(Nx - 1, x)), y: Math.max(0, Math.min(Ny - 1, y)) };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      // Prevent context menu on right click
+      if (e.button === 2) e.preventDefault();
+      
+      mouseActive = true;
+      mouseButton = e.button;
+      const pos = getMouseGridPos(e);
+      mouseGridX = pos.x;
+      mouseGridY = pos.y;
+
+      handleBrushStroke();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const pos = getMouseGridPos(e);
+      mouseGridX = pos.x;
+      mouseGridY = pos.y;
+
+      if (mouseActive) {
+        handleBrushStroke();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      mouseActive = false;
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
+
+    function handleBrushStroke() {
+      const type = document.getElementById('brush-type').value;
+      
+      if (type === 'defect' || type === 'erase-defect') {
+        const val = (type === 'defect') ? 1 : 0;
+        for (let y = 0; y < Ny; y++) {
+          for (let x = 0; x < Nx; x++) {
+            let dx = x - mouseGridX;
+            let dy = y - mouseGridY;
+            if (dx*dx + dy*dy < brushRadius * brushRadius) {
+              defect[y * Nx + x] = val;
+              if (val === 1) {
+                // Clear spin at defect
+                sx[y * Nx + x] = 0;
+                sy[y * Nx + x] = 0;
+                sz[y * Nx + x] = 0;
+              } else {
+                // Restore spin to ferromagnetic state
+                sz[y * Nx + x] = 1.0;
+              }
+            }
+          }
+        }
+      } 
+      // Magnetic tip brushing is handled directly in the effective field solver loop!
+    }
+
+    // Play/Pause controls
+    function togglePause() {
+      isPaused = !isPaused;
+      document.getElementById('btn-pause').innerText = isPaused ? "Play" : "Pause";
+      document.getElementById('btn-pause').className = isPaused ? "active" : "";
+    }
+
+    function stepSim() {
+      stepLLG();
+      draw();
+      updateStats();
+    }
+
+    // Main Loop
+    function loop() {
+      if (!isPaused) {
+        for (let step = 0; step < stepsPerFrame; step++) {
+          stepLLG();
+        }
+      }
+      
+      draw();
+      updateStats();
+      requestAnimationFrame(loop);
+    }
+
+    // Start
+    loadPreset('single');
+    loop();
+
+  </script>
+</body>
+</html>
