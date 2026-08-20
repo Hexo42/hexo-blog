@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cherenkov-Flow: Relativistic Shockwave Sandbox</title>
+  <style>
+    body {
+      background: #030308;
+      color: #e2e8f0;
+      font-family: 'Courier New', Courier, monospace;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      color: #00f3ff;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+      margin-bottom: 5px;
+      font-size: 24px;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 20px;
+      text-align: center;
+      max-width: 900px;
+      line-height: 1.4;
+    }
+    .main-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      max-width: 1200px;
+      width: 100%;
+    }
+    .panel {
+      background: rgba(8, 8, 16, 0.9);
+      border: 1px solid #00f3ff;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+      border-radius: 4px;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 512px;
+    }
+    canvas {
+      background: #000;
+      border: 2px solid #00f3ff;
+      border-radius: 4px;
+      cursor: crosshair;
+      image-rendering: pixelated;
+      max-width: 100%;
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
+    }
+    .controls {
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .control-group {
+      border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+      padding-bottom: 12px;
+    }
+    .control-group:last-child {
+      border-bottom: none;
+    }
+    h3 {
+      color: #ff007f;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 4px;
+      color: #bbb;
+    }
+    .value-display {
+      color: #00f3ff;
+      font-weight: bold;
+    }
+    input[type="range"] {
+      width: 100%;
+      background: #1a1a2e;
+      accent-color: #ff007f;
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    button {
+      background: #111;
+      color: #00f3ff;
+      border: 1px solid #00f3ff;
+      padding: 6px 10px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+    }
+    button:hover {
+      background: #00f3ff;
+      color: #000;
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+    }
+    button.active {
+      background: #ff007f;
+      border-color: #ff007f;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.4);
+    }
+    .select-style {
+      background: #111;
+      color: #00f3ff;
+      border: 1px solid #00f3ff;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 4px;
+      width: 100%;
+      border-radius: 2px;
+      outline: none;
+      margin-bottom: 10px;
+    }
+    .stats-bar {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #aaa;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .stat-box {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px dashed rgba(0, 243, 255, 0.2);
+      padding: 6px;
+      border-radius: 2px;
+      text-align: center;
+    }
+    .stat-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 2px;
+    }
+    .stat-val {
+      font-size: 12px;
+      color: #00f3ff;
+      font-weight: bold;
+    }
+    .status-alert {
+      grid-column: span 3;
+      padding: 8px;
+      text-align: center;
+      font-weight: bold;
+      border-radius: 2px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+    }
+    .status-subluminal {
+      background: rgba(0, 243, 255, 0.1);
+      border: 1px solid #00f3ff;
+      color: #00f3ff;
+    }
+    .status-superluminal {
+      background: rgba(255, 0, 127, 0.15);
+      border: 1px solid #ff007f;
+      color: #ff007f;
+      animation: pulse 1.5s infinite alternate;
+      text-shadow: 0 0 5px rgba(255, 0, 127, 0.5);
+    }
+    @keyframes pulse {
+      0% { box-shadow: inset 0 0 5px rgba(255, 0, 127, 0.2); }
+      100% { box-shadow: inset 0 0 15px rgba(255, 0, 127, 0.6); }
+    }
+    .info-panel {
+      margin-top: 25px;
+      max-width: 900px;
+      width: 100%;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #bbb;
+    }
+    .info-panel h2 {
+      color: #00f3ff;
+      border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+      padding-bottom: 5px;
+      font-size: 15px;
+      margin-top: 0;
+      text-transform: uppercase;
+    }
+    .info-panel p {
+      margin-bottom: 12px;
+    }
+    .info-panel ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+    .info-panel li {
+      margin-bottom: 6px;
+    }
+    .back-link {
+      margin-top: 25px;
+      color: #ff007f;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 12px;
+      transition: color 0.2s;
+    }
+    .back-link:hover {
+      color: #00f3ff;
+      text-decoration: underline;
+    }
+    .audio-hint {
+      font-size: 10px;
+      color: #888;
+      text-align: center;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>CHERENKOV-FLOW: RELATIVISTIC SHOCKWAVE SANDBOX</h1>
+  <div class="subtitle">
+    simulate the electromagnetic shockwaves (optical sonic boom) emitted when a charged particle exceeds the phase velocity of light in a dielectric medium. paint optical media, place wave detectors, trace Huygens wavelets, and listen to the radiation.
+  </div>
+
+  <div class="main-container">
+    <!-- Left Column: Controls -->
+    <div class="panel controls">
+      <div class="control-group">
+        <h3>Presets</h3>
+        <div class="btn-grid">
+          <button onclick="loadPreset('vacuum_sub')">Vacuum Sub-light</button>
+          <button onclick="loadPreset('vacuum_super')">Vacuum Super-light</button>
+          <button onclick="loadPreset('reactor')">Water Reactor</button>
+          <button onclick="loadPreset('prism')">Glass Prism</button>
+          <button onclick="loadPreset('synchrotron')">Synchrotron</button>
+          <button onclick="loadPreset('super_orbit')">Orbit in Glass</button>
+          <button onclick="loadPreset('crystal')">Photonic Pillars</button>
+          <button onclick="loadPreset('mirror_shield')">Mirror Barriers</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Particle Physics</h3>
+        <label>Relativistic Speed &beta; (v/c) <span class="value-display" id="val-beta">1.20</span></label>
+        <input type="range" id="param-beta" min="0.05" max="2.0" step="0.05" value="1.20" oninput="updateBeta(this.value)">
+
+        <label>Charge q <span class="value-display" id="val-q">3.0</span></label>
+        <input type="range" id="param-q" min="-5.0" max="5.0" step="0.5" value="3.0" oninput="updateQ(this.value)">
+
+        <label>Motion Trajectory</label>
+        <select class="select-style" id="select-mode" onchange="updateMode(this.value)">
+          <option value="linear">Linear Cruise</option>
+          <option value="orbit">Circular Orbit</option>
+          <option value="drag">Manual / Mouse Drag</option>
+          <option value="bounce">Grid Bouncer</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <h3>Medium Painter</h3>
+        <label>Active Brush</label>
+        <select class="select-style" id="select-brush" onchange="updateBrush(this.value)">
+          <option value="water">Paint Water (n=1.33)</option>
+          <option value="glass">Paint Glass (n=1.50)</option>
+          <option value="heavy">Paint Heavy Glass (n=2.00)</option>
+          <option value="mirror">Paint Mirror (Reflector)</option>
+          <option value="absorber">Paint Absorber (Dampener)</option>
+          <option value="vacuum">Paint Vacuum (n=1.00)</option>
+        </select>
+
+        <label>Brush Radius <span class="value-display" id="val-radius">6 px</span></label>
+        <input type="range" id="param-radius" min="1" max="20" step="1" value="6" oninput="updateRadius(this.value)">
+
+        <div class="btn-grid">
+          <button onclick="clearMedium()">All Vacuum</button>
+          <button onclick="fillMedium('water')">Fill Water</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h3>Diagnostics & Audio</h3>
+        <div class="btn-grid">
+          <button id="btn-audio" onclick="toggleMute()">Start Audio</button>
+          <button id="btn-wavelets" class="active" onclick="toggleWavelets()">Wavelets ON</button>
+        </div>
+        <div class="btn-grid">
+          <button onclick="clearWaves()">Clear Fields</button>
+          <button id="btn-detector" onclick="setDetectorMode()">Set Detector</button>
+        </div>
+        <div class="audio-hint" id="audio-status">audio requires manual initialization</div>
+      </div>
+    </div>
+
+    <!-- Center/Right Column: Canvas & Realtime Diagnostics -->
+    <div class="canvas-container">
+      <div class="panel" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <canvas id="simCanvas" width="512" height="512"></canvas>
+        
+        <div class="stats-bar">
+          <div class="stat-box">
+            <div class="stat-title">Local Index (n)</div>
+            <div class="stat-val" id="stat-n">1.00</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">Wave Speed (c_s)</div>
+            <div class="stat-val" id="stat-cs">1.00 c</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">Cone Angle (&theta;_c)</div>
+            <div class="stat-val" id="stat-angle">--</div>
+          </div>
+          
+          <div id="stat-alert-box" class="status-alert status-subluminal">
+            SUB-LIGHT MODE (&beta;n &le; 1)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel info-panel">
+    <h2>Cherenkov Radiation Physics</h2>
+    <p>
+      <strong>Cherenkov Radiation</strong> is a physical phenomenon that occurs when a charged particle (like an electron) passes through a dielectric medium at a speed greater than the phase velocity of light in that medium. It is the electromagnetic analogue of a sonic boom or the bow wave of a boat.
+    </p>
+    <p>
+      In vacuum, nothing can travel faster than the speed of light ($c$). However, inside a medium (like water or glass), light is slowed down by the refractive index $n$ to a phase velocity of $c_s = c/n$. A relativistic particle can enter this medium travelling faster than $c_s$ (i.e. $\beta > 1/n$, or $\beta n > 1$). When this happens, the transient polarization of the medium's atoms emits waves that constructively interfere, building a V-shaped shockwave front.
+    </p>
+    <ul>
+      <li><strong>Mach Cone Angle:</strong> The shockwave propagates at an angle $\theta_c$ relative to the particle's heading, defined by $\cos(\theta_c) = \frac{1}{\beta n}$. As the particle speed increases, the cone opens up.</li>
+      <li><strong>Transition Radiation:</strong> Watch what happens when the particle crosses the boundary between vacuum and a medium (like water). Even if it travels below the speed of light in vacuum, the sudden change in local speed of light causes a radiation pulse at the boundary interface.</li>
+      <li><strong>Synchrotron Radiation:</strong> In orbit mode, the particle is constantly accelerating. According to Maxwell's equations, accelerating charges radiate electromagnetic energy even when moving slower than light, creating spiral wavefronts.</li>
+      <li><strong>Simulation Engine:</strong> This sandbox solves the 2D scalar wave equation using a finite-difference time-domain (FDTD) scheme with variable local speed coefficients and boundary absorbing layers (dampeners) to prevent edge reflection. Perfect mirrors are simulated using static zero-potential boundary walls.</li>
+    </ul>
+  </div>
+
+  <a href="../index.html" class="back-link">&lt;&lt; Back to Index</a>
+
+  <script>
+    // Grid settings
+    const W = 160;
+    const H = 160;
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Create buffers
+    let u = new Float32Array(W * H);
+    let prev_u = new Float32Array(W * H);
+    let next_u = new Float32Array(W * H);
+    let n = new Float32Array(W * H);
+    let damping = new Float32Array(W * H);
+    
+    // Wave constants
+    const c_base = 0.5; // Vacuum wave speed in cells/step
+    let stepsPerFrame = 3;
+    
+    // Particle state
+    let particle = {
+      x: W / 2,
+      y: H / 2,
+      vx: 1.0,
+      vy: 0.0,
+      dirX: 1.0,
+      dirY: 0.0,
+      beta: 1.20, // speed multiplier (v / c_base)
+      q: 3.0,     // charge
+      angle: 0,
+      mode: 'linear',
+      isDragging: false
+    };
+    
+    // Wavelet history
+    let waveletHistory = [];
+    let showWavelets = true;
+    let stepCount = 0;
+    
+    // Detector state
+    let detector = {
+      x: W / 2 + 25,
+      y: H / 2 + 15,
+      active: true
+    };
+    let settingDetector = false;
+    
+    // Brush / Paint settings
+    let selectedBrush = 'water';
+    let brushRadius = 6;
+    let isPainting = false;
+    
+    // Audio State
+    let audioCtx = null;
+    let mainGain = null;
+    let carrier = null;
+    let humOsc = null;
+    let noiseNode = null;
+    let filterNode = null;
+    let cherenkovGain = null;
+    let isMuted = true;
+    
+    // ImageData rendering buffer
+    const imgData = ctx.createImageData(W, H);
+    // Backbuffer canvas for pixelated scaling
+    const backCanvas = document.createElement('canvas');
+    backCanvas.width = W;
+    backCanvas.height = H;
+    const backCtx = backCanvas.getContext('2d');
+    
+    // Initialize grids
+    function initGrids() {
+      n.fill(1.0);
+      initDamping();
+      u.fill(0);
+      prev_u.fill(0);
+      next_u.fill(0);
+    }
+    
+    function initDamping() {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          // Base damping to keep simulation stable
+          let d = 0.002;
+          
+          // Exponential boundary absorption layer (Perfectly Matched Layer style)
+          const margin = 12;
+          let dist = Math.min(x, y, W - 1 - x, H - 1 - y);
+          if (dist < margin) {
+            let pct = (margin - dist) / margin;
+            d = 0.002 + 0.18 * pct * pct;
+          }
+          damping[idx] = d;
+        }
+      }
+    }
+    
+    // UI callbacks
+    function updateBeta(val) {
+      particle.beta = parseFloat(val);
+      document.getElementById('val-beta').innerText = particle.beta.toFixed(2);
+    }
+    
+    function updateQ(val) {
+      particle.q = parseFloat(val);
+      document.getElementById('val-q').innerText = particle.q.toFixed(1);
+    }
+    
+    function updateMode(val) {
+      particle.mode = val;
+      if (val === 'linear') {
+        particle.vx = 1.0;
+        particle.vy = 0.0;
+        particle.x = 20;
+        particle.y = H / 2;
+      }
+    }
+    
+    function updateBrush(val) {
+      selectedBrush = val;
+    }
+    
+    function updateRadius(val) {
+      brushRadius = parseInt(val);
+      document.getElementById('val-radius').innerText = brushRadius + ' px';
+    }
+    
+    function toggleWavelets() {
+      showWavelets = !showWavelets;
+      document.getElementById('btn-wavelets').className = showWavelets ? 'active' : '';
+    }
+    
+    function setDetectorMode() {
+      settingDetector = true;
+      document.getElementById('btn-detector').className = 'active';
+    }
+    
+    function clearWaves() {
+      u.fill(0);
+      prev_u.fill(0);
+      next_u.fill(0);
+      waveletHistory = [];
+    }
+    
+    function clearMedium() {
+      n.fill(1.0);
+      // Restore default boundary damping
+      initDamping();
+    }
+    
+    function fillMedium(type) {
+      let val = 1.0;
+      if (type === 'water') val = 1.33;
+      
+      // Fill interior, preserve border
+      for (let y = 11; y < H - 11; y++) {
+        for (let x = 11; x < W - 11; x++) {
+          n[y * W + x] = val;
+          damping[y * W + x] = 0.002;
+        }
+      }
+    }
+    
+    // Drawing helpers
+    function paintCircleMedium(cx, cy, radius, indexValue) {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          let dx = x - cx;
+          let dy = y - cy;
+          if (dx*dx + dy*dy <= radius*radius) {
+            if (x > 10 && x < W - 10 && y > 10 && y < H - 10) {
+              n[y * W + x] = indexValue;
+              damping[y * W + x] = 0.002; // clear absorber
+            }
+          }
+        }
+      }
+    }
+    
+    function drawTrianglePrism(bx, by, width, height, indexValue) {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (isInsideTriangle(x, y, bx, by, bx + width, by, bx + width/2, by - height)) {
+            if (x > 10 && x < W - 10 && y > 10 && y < H - 10) {
+              n[y * W + x] = indexValue;
+              damping[y * W + x] = 0.002;
+            }
+          }
+        }
+      }
+    }
+    
+    function isInsideTriangle(px, py, x1, y1, x2, y2, x3, y3) {
+      let areaOrig = Math.abs((x2 - x1)*(y3 - y1) - (x3 - x1)*(y2 - y1));
+      let area1 = Math.abs((x1 - px)*(y2 - py) - (x2 - px)*(y1 - py));
+      let area2 = Math.abs((x2 - px)*(y3 - py) - (x3 - px)*(y2 - py));
+      let area3 = Math.abs((x3 - px)*(y1 - py) - (x1 - px)*(y3 - py));
+      return Math.abs(areaOrig - (area1 + area2 + area3)) < 0.1;
+    }
+    
+    function drawMirrorWall(x1, y1, x2, y2) {
+      let dx = Math.abs(x2 - x1);
+      let dy = Math.abs(y2 - y1);
+      let sx = (x1 < x2) ? 1 : -1;
+      let sy = (y1 < y2) ? 1 : -1;
+      let err = dx - dy;
+      
+      let x = x1;
+      let y = y1;
+      
+      while (true) {
+        if (x > 10 && x < W - 10 && y > 10 && y < H - 10) {
+          n[y * W + x] = -1; // mirror
+        }
+        if (x === x2 && y === y2) break;
+        let e2 = 2 * err;
+        if (e2 > -dy) {
+          err -= dy;
+          x += sx;
+        }
+        if (e2 < dx) {
+          err += dx;
+          y += sy;
+        }
+      }
+    }
+    
+    function clearWavesNear(cx, cy, r) {
+      let ix = Math.floor(cx);
+      let iy = Math.floor(cy);
+      for (let y = Math.max(0, iy - r); y < Math.min(H, iy + r); y++) {
+        for (let x = Math.max(0, ix - r); x < Math.min(W, ix + r); x++) {
+          let idx = y * W + x;
+          u[idx] = 0;
+          prev_u[idx] = 0;
+          next_u[idx] = 0;
+        }
+      }
+    }
+    
+    // Presets
+    function loadPreset(name) {
+      clearWaves();
+      clearMedium();
+      particle.q = 3.0;
+      
+      switch(name) {
+        case 'vacuum_sub':
+          particle.mode = 'linear';
+          particle.beta = 0.8;
+          break;
+        case 'vacuum_super':
+          particle.mode = 'linear';
+          particle.beta = 1.5;
+          break;
+        case 'reactor':
+          particle.mode = 'linear';
+          particle.beta = 0.85; // Superluminal in water, subluminal in vacuum
+          // Paint water pool on right half
+          for (let y = 11; y < H - 11; y++) {
+            for (let x = Math.floor(W * 0.45); x < W - 11; x++) {
+              n[y * W + x] = 1.33;
+            }
+          }
+          break;
+        case 'prism':
+          particle.mode = 'linear';
+          particle.beta = 0.8; // Superluminal in prism (0.8 * 1.5 = 1.2 > 1)
+          drawTrianglePrism(W/2 - 25, H/2 + 25, 50, 45, 1.5);
+          break;
+        case 'synchrotron':
+          particle.mode = 'orbit';
+          particle.beta = 0.9;
+          break;
+        case 'super_orbit':
+          particle.mode = 'orbit';
+          particle.beta = 0.9;
+          // fill interior with glass
+          for (let y = 11; y < H - 11; y++) {
+            for (let x = 11; x < W - 11; x++) {
+              n[y * W + x] = 1.5;
+            }
+          }
+          break;
+        case 'crystal':
+          particle.mode = 'linear';
+          particle.beta = 0.85;
+          // Paint array of glass cylinders
+          for (let cy = 25; cy < H - 20; cy += 22) {
+            for (let cx = 25; cx < W - 20; cx += 22) {
+              if (Math.abs(cy - H/2) < 14) continue; // Keep center lane clear
+              paintCircleMedium(cx, cy, 5, 2.0);
+            }
+          }
+          break;
+        case 'mirror_shield':
+          particle.mode = 'orbit';
+          particle.beta = 0.95;
+          // Mirror bars
+          drawMirrorWall(W/2 - 25, H/2 - 20, W/2 + 25, H/2 - 20);
+          drawMirrorWall(W/2 - 25, H/2 + 20, W/2 + 25, H/2 + 20);
+          drawMirrorWall(W/2 - 25, H/2 - 20, W/2 - 25, H/2 + 20);
+          drawMirrorWall(W/2 + 25, H/2 - 20, W/2 + 25, H/2 + 20);
+          break;
+      }
+      
+      updateBeta(particle.beta);
+      updateQ(particle.q);
+      updateMode(particle.mode);
+      document.getElementById('select-mode').value = particle.mode;
+    }
+    
+    // Wave solver step (FDTD)
+    function solveWave() {
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          const idx = y * W + x;
+          
+          if (n[idx] < 0) {
+            next_u[idx] = 0;
+            continue;
+          }
+          
+          const cs = c_base / n[idx];
+          const cs2 = cs * cs;
+          
+          const laplacian = u[idx + 1] + u[idx - 1] + u[idx + W] + u[idx - W] - 4 * u[idx];
+          const damp = damping[idx];
+          
+          let val = 2 * u[idx] - prev_u[idx] + cs2 * laplacian - damp * (u[idx] - prev_u[idx]);
+          next_u[idx] = val;
+        }
+      }
+      
+      let px = particle.x;
+      let py = particle.y;
+      let ix = Math.floor(px);
+      let iy = Math.floor(py);
+      let fx = px - ix;
+      let fy = py - iy;
+      
+      if (ix > 0 && ix < W - 1 && iy > 0 && iy < H - 1) {
+        let idx00 = iy * W + ix;
+        let idx10 = idx00 + 1;
+        let idx01 = idx00 + W;
+        let idx11 = idx01 + 1;
+        
+        let w00 = (1 - fx) * (1 - fy);
+        let w10 = fx * (1 - fy);
+        let w01 = (1 - fx) * fy;
+        let w11 = fx * fy;
+        
+        next_u[idx00] += particle.q * w00;
+        next_u[idx10] += particle.q * w10;
+        next_u[idx01] += particle.q * w01;
+        next_u[idx11] += particle.q * w11;
+      }
+      
+      let temp = prev_u;
+      prev_u = u;
+      u = next_u;
+      next_u = temp;
+    }
+    
+    // Physics particle update
+    function updateParticle() {
+      if (particle.isDragging) return;
+      
+      if (particle.mode === 'linear') {
+        let v = c_base * particle.beta;
+        particle.x += particle.vx * v;
+        particle.y += particle.vy * v;
+        
+        particle.dirX = particle.vx;
+        particle.dirY = particle.vy;
+        
+        const margin = 12;
+        if (particle.x < margin) {
+          particle.x = W - margin - 1;
+          clearWavesNear(particle.x, particle.y, 6);
+          waveletHistory = [];
+        } else if (particle.x > W - margin) {
+          particle.x = margin + 1;
+          clearWavesNear(particle.x, particle.y, 6);
+          waveletHistory = [];
+        }
+        
+        if (particle.y < margin) {
+          particle.y = H - margin - 1;
+          clearWavesNear(particle.x, particle.y, 6);
+          waveletHistory = [];
+        } else if (particle.y > H - margin) {
+          particle.y = margin + 1;
+          clearWavesNear(particle.x, particle.y, 6);
+          waveletHistory = [];
+        }
+        
+      } else if (particle.mode === 'orbit') {
+        let angularSpeed = (c_base * particle.beta) / 30;
+        particle.angle += angularSpeed;
+        
+        let cx = W / 2;
+        let cy = H / 2;
+        let r = 32;
+        
+        let targetX = cx + r * Math.cos(particle.angle);
+        let targetY = cy + r * Math.sin(particle.angle);
+        
+        let dx = targetX - particle.x;
+        let dy = targetY - particle.y;
+        let dLen = Math.sqrt(dx*dx + dy*dy);
+        if (dLen > 0.01) {
+          particle.dirX = dx / dLen;
+          particle.dirY = dy / dLen;
+        }
+        
+        particle.x = targetX;
+        particle.y = targetY;
+        
+      } else if (particle.mode === 'bounce') {
+        let v = c_base * particle.beta;
+        
+        if (particle.vx === 0 && particle.vy === 0) {
+          let ang = Math.random() * 2 * Math.PI;
+          particle.vx = Math.cos(ang);
+          particle.vy = Math.sin(ang);
+        }
+        
+        let nextX = particle.x + particle.vx * v;
+        let nextY = particle.y + particle.vy * v;
+        
+        const margin = 12;
+        let bounced = false;
+        
+        let checkX = Math.floor(nextX);
+        let checkY = Math.floor(nextY);
+        let idx = checkY * W + checkX;
+        
+        if (nextX < margin || nextX > W - margin || (n[idx] < 0)) {
+          particle.vx = -particle.vx;
+          bounced = true;
+        }
+        if (nextY < margin || nextY > H - margin || (n[idx] < 0)) {
+          particle.vy = -particle.vy;
+          bounced = true;
+        }
+        
+        if (!bounced) {
+          particle.x = nextX;
+          particle.y = nextY;
+        }
+        
+        particle.dirX = particle.vx;
+        particle.dirY = particle.vy;
+      }
+      
+      if (stepCount % 4 === 0) {
+        let px = Math.floor(particle.x);
+        let py = Math.floor(particle.y);
+        let localN = n[py * W + px] || 1.0;
+        if (localN < 0) localN = 1.0;
+        
+        waveletHistory.push({
+          x: particle.x,
+          y: particle.y,
+          cs: c_base / localN,
+          step: stepCount
+        });
+        
+        if (waveletHistory.length > 25) {
+          waveletHistory.shift();
+        }
+      }
+    }
+    
+    // Pixel graphics rendering
+    function renderGrid() {
+      const data = imgData.data;
+      
+      for (let i = 0; i < W * H; i++) {
+        let val = u[i] * 4.5;
+        let mag = Math.tanh(val);
+        
+        let r = 0, g = 0, b = 0;
+        
+        let refractiveIndex = n[i];
+        let bgR = 4, bgG = 4, bgB = 12;
+        
+        if (refractiveIndex < 0) {
+          let cellY = Math.floor(i / W);
+          let cellX = i % W;
+          let stripe = (cellX + cellY) % 6 < 2;
+          bgR = stripe ? 70 : 100;
+          bgG = stripe ? 80 : 110;
+          bgB = stripe ? 100 : 130;
+        } else if (refractiveIndex > 1.01) {
+          let factor = (refractiveIndex - 1.0) / 1.0;
+          bgR = Math.floor(10 + 20 * factor);
+          bgG = Math.floor(20 + 35 * factor);
+          bgB = Math.floor(40 + 70 * factor);
+        }
+        
+        let damp = damping[i];
+        if (damp > 0.005) {
+          let edgeFactor = Math.min(1.0, (damp - 0.002) / 0.15);
+          bgR = Math.floor(bgR * (1 - edgeFactor) + 20 * edgeFactor);
+          bgG = Math.floor(bgG * (1 - edgeFactor) + 15 * edgeFactor);
+          bgB = Math.floor(bgB * (1 - edgeFactor) + 25 * edgeFactor);
+        }
+        
+        if (mag > 0) {
+          r = Math.floor(bgR * (1 - mag) + 0 * mag);
+          g = Math.floor(bgG * (1 - mag) + 240 * mag);
+          b = Math.floor(bgB * (1 - mag) + 255 * mag);
+        } else {
+          let absMag = -mag;
+          r = Math.floor(bgR * (1 - absMag) + 255 * absMag);
+          g = Math.floor(bgG * (1 - absMag) + 0 * absMag);
+          b = Math.floor(bgB * (1 - absMag) + 127 * absMag);
+        }
+        
+        let pIdx = i * 4;
+        data[pIdx] = r;
+        data[pIdx + 1] = g;
+        data[pIdx + 2] = b;
+        data[pIdx + 3] = 255;
+      }
+      
+      backCtx.putImageData(imgData, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(backCanvas, 0, 0, canvas.width, canvas.height);
+      
+      const scaleX = canvas.width / W;
+      const scaleY = canvas.height / H;
+      
+      if (showWavelets) {
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.18)';
+        ctx.lineWidth = 1.5;
+        for (let pt of waveletHistory) {
+          let age = stepCount - pt.step;
+          let rGrid = age * pt.cs;
+          
+          ctx.beginPath();
+          ctx.arc(pt.x * scaleX, pt.y * scaleY, rGrid * scaleX, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+      }
+      
+      let px = Math.floor(particle.x);
+      let py = Math.floor(particle.y);
+      let localN = n[py * W + px] || 1.0;
+      if (localN < 0) localN = 1.0;
+      let betaN = particle.beta * localN;
+      
+      if (betaN > 1.001) {
+        let theta = Math.acos(1.0 / betaN);
+        let phi = Math.atan2(particle.dirY, particle.dirX);
+        
+        ctx.strokeStyle = 'rgba(255, 0, 127, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        
+        let cX = particle.x * scaleX;
+        let cY = particle.y * scaleY;
+        let len = 150;
+        
+        let a1 = phi + Math.PI + theta;
+        ctx.beginPath();
+        ctx.moveTo(cX, cY);
+        ctx.lineTo(cX + len * Math.cos(a1), cY + len * Math.sin(a1));
+        ctx.stroke();
+        
+        let a2 = phi + Math.PI - theta;
+        ctx.beginPath();
+        ctx.moveTo(cX, cY);
+        ctx.lineTo(cX + len * Math.cos(a2), cY + len * Math.sin(a2));
+        ctx.stroke();
+        
+        ctx.setLineDash([]);
+      }
+      
+      if (detector.active) {
+        let detX = detector.x * scaleX;
+        let detY = detector.y * scaleY;
+        
+        ctx.strokeStyle = '#00ff66';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(detX, detY, 8, 0, 2*Math.PI);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(detX - 12, detY); ctx.lineTo(detX + 12, detY);
+        ctx.moveTo(detX, detY - 12); ctx.lineTo(detX, detY + 12);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#00ff66';
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText('DETECTOR', detX + 12, detY - 4);
+      }
+      
+      let partX = particle.x * scaleX;
+      let partY = particle.y * scaleY;
+      
+      ctx.fillStyle = 'rgba(255, 230, 0, 0.2)';
+      ctx.beginPath();
+      ctx.arc(partX, partY, 12, 0, 2*Math.PI);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffea00';
+      ctx.beginPath();
+      ctx.arc(partX, partY, 4, 0, 2*Math.PI);
+      ctx.fill();
+      
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(partX, partY, 4, 0, 2*Math.PI);
+      ctx.stroke();
+    }
+    
+    // Stats updater
+    function updateStats() {
+      let px = Math.floor(particle.x);
+      let py = Math.floor(particle.y);
+      let localN = n[py * W + px];
+      
+      let isMirror = (localN < 0);
+      if (isMirror) localN = 1.0;
+      
+      let localCs = 1.0 / localN;
+      let betaN = particle.beta * localN;
+      
+      document.getElementById('stat-n').innerText = isMirror ? 'Mirror' : localN.toFixed(2);
+      document.getElementById('stat-cs').innerText = isMirror ? '--' : localCs.toFixed(2) + ' c';
+      
+      const alertBox = document.getElementById('stat-alert-box');
+      
+      if (isMirror) {
+        document.getElementById('stat-angle').innerText = '--';
+        alertBox.innerText = 'INSIDE CONDUCTOR';
+        alertBox.className = 'status-alert status-subluminal';
+      } else if (betaN > 1.0) {
+        let thetaRad = Math.acos(1.0 / betaN);
+        let thetaDeg = thetaRad * 180 / Math.PI;
+        document.getElementById('stat-angle').innerText = thetaDeg.toFixed(1) + '°';
+        
+        alertBox.innerText = 'SUPERLUMINAL / CHERENKOV!';
+        alertBox.className = 'status-alert status-superluminal';
+      } else {
+        document.getElementById('stat-angle').innerText = '--';
+        alertBox.innerText = 'SUB-LIGHT MODE (βn ≤ 1)';
+        alertBox.className = 'status-alert status-subluminal';
+      }
+    }
+    
+    // Web Audio Synthesizer Controls
+    function toggleMute() {
+      if (isMuted) {
+        if (!audioCtx) {
+          initAudio();
+        }
+        isMuted = false;
+        document.getElementById('btn-audio').innerText = 'Mute Audio';
+        document.getElementById('btn-audio').className = 'active';
+        document.getElementById('audio-status').innerText = 'audio active & synthesized';
+      } else {
+        isMuted = true;
+        document.getElementById('btn-audio').innerText = 'Unmute Audio';
+        document.getElementById('btn-audio').className = '';
+        document.getElementById('audio-status').innerText = 'audio muted';
+      }
+    }
+    
+    function initAudio() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        mainGain = audioCtx.createGain();
+        mainGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        mainGain.connect(audioCtx.destination);
+        
+        // 1. FM Synthesizer for wave detector
+        carrier = audioCtx.createOscillator();
+        carrier.type = 'sine';
+        carrier.frequency.setValueAtTime(160, audioCtx.currentTime);
+        
+        let carrierGain = audioCtx.createGain();
+        carrierGain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        
+        carrier.connect(carrierGain);
+        carrierGain.connect(mainGain);
+        carrier.start();
+        
+        // 2. Deep engine hum (relates to particle speed)
+        humOsc = audioCtx.createOscillator();
+        humOsc.type = 'sawtooth';
+        humOsc.frequency.setValueAtTime(60, audioCtx.currentTime);
+        
+        let humFilter = audioCtx.createBiquadFilter();
+        humFilter.type = 'lowpass';
+        humFilter.frequency.setValueAtTime(140, audioCtx.currentTime);
+        
+        let humGain = audioCtx.createGain();
+        humGain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        
+        humOsc.connect(humFilter);
+        humFilter.connect(humGain);
+        humGain.connect(mainGain);
+        humOsc.start();
+        
+        // 3. Cherenkov Glow Sound (sci-fi hiss bandpass filtered noise)
+        let bufferSize = 2 * audioCtx.sampleRate;
+        let noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        let output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        
+        noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+        
+        filterNode = audioCtx.createBiquadFilter();
+        filterNode.type = 'bandpass';
+        filterNode.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        filterNode.Q.setValueAtTime(10.0, audioCtx.currentTime);
+        
+        cherenkovGain = audioCtx.createGain();
+        cherenkovGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+        
+        noiseNode.connect(filterNode);
+        filterNode.connect(cherenkovGain);
+        cherenkovGain.connect(mainGain);
+        noiseNode.start();
+        
+      } catch (err) {
+        console.error('AudioContext could not be initialized:', err);
+      }
+    }
+    
+    function updateAudio() {
+      if (!audioCtx || isMuted) return;
+      
+      mainGain.gain.setTargetAtTime(0.7, audioCtx.currentTime, 0.05);
+      
+      // Update hum based on speed
+      let humFreq = 40 + 70 * particle.beta;
+      humOsc.frequency.setTargetAtTime(humFreq, audioCtx.currentTime, 0.05);
+      
+      // Read wave amplitude for FM synthesizer modulation
+      let u_det = 0;
+      if (detector.active) {
+        let dx = Math.floor(detector.x);
+        let dy = Math.floor(detector.y);
+        if (dx >= 0 && dx < W && dy >= 0 && dy < H) {
+          u_det = u[dy * W + dx];
+        }
+      } else {
+        let px = Math.floor(particle.x);
+        let py = Math.floor(particle.y);
+        if (px >= 0 && px < W && py >= 0 && py < H) {
+          u_det = u[py * W + px];
+        }
+      }
+      
+      // FM carrier frequency shift
+      let targetFreq = 160 + 650 * Math.tanh(u_det * 1.2);
+      targetFreq = Math.max(40, Math.min(2200, targetFreq));
+      carrier.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.02);
+      
+      // Cherenkov hiss parameters
+      let px = Math.floor(particle.x);
+      let py = Math.floor(particle.y);
+      let localN = n[py * W + px] || 1.0;
+      if (localN < 0) localN = 1.0;
+      let betaN = particle.beta * localN;
+      
+      if (betaN > 1.0) {
+        let excess = betaN - 1.0;
+        let volume = Math.min(0.3, excess * 0.4);
+        let centerFreq = 700 + 1600 * excess; // blue shift frequencies!
+        
+        cherenkovGain.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.08);
+        filterNode.frequency.setTargetAtTime(centerFreq, audioCtx.currentTime, 0.08);
+      } else {
+        // Subluminal: fade out cherenkov hiss
+        cherenkovGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.15);
+      }
+    }
+    
+    // Mouse dragging and paint logic
+    function getGridCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const gx = mx * W / rect.width;
+      const gy = my * H / rect.height;
+      return { gx, gy };
+    }
+    
+    canvas.addEventListener('mousedown', (e) => {
+      const { gx, gy } = getGridCoords(e);
+      
+      if (settingDetector) {
+        detector.active = true;
+        detector.x = gx;
+        detector.y = gy;
+        settingDetector = false;
+        document.getElementById('btn-detector').className = '';
+        return;
+      }
+      
+      if (particle.mode === 'drag') {
+        particle.x = gx;
+        particle.y = gy;
+        particle.isDragging = true;
+        clearWavesNear(gx, gy, 6);
+        waveletHistory = [];
+      } else {
+        isPainting = true;
+        paintAt(gx, gy);
+      }
+    });
+    
+    canvas.addEventListener('mousemove', (e) => {
+      const { gx, gy } = getGridCoords(e);
+      
+      if (particle.isDragging) {
+        let dx = gx - particle.x;
+        let dy = gy - particle.y;
+        particle.x = gx;
+        particle.y = gy;
+        
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > 0.05) {
+          particle.dirX = dx / dist;
+          particle.dirY = dy / dist;
+        }
+      } else if (isPainting) {
+        paintAt(gx, gy);
+      }
+    });
+    
+    window.addEventListener('mouseup', () => {
+      isPainting = false;
+      particle.isDragging = false;
+    });
+    
+    // Touch support
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        const { gx, gy } = getGridCoords(touch);
+        
+        if (settingDetector) {
+          detector.active = true;
+          detector.x = gx;
+          detector.y = gy;
+          settingDetector = false;
+          document.getElementById('btn-detector').className = '';
+          e.preventDefault();
+          return;
+        }
+        
+        if (particle.mode === 'drag') {
+          particle.x = gx;
+          particle.y = gy;
+          particle.isDragging = true;
+          clearWavesNear(gx, gy, 6);
+          waveletHistory = [];
+        } else {
+          isPainting = true;
+          paintAt(gx, gy);
+        }
+        e.preventDefault();
+      }
+    });
+    
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        const { gx, gy } = getGridCoords(touch);
+        
+        if (particle.isDragging) {
+          let dx = gx - particle.x;
+          let dy = gy - particle.y;
+          particle.x = gx;
+          particle.y = gy;
+          
+          let dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist > 0.05) {
+            particle.dirX = dx / dist;
+            particle.dirY = dy / dist;
+          }
+        } else if (isPainting) {
+          paintAt(gx, gy);
+        }
+        e.preventDefault();
+      }
+    });
+    
+    canvas.addEventListener('touchend', () => {
+      isPainting = false;
+      particle.isDragging = false;
+    });
+    
+    function paintAt(gx, gy) {
+      let r = brushRadius;
+      let val = 1.0;
+      let isAbsorber = false;
+      
+      if (selectedBrush === 'vacuum') val = 1.0;
+      else if (selectedBrush === 'water') val = 1.33;
+      else if (selectedBrush === 'glass') val = 1.5;
+      else if (selectedBrush === 'heavy') val = 2.0;
+      else if (selectedBrush === 'mirror') val = -1;
+      else if (selectedBrush === 'absorber') {
+        isAbsorber = true;
+        val = 1.0;
+      }
+      
+      let ix = Math.floor(gx);
+      let iy = Math.floor(gy);
+      
+      for (let y = Math.max(11, iy - r); y <= Math.min(H - 12, iy + r); y++) {
+        for (let x = Math.max(11, ix - r); x <= Math.min(W - 12, ix + r); x++) {
+          let dx = x - ix;
+          let dy = y - iy;
+          if (dx*dx + dy*dy <= r*r) {
+            let idx = y * W + x;
+            if (isAbsorber) {
+              damping[idx] = 0.20;
+              n[idx] = 1.0;
+            } else {
+              n[idx] = val;
+              damping[idx] = 0.002;
+            }
+          }
+        }
+      }
+    }
+    
+    // Main loop
+    function loop() {
+      for (let s = 0; s < stepsPerFrame; s++) {
+        updateParticle();
+        solveWave();
+        stepCount++;
+      }
+      
+      renderGrid();
+      updateStats();
+      updateAudio();
+      
+      requestAnimationFrame(loop);
+    }
+    
+    window.addEventListener('keydown', (e) => {
+      if (particle.mode !== 'linear') return;
+      if (e.key === 'ArrowUp' || e.key === 'w') {
+        particle.vx = 0; particle.vy = -1;
+      } else if (e.key === 'ArrowDown' || e.key === 's') {
+        particle.vx = 0; particle.vy = 1;
+      } else if (e.key === 'ArrowLeft' || e.key === 'a') {
+        particle.vx = -1; particle.vy = 0;
+      } else if (e.key === 'ArrowRight' || e.key === 'd') {
+        particle.vx = 1; particle.vy = 0;
+      }
+    });
+    
+    initGrids();
+    loadPreset('reactor');
+    loop();
+  </script>
+</body>
+</html>
