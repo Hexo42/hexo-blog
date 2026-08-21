@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>soliton-collider: nonlinear wave & topological soliton sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #05050f;
+      --bg-panel: rgba(10, 11, 24, 0.9);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --border-glowing: rgba(0, 243, 255, 0.5);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #39ff14;
+      --neon-amber: #ffaa00;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(3, 3, 10, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--neon-cyan);
+      text-shadow: var(--glow-shadow);
+      letter-spacing: 2px;
+    }
+
+    .tagline {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+      font-size: 12px;
+      display: none;
+    }
+
+    @media (min-width: 600px) {
+      .tagline { display: inline; }
+    }
+
+    .back-link {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-magenta);
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px dashed var(--neon-magenta);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .back-link:hover {
+      background: rgba(255, 0, 127, 0.1);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+      text-shadow: 0 0 5px var(--neon-magenta);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
+    }
+
+    @media (min-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 350px 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: var(--neon-magenta);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .value-display {
+      color: var(--neon-cyan);
+      font-weight: bold;
+    }
+
+    select, button, input[type="range"] {
+      background: #0f1026;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      border-radius: 4px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    select:focus, button:hover, button:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    button {
+      cursor: pointer;
+      background: linear-gradient(135deg, #121330 0%, #1c1e4c 100%);
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    button.active {
+      background: var(--neon-magenta);
+      color: white;
+      border-color: var(--neon-magenta);
+      text-shadow: 0 0 5px white;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.1) 0%, rgba(0, 243, 255, 0.2) 100%);
+      color: var(--neon-cyan);
+      border: 1px solid var(--neon-cyan);
+    }
+
+    button.primary:hover {
+      background: var(--neon-cyan);
+      color: #000;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-small {
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+
+    /* Range Sliders styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      padding: 0;
+      background: #11122b;
+      border-radius: 3px;
+      border: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    /* Simulation display area */
+    .display-area {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .canvas-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .canvas-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      color: var(--neon-cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .canvas-subtitle {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    canvas {
+      width: 100%;
+      background: #020207;
+      display: block;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      cursor: crosshair;
+    }
+
+    .audio-probe-marker {
+      position: absolute;
+      width: 2px;
+      top: 0;
+      bottom: 0;
+      background: var(--neon-amber);
+      pointer-events: none;
+      box-shadow: 0 0 8px var(--neon-amber);
+      opacity: 0.8;
+    }
+
+    /* Equation panel */
+    .equation-card {
+      font-family: 'Share Tech Mono', monospace;
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 3px solid var(--neon-cyan);
+      padding: 10px 15px;
+      font-size: 13px;
+      color: #9cdcfe;
+      line-height: 1.4;
+      overflow-x: auto;
+    }
+
+    .equation-tex {
+      font-size: 15px;
+      color: #fff;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    /* Info panel at bottom */
+    .info-panel {
+      grid-column: 1 / -1;
+      line-height: 1.6;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 768px) {
+      .info-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .info-sec h4 {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--neon-cyan);
+      margin-bottom: 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+
+    .info-sec p {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+
+    .info-sec ul {
+      margin-left: 20px;
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+
+    .info-sec code {
+      font-family: 'Share Tech Mono', monospace;
+      background: #0f1026;
+      color: var(--neon-magenta);
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    .blowup-banner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 0, 80, 0.95);
+      border: 2px solid #ff0055;
+      color: white;
+      padding: 15px 30px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: bold;
+      border-radius: 4px;
+      box-shadow: 0 0 30px rgba(255, 0, 80, 0.6);
+      text-shadow: 0 0 5px black;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 100;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .active-brush-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 5px;
+    }
+
+    .brush-circle {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    /* Custom layout styling */
+    .tabs-row {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 10px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      padding: 8px;
+      text-align: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 0;
+    }
+
+    .tab-btn.active {
+      color: var(--neon-cyan);
+      border-bottom-color: var(--neon-cyan);
+      text-shadow: var(--glow-shadow);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo">SOLITON-COLLIDER</div>
+      <div class="tagline">// nonlinear wave physics & topological soliton sandbox</div>
+    </div>
+    <a href="../index.html" class="back-link">&lt;&lt; BACK TO TERMINAL</a>
+  </header>
+
+  <main class="main-layout">
+    <!-- Left panel controls -->
+    <div class="panel">
+      <div>
+        <div class="panel-title">1. select equation</div>
+        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+          <select id="equation-select">
+            <option value="kdv">Korteweg-de Vries (KdV)</option>
+            <option value="sg">Sine-Gordon Equation</option>
+            <option value="nlse">Nonlinear Schrödinger (NLSE)</option>
+          </select>
+          
+          <div class="equation-card" id="eq-card-kdv">
+            <div class="equation-tex">u<sub>t</sub> + 6uu<sub>x</sub> + c<sub>d</sub>u<sub>xxx</sub> = 0</div>
+            modeling shallow water waves, featuring self-steepening non-linearity & dispersion.
+          </div>
+          <div class="equation-card" id="eq-card-sg" style="display:none;">
+            <div class="equation-tex">u<sub>tt</sub> - u<sub>xx</sub> + sin(u) = 0</div>
+            a coupled torsion pendulum chain, hosting topological kinks, antikinks & breathers.
+          </div>
+          <div class="equation-card" id="eq-card-nlse" style="display:none;">
+            <div class="equation-tex">i&psi;<sub>t</sub> + &psi;<sub>xx</sub> + g|&psi;|<sup>2</sup>&psi; = 0</div>
+            modeling quantum wavepackets & fiber optic pulses. supports bright & dark solitons.
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title">2. state presets</div>
+        <div style="margin-top:10px;" class="presets-grid" id="presets-kdv">
+          <button class="btn-small" onclick="loadPreset('kdv_single')">Single Soliton</button>
+          <button class="btn-small" onclick="loadPreset('kdv_collision')">Collision</button>
+          <button class="btn-small" onclick="loadPreset('kdv_triple')">Triple Race</button>
+          <button class="btn-small" onclick="loadPreset('kdv_train')">Soliton Train</button>
+        </div>
+        <div style="margin-top:10px; display:none;" class="presets-grid" id="presets-sg">
+          <button class="btn-small" onclick="loadPreset('sg_kink')">Single Kink</button>
+          <button class="btn-small" onclick="loadPreset('sg_antikink')">Single Antikink</button>
+          <button class="btn-small" onclick="loadPreset('sg_collision')">Kink-Antikink</button>
+          <button class="btn-small" onclick="loadPreset('sg_breather')">Breather Mode</button>
+        </div>
+        <div style="margin-top:10px; display:none;" class="presets-grid" id="presets-nlse">
+          <button class="btn-small" onclick="loadPreset('nlse_single')">Bright Soliton</button>
+          <button class="btn-small" onclick="loadPreset('nlse_collision')">Collision</button>
+          <button class="btn-small" onclick="loadPreset('nlse_dark')">Dark Pair</button>
+          <button class="btn-small" onclick="loadPreset('nlse_mi')">Modulation Inst.</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title">3. simulation controls</div>
+        <div style="margin-top:10px; display:flex; gap:10px;">
+          <button id="play-btn" class="primary active" style="flex:1;" onclick="togglePlay()">PAUSE</button>
+          <button style="flex:1;" onclick="resetSim()">RESET</button>
+          <button style="flex:1;" onclick="clearSim()">CLEAR</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>
+          <span>Time Step (dt)</span>
+          <span class="value-display" id="dt-display">0.0002</span>
+        </label>
+        <input type="range" id="dt-slider" min="0.00005" max="0.0008" step="0.00005" value="0.0002">
+      </div>
+
+      <div class="control-group">
+        <label>
+          <span>Steps per Frame</span>
+          <span class="value-display" id="spf-display">15</span>
+        </label>
+        <input type="range" id="spf-slider" min="1" max="40" step="1" value="15">
+      </div>
+
+      <div class="control-group" id="param-dispersion-group">
+        <label>
+          <span id="param-name-dispersion">Dispersion (c<sub>d</sub>)</span>
+          <span class="value-display" id="dispersion-display">0.100</span>
+        </label>
+        <input type="range" id="dispersion-slider" min="0.01" max="0.4" step="0.01" value="0.1">
+      </div>
+
+      <div class="control-group" id="param-interaction-group" style="display:none;">
+        <label>
+          <span id="param-name-interaction">Interaction (g)</span>
+          <span class="value-display" id="interaction-display">2.0</span>
+        </label>
+        <input type="range" id="interaction-slider" min="-6.0" max="6.0" step="0.2" value="2.0">
+      </div>
+
+      <div class="control-group" id="param-damping-group" style="display:none;">
+        <label>
+          <span>Damping (&gamma;)</span>
+          <span class="value-display" id="damping-display">0.00</span>
+        </label>
+        <input type="range" id="damping-slider" min="0.00" max="0.2" step="0.01" value="0.00">
+      </div>
+
+      <div>
+        <div class="panel-title">4. interactive brush</div>
+        <div class="tabs-row">
+          <button class="tab-btn active" id="tab-draw-add" onclick="setBrushAction('add')">Inject</button>
+          <button class="tab-btn" id="tab-draw-sub" onclick="setBrushAction('sub')">Depress</button>
+          <button class="tab-btn" id="tab-draw-noise" onclick="setBrushAction('noise')">Noise</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="control-group">
+            <label>
+              <span>Brush Size</span>
+              <span class="value-display" id="brush-size-display">1.5</span>
+            </label>
+            <input type="range" id="brush-size-slider" min="0.5" max="5.0" step="0.1" value="1.5">
+          </div>
+          <div class="active-brush-indicator">
+            <span style="font-size:11px; color:var(--text-dim);">Brush Color:</span>
+            <div class="brush-circle" id="brush-indicator"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title">5. sonification (FM synthesis)</div>
+        <div style="margin-top:10px; display:flex; flex-direction:column; gap:12px;">
+          <button id="audio-toggle-btn" class="primary" onclick="toggleAudio()">ENABLE SOUND</button>
+          
+          <div class="control-group">
+            <label>
+              <span>Probe Position</span>
+              <span class="value-display" id="probe-display">50%</span>
+            </label>
+            <input type="range" id="probe-slider" min="0" max="100" value="50">
+          </div>
+
+          <div class="control-group">
+            <label>
+              <span>Volume</span>
+              <span class="value-display" id="volume-display">40%</span>
+            </label>
+            <input type="range" id="volume-slider" min="0" max="100" value="40">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center screen displays -->
+    <div class="display-area">
+      <!-- Wave profile card -->
+      <div class="canvas-card" id="wave-card">
+        <div class="blowup-banner" id="blowup-banner">simulation blown up! resetting...</div>
+        <div class="canvas-header">
+          <div class="canvas-title" id="main-canvas-title">Wave Profile // u(x, t)</div>
+          <div class="canvas-subtitle">click/drag to inject waves</div>
+        </div>
+        <canvas id="wave-canvas" height="280"></canvas>
+      </div>
+
+      <!-- Pendulum chain representation for SG -->
+      <div class="canvas-card" id="pendulum-card" style="display:none;">
+        <div class="canvas-header">
+          <div class="canvas-title">coupled pendulum chain representation</div>
+          <div class="canvas-subtitle">visualizing &theta; = u(x)</div>
+        </div>
+        <canvas id="pendulum-canvas" height="100"></canvas>
+      </div>
+
+      <!-- Waterfall card -->
+      <div class="canvas-card">
+        <div class="canvas-header">
+          <div class="canvas-title">space-time waterfall (evolution history)</div>
+          <div class="canvas-subtitle">time flows downwards</div>
+        </div>
+        <canvas id="waterfall-canvas" height="300"></canvas>
+      </div>
+
+      <!-- Info panel at bottom -->
+      <div class="panel info-panel">
+        <div class="panel-title">soliton physics guide</div>
+        <div class="info-grid">
+          <div class="info-sec">
+            <h4>what is a soliton?</h4>
+            <p>a <strong>soliton</strong> is a self-reinforcing wave packet that maintains its shape while propagating at a constant velocity. standard linear waves spread out (disperse) over time. solitons exist because the dispersive fading of the medium is perfectly balanced by nonlinear self-steepening effects.</p>
+            <p>when two solitons collide, they pass straight through each other, emerging completely intact and restored to their original shapes. the only trace of their meeting is a tiny forward or backward jump in their positions, known as a <strong>phase shift</strong>, which is clearly visible in the scrolling space-time waterfall plot above.</p>
+          </div>
+          <div class="info-sec">
+            <h4>sandbox equations</h4>
+            <ul>
+              <li><strong>Korteweg-de Vries (KdV):</strong> historically derived to describe waves in narrow shallow channels. the nonlinear term <code>6uu<sub>x</sub></code> forces wave peaks to travel faster than troughs, steepening the wavefront. the dispersive term <code>c<sub>d</sub>u<sub>xxx</sub></code> spreads out frequencies. together, they lock into stable, one-way traveling solitons.</li>
+              <li><strong>Sine-Gordon (SG):</strong> maps directly to a physical line of pendulums hanging from a torsion spring. is a model for relativistic field theory, superconducting josephson lines, and crystal dislocations. it hosts topological solitons: <em>kinks</em> (a 360&deg; twist) and <em>antikinks</em> (reverse twist) which have a conserved topological charge, and <em>breathers</em> (oscillatory bound states).</li>
+              <li><strong>Nonlinear Schrödinger (NLSE):</strong> governs waves in optical fibers and bose-einstein condensates. focuses the wave packet when <code>g > 0</code>, forming <em>bright solitons</em>. when <code>g < 0</code>, it is defocusing, creating localized density holes on a constant carrier background called <em>dark solitons</em>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Constants
+    const N = 256;
+    const L = 40.0;
+    const dx = L / N;
+
+    // Simulation fields
+    let u = new Float64Array(N);
+    let v = new Float64Array(N); // for SG (velocity)
+    let R = new Float64Array(N); // for NLSE (Real part)
+    let I = new Float64Array(N); // for NLSE (Imaginary part)
+
+    // Preallocated RK4 temp fields
+    const k1_u = new Float64Array(N);
+    const k1_v = new Float64Array(N);
+    const k2_u = new Float64Array(N);
+    const k2_v = new Float64Array(N);
+    const k3_u = new Float64Array(N);
+    const k3_v = new Float64Array(N);
+    const k4_u = new Float64Array(N);
+    const k4_v = new Float64Array(N);
+    const tmp_u = new Float64Array(N);
+    const tmp_v = new Float64Array(N);
+
+    // Simulator configurations
+    let currentEq = 'kdv';
+    let currentPreset = 'kdv_collision';
+    let isRunning = true;
+    let dt = 0.0002;
+    let spf = 15;
+    let dispersion = 0.1;   // c_d for KdV
+    let interaction = 2.0;  // g for NLSE
+    let damping = 0.0;      // gamma for SG
+    
+    // UI elements
+    const eqSelect = document.getElementById('equation-select');
+    const playBtn = document.getElementById('play-btn');
+    const dtSlider = document.getElementById('dt-slider');
+    const dtDisplay = document.getElementById('dt-display');
+    const spfSlider = document.getElementById('spf-slider');
+    const spfDisplay = document.getElementById('spf-display');
+    const dispersionSlider = document.getElementById('dispersion-slider');
+    const dispersionDisplay = document.getElementById('dispersion-display');
+    const interactionSlider = document.getElementById('interaction-slider');
+    const interactionDisplay = document.getElementById('interaction-display');
+    const dampingSlider = document.getElementById('damping-slider');
+    const dampingDisplay = document.getElementById('damping-display');
+    const brushSizeSlider = document.getElementById('brush-size-slider');
+    const brushSizeDisplay = document.getElementById('brush-size-display');
+    
+    const waveCanvas = document.getElementById('wave-canvas');
+    const waveCtx = waveCanvas.getContext('2d');
+    const waterfallCanvas = document.getElementById('waterfall-canvas');
+    const waterfallCtx = waterfallCanvas.getContext('2d');
+    const pendulumCanvas = document.getElementById('pendulum-canvas');
+    const pendulumCtx = pendulumCanvas.getContext('2d');
+    const pendulumCard = document.getElementById('pendulum-card');
+
+    // Drawing brush settings
+    let brushAction = 'add'; // 'add', 'sub', 'noise'
+    let brushRadius = 1.5;
+    let isMouseDown = false;
+
+    // Audio sonification fields
+    let audioCtx = null;
+    let carrier = null;
+    let modulator = null;
+    let modulatorGain = null;
+    let mainGain = null;
+    let audioEnabled = false;
+    let probePosPercent = 50;
+    let audioVolume = 0.4;
+    
+    const audioToggleBtn = document.getElementById('audio-toggle-btn');
+    const probeSlider = document.getElementById('probe-slider');
+    const probeDisplay = document.getElementById('probe-display');
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeDisplay = document.getElementById('volume-display');
+
+    // Setup Canvas dimensions
+    let width = 0;
+    let height = 0;
+    function resizeCanvas() {
+      // Set actual canvas size to container dimensions
+      width = waveCanvas.clientWidth;
+      height = waveCanvas.clientHeight;
+      if (waveCanvas.width !== width) waveCanvas.width = width;
+      if (waveCanvas.height !== height) waveCanvas.height = height;
+
+      let wfWidth = waterfallCanvas.clientWidth;
+      let wfHeight = waterfallCanvas.clientHeight;
+      if (waterfallCanvas.width !== wfWidth) waterfallCanvas.width = wfWidth;
+      if (waterfallCanvas.height !== wfHeight) waterfallCanvas.height = wfHeight;
+
+      let pWidth = pendulumCanvas.clientWidth;
+      let pHeight = pendulumCanvas.clientHeight;
+      if (pendulumCanvas.width !== pWidth) pendulumCanvas.width = pWidth;
+      if (pendulumCanvas.height !== pHeight) pendulumCanvas.height = pHeight;
+    }
+
+    // Sech math helper
+    function sech(x) {
+      if (Math.abs(x) > 20) return 0;
+      return 2.0 / (Math.exp(x) + Math.exp(-x));
+    }
+
+    // Numerical Spatial Derivatives (with periodic boundaries)
+    function d1x(arr, i) {
+      let prev = (i - 1 + N) % N;
+      let next = (i + 1) % N;
+      return (arr[next] - arr[prev]) / (2.0 * dx);
+    }
+
+    // Numerical 2nd Spatial Derivative
+    function d2x(arr, i) {
+      let prev = (i - 1 + N) % N;
+      let next = (i + 1) % N;
+      return (arr[next] - 2.0 * arr[i] + arr[prev]) / (dx * dx);
+    }
+
+    // Numerical 3rd Spatial Derivative
+    function d3x(arr, i) {
+      let p2 = (i - 2 + N) % N;
+      let p1 = (i - 1 + N) % N;
+      let n1 = (i + 1) % N;
+      let n2 = (i + 2) % N;
+      return (arr[n2] - 2.0 * arr[n1] + 2.0 * arr[p1] - arr[p2]) / (2.0 * dx * dx * dx);
+    }
+
+    // ODE function evaluators
+    function F_KdV(state_u, deriv_u) {
+      for (let i = 0; i < N; i++) {
+        let u_x = d1x(state_u, i);
+        let u_xxx = d3x(state_u, i);
+        deriv_u[i] = -6.0 * state_u[i] * u_x - dispersion * u_xxx;
+      }
+    }
+
+    // ODE function evaluator for Sine-Gordon
+    function F_SG(state_u, state_v, deriv_u, deriv_v) {
+      for (let i = 0; i < N; i++) {
+        let u_xx = d2x(state_u, i);
+        deriv_u[i] = state_v[i];
+        deriv_v[i] = u_xx - Math.sin(state_u[i]) - damping * state_v[i];
+      }
+    }
+
+    // ODE function evaluator for NLSE
+    function F_NLSE(state_R, state_I, deriv_R, deriv_I) {
+      for (let i = 0; i < N; i++) {
+        let R_xx = d2x(state_R, i);
+        let I_xx = d2x(state_I, i);
+        let ampSq = state_R[i] * state_R[i] + state_I[i] * state_I[i];
+        deriv_R[i] = -I_xx - interaction * ampSq * state_I[i];
+        deriv_I[i] = R_xx + interaction * ampSq * state_R[i];
+      }
+    }
+
+    // Perform RK4 time-stepping step
+    let isBlownUp = false;
+    function triggerBlowup() {
+      if (isBlownUp) return;
+      isBlownUp = true;
+      document.getElementById('blowup-banner').style.opacity = 1;
+      setTimeout(() => {
+        resetSim();
+        document.getElementById('blowup-banner').style.opacity = 0;
+        isBlownUp = false;
+      }, 1500);
+    }
+
+    function rk4Step() {
+      if (isBlownUp) return;
+      
+      if (currentEq === 'kdv') {
+        F_KdV(u, k1_u);
+        for (let i = 0; i < N; i++) tmp_u[i] = u[i] + 0.5 * dt * k1_u[i];
+        F_KdV(tmp_u, k2_u);
+        for (let i = 0; i < N; i++) tmp_u[i] = u[i] + 0.5 * dt * k2_u[i];
+        F_KdV(tmp_u, k3_u);
+        for (let i = 0; i < N; i++) tmp_u[i] = u[i] + dt * k3_u[i];
+        F_KdV(tmp_u, k4_u);
+
+        for (let i = 0; i < N; i++) {
+          u[i] += (dt / 6.0) * (k1_u[i] + 2.0 * k2_u[i] + 2.0 * k3_u[i] + k4_u[i]);
+          if (isNaN(u[i]) || Math.abs(u[i]) > 30.0) {
+            triggerBlowup();
+            return;
+          }
+        }
+      } else if (currentEq === 'sg') {
+        F_SG(u, v, k1_u, k1_v);
+        for (let i = 0; i < N; i++) {
+          tmp_u[i] = u[i] + 0.5 * dt * k1_u[i];
+          tmp_v[i] = v[i] + 0.5 * dt * k1_v[i];
+        }
+        F_SG(tmp_u, tmp_v, k2_u, k2_v);
+        for (let i = 0; i < N; i++) {
+          tmp_u[i] = u[i] + 0.5 * dt * k2_u[i];
+          tmp_v[i] = v[i] + 0.5 * dt * k2_v[i];
+        }
+        F_SG(tmp_u, tmp_v, k3_u, k3_v);
+        for (let i = 0; i < N; i++) {
+          tmp_u[i] = u[i] + dt * k3_u[i];
+          tmp_v[i] = v[i] + dt * k3_v[i];
+        }
+        F_SG(tmp_u, tmp_v, k4_u, k4_v);
+
+        for (let i = 0; i < N; i++) {
+          u[i] += (dt / 6.0) * (k1_u[i] + 2.0 * k2_u[i] + 2.0 * k3_u[i] + k4_u[i]);
+          v[i] += (dt / 6.0) * (k1_v[i] + 2.0 * k2_v[i] + 2.0 * k3_v[i] + k4_v[i]);
+          if (isNaN(u[i]) || Math.abs(u[i]) > 100.0) {
+            triggerBlowup();
+            return;
+          }
+        }
+      } else if (currentEq === 'nlse') {
+        F_NLSE(R, I, k1_u, k1_v);
+        for (let i = 0; i < N; i++) {
+          tmp_u[i] = R[i] + 0.5 * dt * k1_u[i];
+          tmp_v[i] = I[i] + 0.5 * dt * k1_v[i];
+        }
+        F_NLSE(tmp_u, tmp_v, k2_u, k2_v);
+        for (let i = 0; i < N; i++) {
+          tmp_u[i] = R[i] + 0.5 * dt * k2_u[i];
+          tmp_v[i] = I[i] + 0.5 * dt * k2_v[i];
+        }
+        F_NLSE(tmp_u, tmp_v, k3_u, k3_v);
+        for (let i = 0; i < N; i++) {
+          tmp_u[i] = R[i] + dt * k3_u[i];
+          tmp_v[i] = I[i] + dt * k3_v[i];
+        }
+        F_NLSE(tmp_u, tmp_v, k4_u, k4_v);
+
+        for (let i = 0; i < N; i++) {
+          R[i] += (dt / 6.0) * (k1_u[i] + 2.0 * k2_u[i] + 2.0 * k3_u[i] + k4_u[i]);
+          I[i] += (dt / 6.0) * (k1_v[i] + 2.0 * k2_v[i] + 2.0 * k3_v[i] + k4_v[i]);
+          if (isNaN(R[i]) || Math.abs(R[i]) > 30.0) {
+            triggerBlowup();
+            return;
+          }
+        }
+      }
+    }
+
+    // Set interactive brush action
+    function setBrushAction(action) {
+      brushAction = action;
+      document.getElementById('tab-draw-add').classList.toggle('active', action === 'add');
+      document.getElementById('tab-draw-sub').classList.toggle('active', action === 'sub');
+      document.getElementById('tab-draw-noise').classList.toggle('active', action === 'noise');
+
+      let brushColor = 'var(--neon-cyan)';
+      if (action === 'sub') brushColor = 'var(--neon-magenta)';
+      if (action === 'noise') brushColor = 'var(--neon-green)';
+      document.getElementById('brush-indicator').style.backgroundColor = brushColor;
+      document.getElementById('brush-indicator').style.boxShadow = `0 0 8px ${brushColor}`;
+    }
+
+    // Presets initializer
+    function loadPreset(presetName) {
+      currentPreset = presetName;
+      
+      u.fill(0);
+      v.fill(0);
+      R.fill(0);
+      I.fill(0);
+
+      if (presetName === 'kdv_single') {
+        let x0 = L * 0.3;
+        let B = 1.4;
+        let A = 2.0 * B * B * dispersion;
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let dist = x - x0;
+          if (dist > L/2) dist -= L;
+          if (dist < -L/2) dist += L;
+          u[i] = A * Math.pow(sech(B * dist), 2);
+        }
+      } 
+      else if (presetName === 'kdv_collision') {
+        let x1 = L * 0.2;
+        let B1 = 1.8;
+        let A1 = 2.0 * B1 * B1 * dispersion;
+
+        let x2 = L * 0.55;
+        let B2 = 1.1;
+        let A2 = 2.0 * B2 * B2 * dispersion;
+
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          
+          let dist1 = x - x1;
+          if (dist1 > L/2) dist1 -= L;
+          if (dist1 < -L/2) dist1 += L;
+          
+          let dist2 = x - x2;
+          if (dist2 > L/2) dist2 -= L;
+          if (dist2 < -L/2) dist2 += L;
+
+          u[i] = A1 * Math.pow(sech(B1 * dist1), 2) + A2 * Math.pow(sech(B2 * dist2), 2);
+        }
+      }
+      else if (presetName === 'kdv_triple') {
+        let B1 = 2.1, A1 = 2.0 * B1 * B1 * dispersion, x1 = L * 0.1;
+        let B2 = 1.5, A2 = 2.0 * B2 * B2 * dispersion, x2 = L * 0.35;
+        let B3 = 0.9, A3 = 2.0 * B3 * B3 * dispersion, x3 = L * 0.6;
+
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let d1 = x - x1; if (d1 > L/2) d1 -= L; if (d1 < -L/2) d1 += L;
+          let d2 = x - x2; if (d2 > L/2) d2 -= L; if (d2 < -L/2) d2 += L;
+          let d3 = x - x3; if (d3 > L/2) d3 -= L; if (d3 < -L/2) d3 += L;
+
+          u[i] = A1 * Math.pow(sech(B1 * d1), 2) + A2 * Math.pow(sech(B2 * d2), 2) + A3 * Math.pow(sech(B3 * d3), 2);
+        }
+      }
+      else if (presetName === 'kdv_train') {
+        let start = Math.floor(N * 0.35);
+        let end = Math.floor(N * 0.55);
+        for (let i = start; i < end; i++) {
+          u[i] = 1.8;
+        }
+      }
+      else if (presetName === 'sg_kink') {
+        let x0 = L * 0.5;
+        let vel = 0.4;
+        let gamma = 1.0 / Math.sqrt(1.0 - vel * vel);
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let dist = x - x0;
+          if (dist > L/2) dist -= L;
+          if (dist < -L/2) dist += L;
+
+          u[i] = 4.0 * Math.atan(Math.exp(gamma * dist));
+          v[i] = -2.0 * vel * gamma * sech(gamma * dist);
+        }
+      }
+      else if (presetName === 'sg_antikink') {
+        let x0 = L * 0.5;
+        let vel = 0.4;
+        let gamma = 1.0 / Math.sqrt(1.0 - vel * vel);
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let dist = x - x0;
+          if (dist > L/2) dist -= L;
+          if (dist < -L/2) dist += L;
+
+          u[i] = 4.0 * Math.atan(Math.exp(-gamma * dist));
+          v[i] = 2.0 * vel * gamma * sech(gamma * dist);
+        }
+      }
+      else if (presetName === 'sg_collision') {
+        let x1 = L * 0.25;
+        let x2 = L * 0.75;
+        let vel = 0.5;
+        let gamma = 1.0 / Math.sqrt(1.0 - vel * vel);
+
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          
+          let d1 = x - x1; if (d1 > L/2) d1 -= L; if (d1 < -L/2) d1 += L;
+          let d2 = x - x2; if (d2 > L/2) d2 -= L; if (d2 < -L/2) d2 += L;
+
+          let u1 = 4.0 * Math.atan(Math.exp(gamma * d1));
+          let v1 = -2.0 * vel * gamma * sech(gamma * d1);
+
+          let u2 = 4.0 * Math.atan(Math.exp(-gamma * d2));
+          let v2 = 2.0 * (-vel) * gamma * sech(-gamma * d2);
+
+          u[i] = u1 + u2 - 2.0 * Math.PI;
+          v[i] = v1 + v2;
+        }
+      }
+      else if (presetName === 'sg_breather') {
+        let x0 = L * 0.5;
+        let w = 0.65;
+        let factor = Math.sqrt(1.0 - w * w);
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let dist = x - x0;
+          if (dist > L/2) dist -= L;
+          if (dist < -L/2) dist += L;
+
+          u[i] = 0.0;
+          v[i] = 4.0 * factor * sech(factor * dist);
+        }
+      }
+      else if (presetName === 'nlse_single') {
+        let x0 = L * 0.5;
+        let A = 1.8;
+        let p = 0.8;
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let dist = x - x0;
+          if (dist > L/2) dist -= L;
+          if (dist < -L/2) dist += L;
+
+          let envelope = A * sech(A * dist);
+          R[i] = envelope * Math.cos(p * dist);
+          I[i] = envelope * Math.sin(p * dist);
+        }
+      }
+      else if (presetName === 'nlse_collision') {
+        let x1 = L * 0.25;
+        let x2 = L * 0.75;
+        let A1 = 1.6, p1 = 1.5;
+        let A2 = 1.6, p2 = -1.5;
+
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let d1 = x - x1; if (d1 > L/2) d1 -= L; if (d1 < -L/2) d1 += L;
+          let d2 = x - x2; if (d2 > L/2) d2 -= L; if (d2 < -L/2) d2 += L;
+
+          let r1 = A1 * sech(A1 * d1) * Math.cos(p1 * d1);
+          let im1 = A1 * sech(A1 * d1) * Math.sin(p1 * d1);
+
+          let r2 = A2 * sech(A2 * d2) * Math.cos(p2 * d2);
+          let im2 = A2 * sech(A2 * d2) * Math.sin(p2 * d2);
+
+          R[i] = r1 + r2;
+          I[i] = im1 + im2;
+        }
+      }
+      else if (presetName === 'nlse_dark') {
+        interaction = -2.0;
+        interactionSlider.value = -2.0;
+        interactionDisplay.textContent = "-2.0";
+
+        let x1 = L * 0.25;
+        let x2 = L * 0.75;
+        let A0 = 1.5;
+
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          let d1 = x - x1; if (d1 > L/2) d1 -= L; if (d1 < -L/2) d1 += L;
+          let d2 = x - x2; if (d2 > L/2) d2 -= L; if (d2 < -L/2) d2 += L;
+
+          let val = A0 * Math.tanh(1.2 * d1) * Math.tanh(1.2 * d2);
+          R[i] = val;
+          I[i] = 0;
+        }
+      }
+      else if (presetName === 'nlse_mi') {
+        interaction = 2.0;
+        interactionSlider.value = 2.0;
+        interactionDisplay.textContent = "2.0";
+
+        let A0 = 1.0;
+        let eps = 0.05;
+        let k = 6.0 * (2.0 * Math.PI / L);
+
+        for (let i = 0; i < N; i++) {
+          let x = i * dx;
+          R[i] = A0 + eps * Math.cos(k * x);
+          I[i] = 0;
+        }
+      }
+
+      waterfallCtx.fillStyle = '#020207';
+      waterfallCtx.fillRect(0, 0, waterfallCanvas.width, waterfallCanvas.height);
+    }
+
+    function togglePlay() {
+      isRunning = !isRunning;
+      playBtn.textContent = isRunning ? "PAUSE" : "PLAY";
+      playBtn.classList.toggle('active', isRunning);
+    }
+
+    function resetSim() {
+      loadPreset(currentPreset);
+    }
+
+    function clearSim() {
+      u.fill(0);
+      v.fill(0);
+      R.fill(0);
+      I.fill(0);
+      waterfallCtx.fillStyle = '#020207';
+      waterfallCtx.fillRect(0, 0, waterfallCanvas.width, waterfallCanvas.height);
+    }
+
+    function getMousePos(canvas, evt) {
+      let rect = canvas.getBoundingClientRect();
+      return {
+        x: (evt.clientX - rect.left) / rect.width,
+        y: (evt.clientY - rect.top) / rect.height
+      };
+    }
+
+    function applyBrush(mousePos) {
+      let brushCenterGrid = mousePos.x * N;
+      
+      let brushAmp = 0.4;
+      if (brushAction === 'sub') brushAmp = -0.4;
+
+      if (currentEq === 'nlse') {
+        brushAmp = 0.3;
+        if (brushAction === 'sub') brushAmp = -0.3;
+      }
+
+      for (let i = 0; i < N; i++) {
+        let dist = i - brushCenterGrid;
+        if (dist > N/2) dist -= N;
+        if (dist < -N/2) dist += N;
+
+        let influence = Math.exp(-(dist * dist) / (2.0 * (brushRadius * N / L) * (brushRadius * N / L)));
+        
+        if (brushAction === 'noise') {
+          let noiseVal = (Math.random() - 0.5) * 0.6 * influence;
+          if (currentEq === 'nlse') {
+            R[i] += noiseVal;
+            I[i] += (Math.random() - 0.5) * 0.6 * influence;
+          } else {
+            u[i] += noiseVal;
+          }
+        } else {
+          let delta = brushAmp * influence;
+          if (currentEq === 'nlse') {
+            R[i] += delta;
+          } else {
+            u[i] += delta;
+          }
+        }
+      }
+    }
+
+    waveCanvas.addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      let pos = getMousePos(waveCanvas, e);
+      
+      if (e.shiftKey) {
+        probePosPercent = Math.min(100, Math.max(0, Math.floor(pos.x * 100)));
+        probeSlider.value = probePosPercent;
+        probeDisplay.textContent = `${probePosPercent}%`;
+        return;
+      }
+      applyBrush(pos);
+    });
+
+    waveCanvas.addEventListener('mousemove', (e) => {
+      if (!isMouseDown) return;
+      let pos = getMousePos(waveCanvas, e);
+      if (e.shiftKey) {
+        probePosPercent = Math.min(100, Math.max(0, Math.floor(pos.x * 100)));
+        probeSlider.value = probePosPercent;
+        probeDisplay.textContent = `${probePosPercent}%`;
+        return;
+      }
+      applyBrush(pos);
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+    });
+
+    eqSelect.addEventListener('change', (e) => {
+      currentEq = e.target.value;
+
+      document.getElementById('presets-kdv').style.display = currentEq === 'kdv' ? 'grid' : 'none';
+      document.getElementById('presets-sg').style.display = currentEq === 'sg' ? 'grid' : 'none';
+      document.getElementById('presets-nlse').style.display = currentEq === 'nlse' ? 'grid' : 'none';
+
+      pendulumCard.style.display = currentEq === 'sg' ? 'block' : 'none';
+
+      document.getElementById('eq-card-kdv').style.display = currentEq === 'kdv' ? 'block' : 'none';
+      document.getElementById('eq-card-sg').style.display = currentEq === 'sg' ? 'block' : 'none';
+      document.getElementById('eq-card-nlse').style.display = currentEq === 'nlse' ? 'block' : 'none';
+
+      document.getElementById('param-dispersion-group').style.display = currentEq === 'kdv' ? 'block' : 'none';
+      document.getElementById('param-damping-group').style.display = currentEq === 'sg' ? 'block' : 'none';
+      document.getElementById('param-interaction-group').style.display = currentEq === 'nlse' ? 'block' : 'none';
+
+      if (currentEq === 'kdv') loadPreset('kdv_collision');
+      if (currentEq === 'sg') loadPreset('sg_collision');
+      if (currentEq === 'nlse') loadPreset('nlse_collision');
+      
+      resizeCanvas();
+    });
+
+    dtSlider.addEventListener('input', (e) => {
+      dt = parseFloat(e.target.value);
+      dtDisplay.textContent = dt.toFixed(5);
+    });
+    spfSlider.addEventListener('input', (e) => {
+      spf = parseInt(e.target.value);
+      spfDisplay.textContent = spf;
+    });
+    dispersionSlider.addEventListener('input', (e) => {
+      dispersion = parseFloat(e.target.value);
+      dispersionDisplay.textContent = dispersion.toFixed(3);
+    });
+    interactionSlider.addEventListener('input', (e) => {
+      interaction = parseFloat(e.target.value);
+      interactionDisplay.textContent = interaction.toFixed(1);
+    });
+    dampingSlider.addEventListener('input', (e) => {
+      damping = parseFloat(e.target.value);
+      dampingDisplay.textContent = damping.toFixed(2);
+    });
+    brushSizeSlider.addEventListener('input', (e) => {
+      brushRadius = parseFloat(e.target.value);
+      brushSizeDisplay.textContent = brushRadius.toFixed(1);
+    });
+    probeSlider.addEventListener('input', (e) => {
+      probePosPercent = parseInt(e.target.value);
+      probeDisplay.textContent = `${probePosPercent}%`;
+    });
+    volumeSlider.addEventListener('input', (e) => {
+      audioVolume = parseInt(e.target.value) / 100;
+      volumeDisplay.textContent = `${Math.floor(audioVolume * 100)}%`;
+      if (mainGain && audioCtx) {
+        mainGain.gain.setTargetAtTime(audioVolume * 0.05, audioCtx.currentTime, 0.05);
+      }
+    });
+
+    function toggleAudio() {
+      if (!audioCtx) {
+        initAudio();
+      }
+      
+      audioEnabled = !audioEnabled;
+      audioToggleBtn.textContent = audioEnabled ? "DISABLE SOUND" : "ENABLE SOUND";
+      audioToggleBtn.classList.toggle('active', audioEnabled);
+
+      if (mainGain && audioCtx) {
+        let gainVal = audioEnabled ? audioVolume * 0.05 : 0;
+        mainGain.gain.setTargetAtTime(gainVal, audioCtx.currentTime, 0.05);
+      }
+    }
+
+    function initAudio() {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        carrier = audioCtx.createOscillator();
+        modulator = audioCtx.createOscillator();
+        modulatorGain = audioCtx.createGain();
+        mainGain = audioCtx.createGain();
+        
+        carrier.type = 'sine';
+        modulator.type = 'sine';
+        
+        modulator.connect(modulatorGain);
+        modulatorGain.connect(carrier.frequency);
+        
+        carrier.connect(mainGain);
+        mainGain.connect(audioCtx.destination);
+        
+        carrier.frequency.setValueAtTime(200, audioCtx.currentTime);
+        modulator.frequency.setValueAtTime(80, audioCtx.currentTime);
+        modulatorGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        
+        let startVol = audioEnabled ? audioVolume * 0.05 : 0;
+        mainGain.gain.setValueAtTime(startVol, audioCtx.currentTime);
+        
+        carrier.start();
+        modulator.start();
+      } catch (err) {
+        console.error("Audio Context Init Failed:", err);
+      }
+    }
+
+    function updateSonification() {
+      if (!audioCtx || !audioEnabled) return;
+
+      let probeIdx = Math.floor((probePosPercent / 100) * N);
+      let val = 0;
+      let grad = 0;
+
+      if (currentEq === 'kdv') {
+        val = u[probeIdx];
+        grad = d1x(u, probeIdx);
+      } else if (currentEq === 'sg') {
+        let normAngle = ((u[probeIdx] + Math.PI) % (2.0 * Math.PI)) - Math.PI;
+        val = normAngle;
+        grad = d1x(u, probeIdx);
+      } else if (currentEq === 'nlse') {
+        let r = R[probeIdx];
+        let im = I[probeIdx];
+        val = Math.sqrt(r * r + im * im);
+        grad = d1x(R, probeIdx);
+      }
+
+      let targetCarrierFreq = 120.0 + Math.max(-50, Math.min(300, val * 120.0));
+      let targetModFreq = 40.0 + Math.max(-20, Math.min(200, val * 60.0));
+      let targetModGain = Math.min(600, Math.abs(grad) * 200.0);
+
+      carrier.frequency.setTargetAtTime(targetCarrierFreq, audioCtx.currentTime, 0.04);
+      modulator.frequency.setTargetAtTime(targetModFreq, audioCtx.currentTime, 0.04);
+      modulatorGain.gain.setTargetAtTime(targetModGain, audioCtx.currentTime, 0.04);
+    }
+
+    function getWaterfallColor(val, eq) {
+      let r = 0, g = 0, b = 0;
+      
+      if (eq === 'kdv') {
+        let norm = Math.max(0, Math.min(1.0, (val + 0.2) / 2.5));
+        r = Math.floor(Math.pow(norm, 3.0) * 255);
+        g = Math.floor(Math.pow(norm, 1.2) * 243);
+        b = Math.floor(norm * 255);
+      } 
+      else if (eq === 'sg') {
+        let cosHalf = Math.cos(val * 0.5);
+        let kinkVal = 1.0 - cosHalf * cosHalf;
+        let speedVal = Math.min(1.0, Math.abs(kinkVal));
+        
+        r = Math.floor(speedVal * 255);
+        g = Math.floor(Math.pow(speedVal, 3.0) * 150);
+        b = Math.floor(Math.pow(speedVal, 1.5) * 127);
+      } 
+      else if (eq === 'nlse') {
+        let norm = Math.max(0, Math.min(1.0, val / 4.0));
+        r = Math.floor(Math.pow(norm, 2.0) * 255);
+        g = Math.floor(norm * 255);
+        b = Math.floor(Math.pow(norm, 3.0) * 100);
+      }
+
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function shiftWaterfallDown(colorRow) {
+      let wfW = waterfallCanvas.width;
+      let wfH = waterfallCanvas.height;
+      
+      waterfallCtx.drawImage(waterfallCanvas, 0, 0, wfW, wfH - 2, 0, 2, wfW, wfH - 2);
+
+      let cellW = wfW / N;
+      for (let i = 0; i < N; i++) {
+        waterfallCtx.fillStyle = colorRow[i];
+        waterfallCtx.fillRect(i * cellW, 0, cellW + 1, 2);
+      }
+    }
+
+    let stepCount = 0;
+    const wfColorRow = new Array(N);
+
+    function tick() {
+      if (isRunning && !isBlownUp) {
+        for (let s = 0; s < spf; s++) {
+          rk4Step();
+          stepCount++;
+          
+          if (stepCount % 3 === 0) {
+            for (let i = 0; i < N; i++) {
+              let val = 0;
+              if (currentEq === 'kdv') val = u[i];
+              if (currentEq === 'sg') val = u[i];
+              if (currentEq === 'nlse') val = R[i]*R[i] + I[i]*I[i];
+              wfColorRow[i] = getWaterfallColor(val, currentEq);
+            }
+            shiftWaterfallDown(wfColorRow);
+          }
+        }
+      }
+
+      updateSonification();
+      drawWave();
+      if (currentEq === 'sg') drawPendulums();
+
+      requestAnimationFrame(tick);
+    }
+
+    function drawWave() {
+      waveCtx.clearRect(0, 0, width, height);
+
+      waveCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+      waveCtx.lineWidth = 1;
+      
+      let gridSpacing = width / 10;
+      for (let x = 0; x < width; x += gridSpacing) {
+        waveCtx.beginPath();
+        waveCtx.moveTo(x, 0);
+        waveCtx.lineTo(x, height);
+        waveCtx.stroke();
+      }
+
+      let yZero = height * 0.65;
+      if (currentEq === 'nlse') yZero = height * 0.8;
+      if (currentEq === 'sg') yZero = height * 0.5;
+
+      waveCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      waveCtx.beginPath();
+      waveCtx.moveTo(0, yZero);
+      waveCtx.lineTo(width, yZero);
+      waveCtx.stroke();
+
+      let xStep = width / N;
+
+      if (currentEq === 'kdv') {
+        let scaleY = 45.0;
+
+        let grad = waveCtx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, 'rgba(0, 243, 255, 0.15)');
+        grad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+        
+        waveCtx.fillStyle = grad;
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero);
+        for (let i = 0; i < N; i++) {
+          let cx = i * xStep;
+          let cy = yZero - u[i] * scaleY;
+          waveCtx.lineTo(cx, cy);
+        }
+        waveCtx.lineTo(width, yZero);
+        waveCtx.closePath();
+        waveCtx.fill();
+
+        waveCtx.strokeStyle = varColor('--neon-cyan');
+        waveCtx.shadowColor = varColor('--neon-cyan');
+        waveCtx.shadowBlur = 10;
+        waveCtx.lineWidth = 3;
+
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero - u[0] * scaleY);
+        for (let i = 1; i < N; i++) {
+          waveCtx.lineTo(i * xStep, yZero - u[i] * scaleY);
+        }
+        waveCtx.stroke();
+        
+        waveCtx.shadowBlur = 0;
+      } 
+      else if (currentEq === 'sg') {
+        let scaleY = 15.0;
+        
+        waveCtx.strokeStyle = 'rgba(255, 0, 127, 0.08)';
+        for (let k = -2; k <= 4; k++) {
+          let levelY = yZero - (k * 2.0 * Math.PI) * scaleY;
+          if (levelY >= 0 && levelY <= height) {
+            waveCtx.beginPath();
+            waveCtx.moveTo(0, levelY);
+            waveCtx.lineTo(width, levelY);
+            waveCtx.stroke();
+            
+            waveCtx.font = '10px Share Tech Mono';
+            waveCtx.fillStyle = 'rgba(255, 0, 127, 0.3)';
+            waveCtx.fillText(`${k === 0 ? '0' : k + '·2π'}`, 5, levelY - 3);
+          }
+        }
+
+        let grad = waveCtx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, 'rgba(255, 0, 127, 0.1)');
+        grad.addColorStop(1, 'rgba(255, 0, 127, 0)');
+        
+        waveCtx.fillStyle = grad;
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero);
+        for (let i = 0; i < N; i++) {
+          waveCtx.lineTo(i * xStep, yZero - u[i] * scaleY);
+        }
+        waveCtx.lineTo(width, yZero);
+        waveCtx.closePath();
+        waveCtx.fill();
+
+        waveCtx.strokeStyle = varColor('--neon-magenta');
+        waveCtx.shadowColor = varColor('--neon-magenta');
+        waveCtx.shadowBlur = 10;
+        waveCtx.lineWidth = 3;
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero - u[0] * scaleY);
+        for (let i = 1; i < N; i++) {
+          waveCtx.lineTo(i * xStep, yZero - u[i] * scaleY);
+        }
+        waveCtx.stroke();
+        waveCtx.shadowBlur = 0;
+      } 
+      else if (currentEq === 'nlse') {
+        let scaleY = 40.0;
+        
+        const density = new Float64Array(N);
+        for (let i = 0; i < N; i++) {
+          density[i] = R[i] * R[i] + I[i] * I[i];
+        }
+
+        let grad = waveCtx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, 'rgba(0, 243, 255, 0.15)');
+        grad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+        
+        waveCtx.fillStyle = grad;
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero);
+        for (let i = 0; i < N; i++) {
+          waveCtx.lineTo(i * xStep, yZero - density[i] * scaleY);
+        }
+        waveCtx.lineTo(width, yZero);
+        waveCtx.closePath();
+        waveCtx.fill();
+
+        waveCtx.strokeStyle = 'rgba(255, 0, 127, 0.5)';
+        waveCtx.lineWidth = 1.5;
+        waveCtx.setLineDash([5, 5]);
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero - R[0] * scaleY);
+        for (let i = 1; i < N; i++) {
+          waveCtx.lineTo(i * xStep, yZero - R[i] * scaleY);
+        }
+        waveCtx.stroke();
+        waveCtx.setLineDash([]);
+
+        waveCtx.strokeStyle = 'rgba(57, 255, 20, 0.4)';
+        waveCtx.lineWidth = 1.5;
+        waveCtx.setLineDash([3, 4]);
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero - I[0] * scaleY);
+        for (let i = 1; i < N; i++) {
+          waveCtx.lineTo(i * xStep, yZero - I[i] * scaleY);
+        }
+        waveCtx.stroke();
+        waveCtx.setLineDash([]);
+
+        waveCtx.strokeStyle = varColor('--neon-cyan');
+        waveCtx.shadowColor = varColor('--neon-cyan');
+        waveCtx.shadowBlur = 10;
+        waveCtx.lineWidth = 3;
+        waveCtx.beginPath();
+        waveCtx.moveTo(0, yZero - density[0] * scaleY);
+        for (let i = 1; i < N; i++) {
+          waveCtx.lineTo(i * xStep, yZero - density[i] * scaleY);
+        }
+        waveCtx.stroke();
+        waveCtx.shadowBlur = 0;
+      }
+
+      let px = (probePosPercent / 100) * width;
+      waveCtx.strokeStyle = varColor('--neon-amber');
+      waveCtx.lineWidth = 1;
+      waveCtx.setLineDash([4, 6]);
+      waveCtx.beginPath();
+      waveCtx.moveTo(px, 0);
+      waveCtx.lineTo(px, height);
+      waveCtx.stroke();
+      waveCtx.setLineDash([]);
+
+      waveCtx.font = '10px Share Tech Mono';
+      waveCtx.fillStyle = varColor('--neon-amber');
+      waveCtx.fillText('PROBE', px + 5, 15);
+    }
+
+    function drawPendulums() {
+      let pW = pendulumCanvas.width;
+      let pH = pendulumCanvas.height;
+      pendulumCtx.clearRect(0, 0, pW, pH);
+
+      let numPends = 64;
+      let spacing = pW / numPends;
+      let centerOffset = pH * 0.5;
+      let armLen = 22.0;
+
+      pendulumCtx.strokeStyle = '#222340';
+      pendulumCtx.lineWidth = 2;
+      pendulumCtx.beginPath();
+      pendulumCtx.moveTo(0, centerOffset);
+      pendulumCtx.lineTo(pW, centerOffset);
+      pendulumCtx.stroke();
+
+      for (let p = 0; p < numPends; p++) {
+        let gridIdx = Math.floor(p * (N / numPends));
+        let angle = u[gridIdx];
+        
+        let px = p * spacing + spacing * 0.5;
+        let py = centerOffset;
+
+        let ex = px + armLen * Math.sin(angle);
+        let ey = py + armLen * Math.cos(angle);
+
+        pendulumCtx.strokeStyle = 'rgba(255, 0, 127, 0.3)';
+        pendulumCtx.lineWidth = 1;
+        pendulumCtx.beginPath();
+        pendulumCtx.moveTo(px, py);
+        pendulumCtx.lineTo(ex, ey);
+        pendulumCtx.stroke();
+
+        pendulumCtx.fillStyle = varColor('--neon-magenta');
+        pendulumCtx.beginPath();
+        pendulumCtx.arc(ex, ey, 3.5, 0, 2.0 * Math.PI);
+        pendulumCtx.fill();
+      }
+    }
+
+    function varColor(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+    });
+
+    resizeCanvas();
+    loadPreset('kdv_collision');
+    requestAnimationFrame(tick);
+
+  </script>
+</body>
+</html>
