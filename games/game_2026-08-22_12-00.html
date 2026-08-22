@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>optical-tweezers: laser trapping & micro-manipulation sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #030308;
+      --bg-panel: rgba(8, 9, 20, 0.9);
+      --border-color: rgba(0, 255, 127, 0.2);
+      --border-glowing: rgba(0, 255, 127, 0.5);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #00ff7f;
+      --neon-amber: #ffaa00;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 255, 127, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(3, 3, 10, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--neon-green);
+      text-shadow: var(--glow-shadow);
+      letter-spacing: 2px;
+    }
+
+    .tagline {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+      font-size: 12px;
+      display: none;
+    }
+
+    @media (min-width: 600px) {
+      .tagline { display: inline; }
+    }
+
+    .back-link {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px dashed var(--neon-cyan);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .back-link:hover {
+      background: rgba(0, 243, 255, 0.1);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+      text-shadow: 0 0 5px var(--neon-cyan);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
+    }
+
+    @media (min-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 360px 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: var(--neon-green);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .value-display {
+      color: var(--neon-cyan);
+      font-weight: bold;
+    }
+
+    select, button, input[type="range"] {
+      background: #090915;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      border-radius: 4px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    select:focus, button:hover, button:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    button {
+      cursor: pointer;
+      background: linear-gradient(135deg, #091c12 0%, #153820 100%);
+      border-color: var(--border-color);
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    button.active {
+      background: var(--neon-cyan);
+      color: black;
+      border-color: var(--neon-cyan);
+      text-shadow: none;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, rgba(0, 255, 127, 0.1) 0%, rgba(0, 255, 127, 0.2) 100%);
+      color: var(--neon-green);
+      border: 1px solid var(--neon-green);
+    }
+
+    button.primary:hover {
+      background: var(--neon-green);
+      color: #000;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-small {
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+
+    /* Range Sliders styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      padding: 0;
+      background: #090915;
+      border-radius: 3px;
+      border: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      cursor: pointer;
+      box-shadow: 0 0 5px var(--neon-green);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 5px var(--neon-green);
+    }
+
+    /* Simulation display area */
+    .display-area {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .canvas-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      background: #020205;
+      border-radius: 4px;
+      cursor: crosshair;
+    }
+
+    .telemetry-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+
+    @media (min-width: 768px) {
+      .telemetry-row {
+        grid-template-columns: 1fr 1.2fr;
+      }
+    }
+
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+    }
+
+    .stats-table td {
+      padding: 6px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stats-table td:last-child {
+      text-align: right;
+      color: var(--neon-cyan);
+    }
+
+    .desc-box {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #94a3b8;
+      border-left: 3px solid var(--neon-green);
+      padding-left: 10px;
+    }
+
+    .desc-box b {
+      color: var(--text-color);
+    }
+
+    .info-pane {
+      background: rgba(10, 11, 24, 0.5);
+      border: 1px dashed rgba(0, 255, 127, 0.2);
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo">optical-tweezers</div>
+      <div class="tagline">laser trapping & micro-manipulation physics sandbox</div>
+    </div>
+    <a href="../index.html" class="back-link">&lt;&lt; back to home</a>
+  </header>
+
+  <div class="main-layout">
+    <!-- Controls Panel -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>presets</span>
+      </div>
+      <div class="presets-grid">
+        <button id="preset-sandbox" class="btn-small active">single trap</button>
+        <button id="preset-dual" class="btn-small">dual trap</button>
+        <button id="preset-dna" class="btn-small">dna stretching</button>
+        <button id="preset-sorter" class="btn-small">optical sorter</button>
+      </div>
+
+      <div class="panel-title">
+        <span>laser source</span>
+      </div>
+      
+      <div class="control-group">
+        <label>laser state <span id="laser-state-lbl" class="value-display">ON</span></label>
+        <button id="btn-laser-toggle" class="primary">TOGGLE LASER</button>
+      </div>
+
+      <div class="control-group">
+        <label>laser power <span id="val-power" class="value-display">5.0 W</span></label>
+        <input type="range" id="slide-power" min="0.0" max="10.0" step="0.5" value="5.0">
+      </div>
+
+      <div class="control-group">
+        <label>beam numerical aperture (na) <span id="val-na" class="value-display">0.90</span></label>
+        <input type="range" id="slide-na" min="0.4" max="1.2" step="0.05" value="0.90">
+      </div>
+
+      <div class="control-group">
+        <label>wavelength / color</label>
+        <select id="select-wavelength">
+          <option value="green">green (532 nm)</option>
+          <option value="red">red (633 nm)</option>
+          <option value="blue">blue (445 nm)</option>
+        </select>
+      </div>
+
+      <div class="panel-title">
+        <span>fluid environment</span>
+      </div>
+
+      <div class="control-group">
+        <label>temperature <span id="val-temp" class="value-display">25 °C</span></label>
+        <input type="range" id="slide-temp" min="0" max="100" step="5" value="25">
+      </div>
+
+      <div class="control-group">
+        <label>viscosity <span id="val-visc" class="value-display">1.00 mPa·s</span></label>
+        <input type="range" id="slide-visc" min="0.10" max="5.00" step="0.1" value="1.00">
+      </div>
+
+      <div class="control-group">
+        <label>microfluidic flow <span id="val-flow" class="value-display">0.0 μm/s</span></label>
+        <input type="range" id="slide-flow" min="-5.0" max="5.0" step="0.5" value="0.0">
+      </div>
+
+      <div class="panel-title">
+        <span>sonification</span>
+      </div>
+      <button id="btn-audio" class="btn-small">ENABLE AUDIO PROBE</button>
+
+      <div class="info-pane">
+        <p><b>ray-optics regime:</b> when dielectric beads are larger than the wavelength, refraction of light rays transfers momentum, pulling high-index beads toward the focal point.</p>
+      </div>
+    </div>
+
+    <!-- Simulation and Graphs -->
+    <div class="display-area">
+      <div class="canvas-card">
+        <canvas id="simCanvas" width="800" height="500"></canvas>
+      </div>
+
+      <div class="telemetry-row">
+        <!-- Telemetry Data -->
+        <div class="panel">
+          <div class="panel-title">live telemetry</div>
+          <table class="stats-table">
+            <tr>
+              <td>trap stiffness (k_x)</td>
+              <td><span id="tel-kx">0.050 pN/μm</span></td>
+            </tr>
+            <tr>
+              <td>trap stiffness (k_y)</td>
+              <td><span id="tel-ky">0.025 pN/μm</span></td>
+            </tr>
+            <tr>
+              <td>displacement (Δx)</td>
+              <td><span id="tel-dx">0.00 μm</span></td>
+            </tr>
+            <tr>
+              <td>displacement (Δy)</td>
+              <td><span id="tel-dy">0.00 μm</span></td>
+            </tr>
+            <tr>
+              <td>optical force (F_opt)</td>
+              <td><span id="tel-fopt">0.00 pN</span></td>
+            </tr>
+            <tr>
+              <td>thermal noise (F_brown)</td>
+              <td><span id="tel-fbrown">0.00 pN</span></td>
+            </tr>
+            <tr>
+              <td>dna tension</td>
+              <td><span id="tel-dna">0.00 pN</span></td>
+            </tr>
+          </table>
+          <div class="desc-box">
+            drag the <b>green laser focus</b> to capture and drag the beads. turn on <b>fluid flow</b> or <b>temperature</b> to test trap strength.
+          </div>
+        </div>
+
+        <!-- Telemetry Graphs -->
+        <div class="panel" style="flex-grow: 1;">
+          <div class="panel-title">potential energy well & force profile</div>
+          <canvas id="graphCanvas" width="450" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Vector Mathematics Helper ---
+    class Vec2 {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+      }
+      add(v) { return new Vec2(this.x + v.x, this.y + v.y); }
+      sub(v) { return new Vec2(this.x - v.x, this.y - v.y); }
+      mult(s) { return new Vec2(this.x * s, this.y * s); }
+      dot(v) { return this.x * v.x + this.y * v.y; }
+      cross(v) { return this.x * v.y - this.y * v.x; }
+      magSq() { return this.x * this.x + this.y * this.y; }
+      mag() { return Math.sqrt(this.magSq()); }
+      normalize() {
+        let m = this.mag();
+        return m === 0 ? new Vec2(0, 0) : new Vec2(this.x / m, this.y / m);
+      }
+      dist(v) { return this.sub(v).mag(); }
+    }
+
+    // --- State and Config ---
+    const config = {
+      laserPower: 5.0,
+      na: 0.9,
+      wavelength: 'green',
+      laserOn: true,
+      temp: 25.0,
+      viscosity: 1.0,
+      flowSpeed: 0.0,
+      nm: 1.33, // water refractive index
+      dt: 0.05
+    };
+
+    const colors = {
+      green: { light: 'rgba(0, 255, 127, 0.12)', ray: 'rgba(0, 255, 127, 0.45)', core: '#00ff7f', val: 1.33 },
+      red: { light: 'rgba(255, 0, 127, 0.12)', ray: 'rgba(255, 0, 127, 0.45)', core: '#ff007f', val: 1.328 },
+      blue: { light: 'rgba(0, 243, 255, 0.12)', ray: 'rgba(0, 243, 255, 0.45)', core: '#00f3ff', val: 1.335 }
+    };
+
+    let activePreset = 'sandbox'; // sandbox, dual, dna, sorter
+    let laserFoci = [new Vec2(400, 250)];
+    let activeFocusIdx = 0;
+    let beads = [];
+    let flowParticles = [];
+    let dnaAnchor = new Vec2(150, 250);
+    let isDraggingFocus = false;
+    let dragOffset = null;
+    let graphOffsetHist = [];
+
+    // Canvas contexts
+    const simCanvas = document.getElementById('simCanvas');
+    const simCtx = simCanvas.getContext('2d');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const graphCtx = graphCanvas.getContext('2d');
+
+    // --- Web Audio Synthesizer ---
+    let audioCtx = null;
+    let humOsc = null;
+    let humFilter = null;
+    let humGain = null;
+    let audioEnabled = false;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        humOsc = audioCtx.createOscillator();
+        humOsc.type = 'triangle';
+        humOsc.frequency.setValueAtTime(65, audioCtx.currentTime); // Low fundamental frequency
+        
+        humFilter = audioCtx.createBiquadFilter();
+        humFilter.type = 'bandpass';
+        humFilter.Q.setValueAtTime(12, audioCtx.currentTime);
+        humFilter.frequency.setValueAtTime(130, audioCtx.currentTime);
+        
+        humGain = audioCtx.createGain();
+        humGain.gain.setValueAtTime(0, audioCtx.currentTime); // start muted
+        
+        humOsc.connect(humFilter);
+        humFilter.connect(humGain);
+        humGain.connect(audioCtx.destination);
+        
+        humOsc.start();
+      } catch (e) {
+        console.error('web audio initialization failed:', e);
+      }
+    }
+
+    function updateAudioSynth(displacement, stiffness, active) {
+      if (!audioEnabled || !audioCtx) return;
+      
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      if (!active || !config.laserOn) {
+        humGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.08);
+        return;
+      }
+      
+      // Map stiffness to fundamental hum frequency
+      const targetBase = 50 + stiffness * 300;
+      humOsc.frequency.setTargetAtTime(targetBase, audioCtx.currentTime, 0.1);
+      
+      // Map displacement to bandpass resonance sweeps
+      const filterTarget = targetBase * 2 + displacement * 8;
+      humFilter.frequency.setTargetAtTime(Math.max(40, Math.min(2500, filterTarget)), audioCtx.currentTime, 0.05);
+      
+      // Volume scales with displacement tension
+      const targetGain = Math.min(0.25, displacement * 0.015);
+      humGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.08);
+    }
+
+    function triggerClickSound(freq = 600, duration = 0.04) {
+      if (!audioEnabled || !audioCtx) return;
+      try {
+        const clickOsc = audioCtx.createOscillator();
+        const clickGain = audioCtx.createGain();
+        clickOsc.type = 'sine';
+        clickOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        clickOsc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + duration);
+        
+        clickGain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        clickGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+        
+        clickOsc.connect(clickGain);
+        clickGain.connect(audioCtx.destination);
+        clickOsc.start();
+        clickOsc.stop(audioCtx.currentTime + duration + 0.01);
+      } catch(e){}
+    }
+
+    document.getElementById('btn-audio').addEventListener('click', () => {
+      audioEnabled = !audioEnabled;
+      const btn = document.getElementById('btn-audio');
+      if (audioEnabled) {
+        initAudio();
+        btn.classList.add('active');
+        btn.innerText = "AUDIO PROBE: ACTIVE";
+        triggerClickSound(400, 0.1);
+      } else {
+        btn.classList.remove('active');
+        btn.innerText = "ENABLE AUDIO PROBE";
+        if (humGain) humGain.gain.setValueAtTime(0, audioCtx.currentTime);
+      }
+    });
+
+    // --- Entity Classes ---
+    class Bead {
+      constructor(x, y, radius, type = 'polystyrene') {
+        this.pos = new Vec2(x, y);
+        this.vel = new Vec2(0, 0);
+        this.radius = radius;
+        this.type = type;
+        this.force = new Vec2(0, 0);
+        this.lastFopt = new Vec2(0, 0);
+        this.lastFbrown = new Vec2(0, 0);
+        this.escaped = false;
+        
+        // Material specs
+        if (type === 'polystyrene') {
+          this.n = 1.57; // High refractive index
+          this.color = 'rgba(0, 243, 255, 0.7)';
+          this.label = 'Polystyrene';
+        } else if (type === 'glass') {
+          this.n = 1.90; // Very high refractive index
+          this.color = 'rgba(255, 170, 0, 0.7)';
+          this.label = 'High-index Glass';
+        } else if (type === 'bubble') {
+          this.n = 1.0; // Less than water (1.33) -> Repelled!
+          this.color = 'rgba(255, 255, 255, 0.35)';
+          this.label = 'Air Bubble';
+        } else if (type === 'cell') {
+          this.n = 1.36; // low contrast -> weak trap
+          this.color = 'rgba(255, 0, 127, 0.6)';
+          this.label = 'Biological Cell';
+        } else if (type === 'metal') {
+          this.n = 3.0; // simulated reflection
+          this.color = 'rgba(200, 200, 220, 0.9)';
+          this.label = 'Gold Nanoparticle';
+        }
+      }
+
+      update() {
+        // Drag force: F_drag = -6 * pi * eta * R * (v - v_fluid)
+        // Brownian noise force: F_brown = sqrt(12 * pi * eta * R * kB * T / dt) * GaussianRandom
+        // We calculate overdamped dynamics:
+        // v = (F_optical + F_dna + F_brownian) / (6 * pi * eta * R) + v_fluid
+        
+        const eta = config.viscosity * 0.05; // scaled parameter
+        const gamma = 6 * Math.PI * eta * this.radius * 0.02; // drag coefficient
+        
+        // Fluid flow
+        const flowVel = new Vec2(config.flowSpeed * 1.5, 0);
+        
+        // Brownian force calculation
+        const kBT = config.temp * 0.008; // scale factor
+        const brownMagnitude = Math.sqrt(2 * gamma * kBT / config.dt) * 0.4;
+        const randX = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; // Gaussian approx
+        const randY = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+        const fBrown = new Vec2(randX * brownMagnitude, randY * brownMagnitude);
+        this.lastFbrown = fBrown;
+        
+        // DNA spring force
+        let fDNA = new Vec2(0, 0);
+        if (activePreset === 'dna' && this.type === 'polystyrene') {
+          const extensionVec = this.pos.sub(dnaAnchor);
+          const ext = extensionVec.mag() - this.radius;
+          const L0 = 260.0; // contour length in pixels
+          
+          if (ext > 0) {
+            // Worm-like Chain (WLC) formula approximation
+            const normExt = Math.min(0.96, ext / L0);
+            const wlcForceVal = 0.06 * (0.25 / Math.pow(1 - normExt, 2) - 0.25 + normExt);
+            fDNA = extensionVec.normalize().mult(-wlcForceVal);
+          }
+        }
+        
+        // Accumulate forces
+        const totalF = this.force.add(fBrown).add(fDNA);
+        this.lastFopt = new Vec2(this.force.x, this.force.y);
+        
+        // Calculate step (overdamped)
+        const motionVel = totalF.mult(1.0 / gamma);
+        this.vel = motionVel.add(flowVel);
+        
+        this.pos = this.pos.add(this.vel.mult(config.dt));
+        
+        // Reset optical force accumulator for next frame
+        this.force = new Vec2(0, 0);
+        
+        // Constraints
+        if (this.pos.x < this.radius) { this.pos.x = this.radius; this.vel.x *= -0.2; }
+        if (this.pos.x > 800 - this.radius) { 
+          if (activePreset === 'sorter') {
+            // Respawn on left in sorter mode
+            this.pos.x = this.radius + Math.random() * 20;
+            this.pos.y = 80 + Math.random() * 340;
+            this.vel = new Vec2(0, 0);
+          } else {
+            this.pos.x = 800 - this.radius; 
+            this.vel.x *= -0.2;
+          }
+        }
+        if (this.pos.y < 50 + this.radius) { this.pos.y = 50 + this.radius; this.vel.y *= -0.2; }
+        if (this.pos.y > 500 - this.radius) { this.pos.y = 500 - this.radius; this.vel.y *= -0.2; }
+      }
+
+      draw(ctx) {
+        // Draw glow backplate
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0; // reset
+        
+        // Highlight border
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Draw inner shine (lens effect)
+        if (this.type !== 'bubble') {
+          ctx.beginPath();
+          ctx.arc(this.pos.x - this.radius * 0.3, this.pos.y - this.radius * 0.3, this.radius * 0.25, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.fill();
+        } else {
+          // Bubble border highlight
+          ctx.beginPath();
+          ctx.arc(this.pos.x, this.pos.y, this.radius * 0.85, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+          ctx.stroke();
+        }
+        
+        // Text label
+        ctx.font = '9px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.label, this.pos.x, this.pos.y + this.radius + 12);
+      }
+    }
+
+    // Particle flow representation
+    class FlowParticle {
+      constructor() {
+        this.pos = new Vec2(Math.random() * 800, 50 + Math.random() * 450);
+        this.speed = 1.0 + Math.random() * 1.5;
+      }
+      update() {
+        this.pos.x += config.flowSpeed * this.speed * 1.5;
+        if (this.pos.x > 800) {
+          this.pos.x = 0;
+          this.pos.y = 50 + Math.random() * 450;
+        }
+        if (this.pos.x < 0) {
+          this.pos.x = 800;
+          this.pos.y = 50 + Math.random() * 450;
+        }
+      }
+      draw(ctx) {
+        ctx.fillStyle = 'rgba(100, 255, 150, 0.08)';
+        ctx.fillRect(this.pos.x, this.pos.y, 2, 2);
+      }
+    }
+
+    // Populate flow background
+    for (let i = 0; i < 40; i++) {
+      flowParticles.push(new FlowParticle());
+    }
+
+    // --- Presets Initialization ---
+    function loadPreset(presetName) {
+      activePreset = presetName;
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+      
+      beads = [];
+      laserFoci = [];
+      activeFocusIdx = 0;
+      
+      const beamWavelengthSelect = document.getElementById('select-wavelength');
+      
+      if (presetName === 'sandbox') {
+        document.getElementById('preset-sandbox').classList.add('active');
+        laserFoci = [new Vec2(400, 250)];
+        beads.push(new Bead(390, 290, 30, 'polystyrene'));
+        
+        // reset sliders
+        document.getElementById('slide-flow').value = 0.0;
+        config.flowSpeed = 0.0;
+        document.getElementById('val-flow').innerText = "0.0 μm/s";
+      } 
+      else if (presetName === 'dual') {
+        document.getElementById('preset-dual').classList.add('active');
+        laserFoci = [new Vec2(300, 250), new Vec2(500, 250)];
+        beads.push(new Bead(280, 280, 25, 'polystyrene'));
+        beads.push(new Bead(510, 270, 25, 'glass'));
+        
+        document.getElementById('slide-flow').value = 0.0;
+        config.flowSpeed = 0.0;
+        document.getElementById('val-flow').innerText = "0.0 μm/s";
+      } 
+      else if (presetName === 'dna') {
+        document.getElementById('preset-dna').classList.add('active');
+        laserFoci = [new Vec2(450, 250)];
+        // Bead anchored via dna to dnaAnchor(150, 250)
+        beads.push(new Bead(430, 250, 35, 'polystyrene'));
+        
+        document.getElementById('slide-flow').value = 0.0;
+        config.flowSpeed = 0.0;
+        document.getElementById('val-flow').innerText = "0.0 μm/s";
+      } 
+      else if (presetName === 'sorter') {
+        document.getElementById('preset-sorter').classList.add('active');
+        laserFoci = [new Vec2(400, 250)];
+        
+        // Add diverse particle classes
+        beads.push(new Bead(100, 150, 20, 'polystyrene'));
+        beads.push(new Bead(120, 230, 20, 'glass'));
+        beads.push(new Bead(140, 310, 24, 'cell'));
+        beads.push(new Bead(80, 380, 18, 'bubble'));
+        
+        // force flow
+        document.getElementById('slide-flow').value = 1.5;
+        config.flowSpeed = 1.5;
+        document.getElementById('val-flow').innerText = "1.5 μm/s";
+      }
+      
+      graphOffsetHist = [];
+      triggerClickSound(600, 0.06);
+    }
+
+    // --- Snell's Law & Ray Tracing Engine ---
+    
+    // Vector refraction
+    function refract(rayDir, surfaceNormal, n1, n2) {
+      const eta = n1 / n2;
+      const dot = rayDir.dot(surfaceNormal);
+      const entering = dot < 0;
+      const norm = entering ? surfaceNormal : surfaceNormal.mult(-1);
+      const cos1 = -rayDir.dot(norm);
+      
+      const sin2_sq = eta * eta * (1 - cos1 * cos1);
+      if (sin2_sq > 1.0) {
+        // Total Internal Reflection (TIR)
+        const reflDir = rayDir.sub(norm.mult(2 * rayDir.dot(norm)));
+        return { refracted: null, reflected: reflDir };
+      }
+      
+      const cos2 = Math.sqrt(1.0 - sin2_sq);
+      const refracted = rayDir.mult(eta).add(norm.mult(eta * cos1 - cos2));
+      const reflected = rayDir.sub(norm.mult(2 * rayDir.dot(norm)));
+      return { refracted, reflected, cos1, cos2 };
+    }
+
+    // Individual ray tracing through a target bead
+    function traceRayThroughBead(rayOrigin, rayDir, bead, nm, np) {
+      const v = rayOrigin.sub(bead.pos);
+      const b = rayDir.dot(v);
+      const c = v.magSq() - bead.radius * bead.radius;
+      const disc = b * b - c;
+      
+      if (disc < 0) return { intersected: false };
+      
+      const t1 = -b - Math.sqrt(disc);
+      if (t1 <= 0.001) return { intersected: false }; // ray starting past intersection
+      
+      const entryPos = rayOrigin.add(rayDir.mult(t1));
+      const entryNormal = entryPos.sub(bead.pos).normalize();
+      
+      // Metal nanoparticle acts like mirror (absorptive/reflective scattering)
+      if (bead.type === 'metal') {
+        const reflDir = rayDir.sub(entryNormal.mult(2 * rayDir.dot(entryNormal)));
+        return {
+          intersected: true,
+          entryPos,
+          exitPos: null,
+          refractedDir: null,
+          finalDir: reflDir,
+          path: [rayOrigin, entryPos, entryPos.add(reflDir.mult(25))]
+        };
+      }
+      
+      // Refraction at boundary entry
+      const step1 = refract(rayDir, entryNormal, nm, np);
+      if (!step1.refracted) {
+        // Entry TIR (can occur when np < nm, e.g. air bubble at steep angle)
+        const reflDir = step1.reflected;
+        return {
+          intersected: true,
+          entryPos,
+          exitPos: null,
+          refractedDir: null,
+          finalDir: reflDir,
+          path: [rayOrigin, entryPos, entryPos.add(reflDir.mult(500))]
+        };
+      }
+      
+      const refractedDir = step1.refracted;
+      const cos2 = step1.cos2;
+      
+      // Length of path inside the circle: d = 2 * R * cos(theta_2)
+      const distInside = 2 * bead.radius * cos2;
+      const exitPos = entryPos.add(refractedDir.mult(distInside));
+      const exitNormal = exitPos.sub(bead.pos).normalize();
+      
+      // Refraction at exit boundary
+      const step2 = refract(refractedDir, exitNormal, np, nm);
+      let finalDir = null;
+      let path = [rayOrigin, entryPos, exitPos];
+      
+      if (!step2.refracted) {
+        // Internal TIR (bounces once, then exits)
+        const internalRefl = step2.reflected;
+        const normRefl = exitNormal.mult(-1);
+        const distInside2 = 2 * bead.radius * Math.max(0.1, internalRefl.dot(normRefl));
+        const exitPos2 = exitPos.add(internalRefl.mult(distInside2));
+        const exitNormal2 = exitPos2.sub(bead.pos).normalize();
+        
+        const step3 = refract(internalRefl, exitNormal2, np, nm);
+        if (step3.refracted) {
+          finalDir = step3.refracted;
+          path.push(exitPos2);
+          path.push(exitPos2.add(finalDir.mult(500)));
+        } else {
+          finalDir = internalRefl;
+          path.push(exitPos2);
+        }
+      } else {
+        finalDir = step2.refracted;
+        path.push(exitPos.add(finalDir.mult(500)));
+      }
+      
+      return {
+        intersected: true,
+        entryPos,
+        exitPos: exitPos,
+        refractedDir: refractedDir,
+        finalDir: finalDir,
+        path: path
+      };
+    }
+
+    // Core scene ray tracer
+    function traceLaserRays(simCtx, focus, power, na, beadsArray, nm, drawRays) {
+      const numRays = 27;
+      const lensY = 50;
+      const lensWidth = 200 * (na / 0.9); // scale aperture based on NA
+      
+      const wavelengthColor = config.wavelength;
+      const rayStyle = colors[wavelengthColor].ray;
+      const coreColor = colors[wavelengthColor].core;
+      
+      // Adjust water index slightly based on dispersion model (aesthetic)
+      const adjustedNm = colors[wavelengthColor].val;
+      
+      for (let i = 0; i < numRays; i++) {
+        const offsetPct = (i - (numRays - 1) / 2) / ((numRays - 1) / 2); // range [-1, 1]
+        const startX = focus.x + offsetPct * (lensWidth / 2);
+        const rayStart = new Vec2(startX, lensY);
+        
+        // Initial convergence ray direction
+        const initialDir = focus.sub(rayStart).normalize();
+        
+        // Power distribution profiles a Gaussian waist cross-section
+        const relativePower = power * Math.exp(-2.0 * offsetPct * offsetPct);
+        
+        let currOrigin = rayStart;
+        let currDir = initialDir;
+        let currPower = relativePower;
+        
+        let path = [currOrigin];
+        let depth = 0;
+        const maxSceneDepth = 3;
+        let hitBeads = new Set();
+        
+        while (depth < maxSceneDepth && config.laserOn) {
+          let nearestBead = null;
+          let minT = Infinity;
+          
+          for (let bead of beadsArray) {
+            if (hitBeads.has(bead)) continue;
+            
+            const v = currOrigin.sub(bead.pos);
+            const b = currDir.dot(v);
+            const c = v.magSq() - bead.radius * bead.radius;
+            const disc = b * b - c;
+            
+            if (disc >= 0) {
+              const t = -b - Math.sqrt(disc);
+              if (t > 0.01 && t < minT) {
+                minT = t;
+                nearestBead = bead;
+              }
+            }
+          }
+          
+          if (nearestBead) {
+            hitBeads.add(nearestBead);
+            const res = traceRayThroughBead(currOrigin, currDir, nearestBead, adjustedNm, nearestBead.n);
+            
+            if (res.intersected) {
+              // FORCE CALCULATION:
+              // F = (n_medium * Power / c) * (dir_in - dir_out)
+              // We scale this to pixel forces
+              const opticalForce = currDir.sub(res.finalDir).mult(currPower * adjustedNm * 0.15);
+              nearestBead.force = nearestBead.force.add(opticalForce);
+              
+              currOrigin = res.exitPos || res.entryPos;
+              currDir = res.finalDir;
+              
+              // Ray attenuation inside particle
+              currPower *= (nearestBead.type === 'cell' ? 0.94 : 0.88);
+              
+              // Append points
+              if (res.path && res.path.length > 1) {
+                path = path.concat(res.path.slice(1, -1));
+              }
+              depth++;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
+        }
+        
+        // Cap trailing ray length
+        path.push(currOrigin.add(currDir.mult(500)));
+        
+        // Render ray segments
+        if (drawRays && config.laserOn) {
+          simCtx.beginPath();
+          simCtx.moveTo(path[0].x, path[0].y);
+          for (let k = 1; k < path.length; k++) {
+            simCtx.lineTo(path[k].x, path[k].y);
+          }
+          simCtx.strokeStyle = rayStyle;
+          simCtx.lineWidth = 1 + currPower * 0.12;
+          simCtx.stroke();
+        }
+      }
+    }
+
+    // --- Physics Simulation Loop ---
+    function updatePhysics() {
+      // Update background particles
+      flowParticles.forEach(p => p.update());
+      
+      // Update beads
+      beads.forEach(bead => {
+        bead.update();
+      });
+      
+      // Tracing and force calculations from laser beams
+      laserFoci.forEach(focus => {
+        traceLaserRays(simCtx, focus, config.laserPower, config.na, beads, config.nm, false);
+      });
+      
+      // Collate statistics for live dashboard
+      if (beads.length > 0) {
+        const tracked = beads[0];
+        const focus = laserFoci[activeFocusIdx] || new Vec2(400, 250);
+        const disp = tracked.pos.sub(focus);
+        
+        // Approximate scaling to real-world dimensions (1 px = 0.05 um, 1 force unit = 0.1 pN)
+        const umDispX = disp.x * 0.04;
+        const umDispY = disp.y * 0.04;
+        const forceMag = tracked.lastFopt.mag() * 0.25;
+        const brownMag = tracked.lastFbrown.mag() * 0.25;
+        
+        // Calculate dynamic stiffness (hookean regime: F = -k * x)
+        let kx = 0;
+        let ky = 0;
+        if (Math.abs(disp.x) > 0.5 && config.laserOn) {
+          kx = Math.max(0, -tracked.lastFopt.x / disp.x) * 6.25;
+        }
+        if (Math.abs(disp.y) > 0.5 && config.laserOn) {
+          ky = Math.max(0, -tracked.lastFopt.y / disp.y) * 6.25;
+        }
+        
+        document.getElementById('tel-dx').innerText = `${umDispX.toFixed(2)} μm`;
+        document.getElementById('tel-dy').innerText = `${umDispY.toFixed(2)} μm`;
+        document.getElementById('tel-fopt').innerText = `${forceMag.toFixed(2)} pN`;
+        document.getElementById('tel-fbrown').innerText = `${brownMag.toFixed(2)} pN`;
+        document.getElementById('tel-kx').innerText = `${kx.toFixed(3)} pN/μm`;
+        document.getElementById('tel-ky').innerText = `${ky.toFixed(3)} pN/μm`;
+        
+        let dnaForceStr = "0.00 pN";
+        if (activePreset === 'dna') {
+          const extensionVec = tracked.pos.sub(dnaAnchor);
+          const ext = extensionVec.mag() - tracked.radius;
+          if (ext > 0) {
+            const L0 = 260.0;
+            const normExt = Math.min(0.96, ext / L0);
+            const wlcForceVal = 0.06 * (0.25 / Math.pow(1 - normExt, 2) - 0.25 + normExt);
+            dnaForceStr = `${(wlcForceVal * 2.5).toFixed(2)} pN`;
+          }
+        }
+        document.getElementById('tel-dna').innerText = dnaForceStr;
+        
+        // Record telemetry data history for plotting
+        if (config.laserOn && !isDraggingFocus && activePreset !== 'sorter') {
+          graphOffsetHist.push({ dx: disp.x, fx: tracked.lastFopt.x });
+          if (graphOffsetHist.length > 150) graphOffsetHist.shift();
+        }
+        
+        // Update audio synthesizer parameters
+        updateAudioSynth(disp.mag(), kx, true);
+      } else {
+        updateAudioSynth(0, 0, false);
+      }
+    }
+
+    // --- Rendering loop ---
+    function draw() {
+      // Clear Sim Canvas
+      simCtx.fillStyle = '#020205';
+      simCtx.fillRect(0, 0, 800, 500);
+      
+      // Draw Grid
+      simCtx.strokeStyle = 'rgba(0, 255, 127, 0.03)';
+      simCtx.lineWidth = 1;
+      for (let x = 0; x < 800; x += 40) {
+        simCtx.beginPath(); simCtx.moveTo(x, 50); simCtx.lineTo(x, 500); simCtx.stroke();
+      }
+      for (let y = 50; y < 500; y += 40) {
+        simCtx.beginPath(); simCtx.moveTo(0, y); simCtx.lineTo(800, y); simCtx.stroke();
+      }
+      
+      // Draw microfluidic channel borders
+      simCtx.strokeStyle = 'rgba(0, 255, 127, 0.15)';
+      simCtx.lineWidth = 2;
+      simCtx.beginPath();
+      simCtx.moveTo(0, 50);
+      simCtx.lineTo(800, 50);
+      simCtx.moveTo(0, 498);
+      simCtx.lineTo(800, 498);
+      simCtx.stroke();
+      
+      if (activePreset === 'sorter') {
+        // Draw sort barrier markers
+        simCtx.strokeStyle = 'rgba(0, 243, 255, 0.1)';
+        simCtx.lineWidth = 1;
+        simCtx.setLineDash([5, 5]);
+        simCtx.beginPath();
+        simCtx.moveTo(600, 50); simCtx.lineTo(600, 500);
+        simCtx.moveTo(600, 200); simCtx.lineTo(800, 200);
+        simCtx.moveTo(600, 350); simCtx.lineTo(800, 350);
+        simCtx.stroke();
+        simCtx.setLineDash([]);
+        
+        simCtx.font = '10px monospace';
+        simCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        simCtx.textAlign = 'left';
+        simCtx.fillText("OUTLET A (bubbles / cells)", 610, 120);
+        simCtx.fillText("OUTLET B (glass beads)", 610, 280);
+        simCtx.fillText("OUTLET C (polystyrene)", 610, 430);
+      }
+      
+      // Render flow background particles
+      if (Math.abs(config.flowSpeed) > 0.05) {
+        flowParticles.forEach(p => p.draw(simCtx));
+      }
+      
+      // Draw Laser waist backgrounds (glowing gradient cones)
+      if (config.laserOn) {
+        laserFoci.forEach(focus => {
+          const wavelengthColor = config.wavelength;
+          const beamColor = colors[wavelengthColor].light;
+          const coreColor = colors[wavelengthColor].core;
+          
+          const lensW = 200 * (config.na / 0.9);
+          
+          // Draw cone from aperture at top y=50 to focus
+          simCtx.beginPath();
+          simCtx.moveTo(focus.x - lensW/2, 50);
+          simCtx.lineTo(focus.x + lensW/2, 50);
+          simCtx.lineTo(focus.x + 2, focus.y);
+          simCtx.lineTo(focus.x - 2, focus.y);
+          simCtx.closePath();
+          
+          const grad = simCtx.createLinearGradient(focus.x, 50, focus.x, focus.y);
+          grad.addColorStop(0, beamColor);
+          grad.addColorStop(1, 'rgba(0, 255, 127, 0.25)');
+          simCtx.fillStyle = grad;
+          simCtx.fill();
+          
+          // Draw diverging cone below focus
+          simCtx.beginPath();
+          simCtx.moveTo(focus.x - 2, focus.y);
+          simCtx.lineTo(focus.x + 2, focus.y);
+          simCtx.lineTo(focus.x + lensW, 500);
+          simCtx.lineTo(focus.x - lensW, 500);
+          simCtx.closePath();
+          
+          const grad2 = simCtx.createLinearGradient(focus.x, focus.y, focus.x, 500);
+          grad2.addColorStop(0, 'rgba(0, 255, 127, 0.25)');
+          grad2.addColorStop(1, 'rgba(0, 255, 127, 0.0)');
+          simCtx.fillStyle = grad2;
+          simCtx.fill();
+        });
+      }
+      
+      // Render DNA tether
+      if (activePreset === 'dna' && beads.length > 0) {
+        // Draw Glass surface anchor
+        simCtx.fillStyle = '#0f172a';
+        simCtx.fillRect(0, 50, 100, 450);
+        simCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+        simCtx.lineWidth = 2;
+        simCtx.beginPath();
+        simCtx.moveTo(100, 50);
+        simCtx.lineTo(100, 500);
+        simCtx.stroke();
+        
+        simCtx.font = '10px monospace';
+        simCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        simCtx.textAlign = 'center';
+        simCtx.fillText("SURFACE ANCHOR", 50, 250);
+        
+        // Draw DNA strand connecting anchor to bead
+        const bead = beads[0];
+        const connectionPoint = new Vec2(bead.pos.x - bead.radius, bead.pos.y);
+        drawDNA(simCtx, dnaAnchor, connectionPoint);
+        
+        // Draw tether anchor peg
+        simCtx.beginPath();
+        simCtx.arc(dnaAnchor.x, dnaAnchor.y, 4, 0, Math.PI * 2);
+        simCtx.fillStyle = '#00ff7f';
+        simCtx.fill();
+      }
+      
+      // Trace and render light rays
+      laserFoci.forEach(focus => {
+        traceLaserRays(simCtx, focus, config.laserPower, config.na, beads, config.nm, true);
+      });
+      
+      // Draw beads
+      beads.forEach(bead => {
+        bead.draw(simCtx);
+        
+        // Render force arrows
+        if (bead.lastFopt.mag() > 0.05 && config.laserOn) {
+          const arrowScale = 12.0;
+          const arrowEnd = bead.pos.add(bead.lastFopt.mult(arrowScale));
+          
+          simCtx.beginPath();
+          simCtx.moveTo(bead.pos.x, bead.pos.y);
+          simCtx.lineTo(arrowEnd.x, arrowEnd.y);
+          simCtx.strokeStyle = '#ffff00';
+          simCtx.lineWidth = 2.5;
+          simCtx.stroke();
+          
+          // Arrowhead
+          const dir = arrowEnd.sub(bead.pos).normalize();
+          const head1 = arrowEnd.sub(dir.mult(6)).add(new Vec2(-dir.y, dir.x).mult(4));
+          const head2 = arrowEnd.sub(dir.mult(6)).sub(new Vec2(-dir.y, dir.x).mult(4));
+          
+          simCtx.beginPath();
+          simCtx.moveTo(arrowEnd.x, arrowEnd.y);
+          simCtx.lineTo(head1.x, head1.y);
+          simCtx.lineTo(head2.x, head2.y);
+          simCtx.closePath();
+          simCtx.fillStyle = '#ffff00';
+          simCtx.fill();
+        }
+      });
+      
+      // Draw lens silhouette at the top boundary
+      simCtx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+      simCtx.fillRect(0, 0, 800, 50);
+      simCtx.strokeStyle = 'rgba(0, 255, 127, 0.3)';
+      simCtx.lineWidth = 1;
+      simCtx.beginPath();
+      simCtx.moveTo(0, 50);
+      simCtx.lineTo(800, 50);
+      simCtx.stroke();
+      
+      // Draw focus points (tweezers nodes)
+      if (config.laserOn) {
+        laserFoci.forEach((focus, idx) => {
+          simCtx.beginPath();
+          simCtx.arc(focus.x, focus.y, 6, 0, Math.PI * 2);
+          simCtx.strokeStyle = idx === activeFocusIdx ? '#ff007f' : '#00f3ff';
+          simCtx.lineWidth = 2;
+          simCtx.stroke();
+          
+          simCtx.beginPath();
+          simCtx.arc(focus.x, focus.y, 2, 0, Math.PI * 2);
+          simCtx.fillStyle = '#ffffff';
+          simCtx.fill();
+          
+          // Reticle crosshair ticks
+          simCtx.beginPath();
+          simCtx.moveTo(focus.x - 12, focus.y); simCtx.lineTo(focus.x - 7, focus.y);
+          simCtx.moveTo(focus.x + 7, focus.y); simCtx.lineTo(focus.x + 12, focus.y);
+          simCtx.moveTo(focus.x, focus.y - 12); simCtx.lineTo(focus.x, focus.y - 7);
+          simCtx.moveTo(focus.x, focus.y + 7); simCtx.lineTo(focus.x, focus.y + 12);
+          simCtx.strokeStyle = idx === activeFocusIdx ? 'rgba(255, 0, 127, 0.6)' : 'rgba(0, 243, 255, 0.6)';
+          simCtx.lineWidth = 1.5;
+          simCtx.stroke();
+        });
+      }
+      
+      // Render graph telemetry
+      drawGraphs();
+    }
+
+    // Double Helix DNA drawing helper
+    function drawDNA(ctx, start, end, segments = 24) {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const ux = dx / len;
+      const uy = dy / len;
+      const vx = -uy;
+      const vy = ux;
+      
+      // Strand 1
+      ctx.beginPath();
+      ctx.strokeStyle = '#00ff7f';
+      ctx.lineWidth = 2.0;
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const px = start.x + dx * t;
+        const py = start.y + dy * t;
+        const phase = t * Math.PI * 9;
+        const offset = Math.sin(phase) * 9 * (1.0 - 0.2 * t);
+        const sx = px + vx * offset;
+        const sy = py + vy * offset;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+      
+      // Strand 2
+      ctx.beginPath();
+      ctx.strokeStyle = '#00f3ff';
+      ctx.lineWidth = 2.0;
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const px = start.x + dx * t;
+        const py = start.y + dy * t;
+        const phase = t * Math.PI * 9 + Math.PI;
+        const offset = Math.sin(phase) * 9 * (1.0 - 0.2 * t);
+        const sx = px + vx * offset;
+        const sy = py + vy * offset;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+      
+      // Base pairs (rungs)
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.25)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < segments; i++) {
+        const t = i / segments;
+        const px = start.x + dx * t;
+        const py = start.y + dy * t;
+        const phase = t * Math.PI * 9;
+        const offset1 = Math.sin(phase) * 9 * (1.0 - 0.2 * t);
+        const offset2 = Math.sin(phase + Math.PI) * 9 * (1.0 - 0.2 * t);
+        ctx.beginPath();
+        ctx.moveTo(px + vx * offset1, py + vy * offset1);
+        ctx.lineTo(px + vx * offset2, py + vy * offset2);
+        ctx.stroke();
+      }
+    }
+
+    // --- Graphs Rendering ---
+    function drawGraphs() {
+      graphCtx.fillStyle = '#060713';
+      graphCtx.fillRect(0, 0, 450, 180);
+      
+      // Grid lines
+      graphCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      graphCtx.lineWidth = 1;
+      graphCtx.beginPath();
+      graphCtx.moveTo(225, 0); graphCtx.lineTo(225, 180);
+      graphCtx.moveTo(0, 90); graphCtx.lineTo(450, 90);
+      graphCtx.stroke();
+      
+      // Labels
+      graphCtx.font = '10px "Share Tech Mono"';
+      graphCtx.fillStyle = '#64748b';
+      graphCtx.textAlign = 'right';
+      graphCtx.fillText("+F (optical restoring force)", 440, 20);
+      graphCtx.fillText("-F", 440, 170);
+      graphCtx.textAlign = 'left';
+      graphCtx.fillText("-Δx (left)", 10, 105);
+      graphCtx.textAlign = 'right';
+      graphCtx.fillText("+Δx (right)", 440, 105);
+      
+      if (activePreset === 'sorter' || beads.length === 0) {
+        graphCtx.textAlign = 'center';
+        graphCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        graphCtx.font = '13px monospace';
+        graphCtx.fillText("Telemetry tracking disabled in microfluidic sorter", 225, 95);
+        return;
+      }
+      
+      const trackedBead = beads[0];
+      const focus = laserFoci[activeFocusIdx] || new Vec2(400, 250);
+      const currentDisp = trackedBead.pos.sub(focus);
+      
+      // Draw Optical Force Profile Curve F(x) = -c * x * exp(-x^2 / w^2)
+      // Representing the Gaussian beam transverse force profile
+      graphCtx.beginPath();
+      graphCtx.strokeStyle = 'rgba(0, 255, 127, 0.8)';
+      graphCtx.lineWidth = 2;
+      
+      const scaleX = 2.0; // scaling variables for display fitting
+      const scaleY = 3.5;
+      
+      // Calculate curve points
+      for (let graphX = -200; graphX <= 200; graphX += 2) {
+        const physicalX = graphX / scaleX;
+        // Transverse force formula: F = -k_0 * x * exp(-x^2 / w^2)
+        const stiffness = 0.14 * (config.laserPower / 5.0) * (config.na / 0.9);
+        const w = 50.0; // beam waist size
+        const fx = -stiffness * physicalX * Math.exp(- (physicalX * physicalX) / (w * w));
+        
+        const canvasX = 225 + graphX;
+        const canvasY = 90 - (fx * scaleY * 20);
+        
+        if (graphX === -200) graphCtx.moveTo(canvasX, canvasY);
+        else graphCtx.lineTo(canvasX, canvasY);
+      }
+      graphCtx.stroke();
+      
+      // Draw Potential energy well profile (inverted gaussian shape)
+      graphCtx.beginPath();
+      graphCtx.strokeStyle = 'rgba(255, 0, 127, 0.4)';
+      graphCtx.setLineDash([3, 3]);
+      for (let graphX = -200; graphX <= 200; graphX += 2) {
+        const physicalX = graphX / scaleX;
+        const depth = 3.5 * (config.laserPower / 5.0) * (config.na / 0.9);
+        const w = 50.0;
+        const potential = -depth * Math.exp(- (physicalX * physicalX) / (w * w));
+        
+        const canvasX = 225 + graphX;
+        const canvasY = 160 + (potential * 15); // offset down
+        
+        if (graphX === -200) graphCtx.moveTo(canvasX, canvasY);
+        else graphCtx.lineTo(canvasX, canvasY);
+      }
+      graphCtx.stroke();
+      graphCtx.setLineDash([]);
+      
+      // Plot historical telemetry scatter points
+      graphCtx.fillStyle = 'rgba(0, 243, 255, 0.35)';
+      graphOffsetHist.forEach(pt => {
+        const cx = 225 + pt.dx * scaleX;
+        const cy = 90 - (pt.fx * scaleY * 20);
+        if (cx >= 25 && cx <= 425 && cy >= 5 && cy <= 175) {
+          graphCtx.fillRect(cx - 1, cy - 1, 2.5, 2.5);
+        }
+      });
+      
+      // Draw the active bead's position indicator in the Potential Well
+      const bX = 225 + currentDisp.x * scaleX;
+      // Calculate active potential
+      const activeDepth = 3.5 * (config.laserPower / 5.0) * (config.na / 0.9);
+      const w = 50.0;
+      const activePotVal = -activeDepth * Math.exp(- (currentDisp.x * currentDisp.x) / (w * w));
+      const bY = 160 + (activePotVal * 15);
+      
+      if (bX >= 25 && bX <= 425) {
+        graphCtx.beginPath();
+        graphCtx.arc(bX, bY, 5, 0, Math.PI * 2);
+        graphCtx.fillStyle = '#ff007f';
+        graphCtx.fill();
+        graphCtx.strokeStyle = '#ffffff';
+        graphCtx.stroke();
+      }
+    }
+
+    // --- Interactive Mouse Handlers ---
+    function getMousePos(canvas, evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return new Vec2(
+        (evt.clientX - rect.left) * scaleX,
+        (evt.clientY - rect.top) * scaleY
+      );
+    }
+
+    simCanvas.addEventListener('mousedown', evt => {
+      const mPos = getMousePos(simCanvas, evt);
+      
+      // Check if clicked close to any laser focus point
+      let clickedFocus = -1;
+      laserFoci.forEach((focus, idx) => {
+        if (mPos.dist(focus) < 18) {
+          clickedFocus = idx;
+        }
+      });
+      
+      if (clickedFocus !== -1) {
+        activeFocusIdx = clickedFocus;
+        isDraggingFocus = true;
+        dragOffset = laserFoci[clickedFocus].sub(mPos);
+      } else {
+        // Drag particle directly if clicked close
+        let clickedBead = null;
+        beads.forEach(b => {
+          if (mPos.dist(b.pos) < b.radius) {
+            clickedBead = b;
+          }
+        });
+        
+        if (clickedBead) {
+          // Temporarily attach selected bead directly to mouse cursor (optical manipulation bypass)
+          isDraggingFocus = false;
+          window.draggedBead = clickedBead;
+        }
+      }
+    });
+
+    simCanvas.addEventListener('mousemove', evt => {
+      const mPos = getMousePos(simCanvas, evt);
+      
+      if (isDraggingFocus) {
+        laserFoci[activeFocusIdx] = mPos.add(dragOffset);
+        // boundary clamp
+        laserFoci[activeFocusIdx].x = Math.max(50, Math.min(750, laserFoci[activeFocusIdx].x));
+        laserFoci[activeFocusIdx].y = Math.max(80, Math.min(480, laserFoci[activeFocusIdx].y));
+        graphOffsetHist = []; // reset telemetry traces
+      } else if (window.draggedBead) {
+        window.draggedBead.pos = mPos;
+        window.draggedBead.vel = new Vec2(0, 0);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingFocus = false;
+      window.draggedBead = null;
+    });
+
+    // Touch event helpers
+    simCanvas.addEventListener('touchstart', evt => {
+      if (evt.touches.length > 0) {
+        const touch = evt.touches[0];
+        const dummyMouseEvt = new MouseEvent('mousedown', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        simCanvas.dispatchEvent(dummyMouseEvt);
+      }
+    }, {passive: true});
+
+    simCanvas.addEventListener('touchmove', evt => {
+      if (evt.touches.length > 0) {
+        const touch = evt.touches[0];
+        const dummyMouseEvt = new MouseEvent('mousemove', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        simCanvas.dispatchEvent(dummyMouseEvt);
+      }
+    }, {passive: true});
+
+    simCanvas.addEventListener('touchend', () => {
+      const dummyMouseEvt = new MouseEvent('mouseup', {});
+      window.dispatchEvent(dummyMouseEvt);
+    }, {passive: true});
+
+
+    // --- UI Control Hooks ---
+    document.getElementById('slide-power').addEventListener('input', e => {
+      config.laserPower = parseFloat(e.target.value);
+      document.getElementById('val-power').innerText = `${config.laserPower.toFixed(1)} W`;
+    });
+
+    document.getElementById('slide-na').addEventListener('input', e => {
+      config.na = parseFloat(e.target.value);
+      document.getElementById('val-na').innerText = config.na.toFixed(2);
+    });
+
+    document.getElementById('slide-temp').addEventListener('input', e => {
+      config.temp = parseFloat(e.target.value);
+      document.getElementById('val-temp').innerText = `${config.temp.toFixed(0)} °C`;
+    });
+
+    document.getElementById('slide-visc').addEventListener('input', e => {
+      config.viscosity = parseFloat(e.target.value);
+      document.getElementById('val-visc').innerText = `${config.viscosity.toFixed(2)} mPa·s`;
+    });
+
+    document.getElementById('slide-flow').addEventListener('input', e => {
+      config.flowSpeed = parseFloat(e.target.value);
+      document.getElementById('val-flow').innerText = `${(config.flowSpeed * 10).toFixed(1)} μm/s`;
+    });
+
+    document.getElementById('select-wavelength').addEventListener('change', e => {
+      config.wavelength = e.target.value;
+    });
+
+    document.getElementById('btn-laser-toggle').addEventListener('click', () => {
+      config.laserOn = !config.laserOn;
+      const stateLbl = document.getElementById('laser-state-lbl');
+      const btn = document.getElementById('btn-laser-toggle');
+      if (config.laserOn) {
+        stateLbl.innerText = "ON";
+        stateLbl.style.color = "var(--neon-green)";
+        btn.classList.remove('active');
+        triggerClickSound(700, 0.05);
+      } else {
+        stateLbl.innerText = "OFF";
+        stateLbl.style.color = "var(--neon-magenta)";
+        btn.classList.add('active');
+        triggerClickSound(300, 0.08);
+      }
+    });
+
+    // Preset handlers
+    document.getElementById('preset-sandbox').addEventListener('click', () => loadPreset('sandbox'));
+    document.getElementById('preset-dual').addEventListener('click', () => loadPreset('dual'));
+    document.getElementById('preset-dna').addEventListener('click', () => loadPreset('dna'));
+    document.getElementById('preset-sorter').addEventListener('click', () => loadPreset('sorter'));
+
+    // --- Main Simulation Loop ---
+    function tick() {
+      updatePhysics();
+      draw();
+      
+      // Periodically spawn beads in microfluidic sorter mode
+      if (activePreset === 'sorter' && beads.length < 7 && Math.random() < 0.008) {
+        const types = ['polystyrene', 'glass', 'cell', 'bubble'];
+        const rType = types[Math.floor(Math.random() * types.length)];
+        const rSize = 15 + Math.random() * 10;
+        const newB = new Bead(20, 80 + Math.random() * 340, rSize, rType);
+        beads.push(newB);
+      }
+      
+      requestAnimationFrame(tick);
+    }
+
+    // Initial load
+    loadPreset('sandbox');
+    tick();
+
+  </script>
+</body>
+</html>
