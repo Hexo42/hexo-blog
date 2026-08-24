@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>conformal-flight: joukowsky airfoil potential flow sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #020206;
+      --bg-panel: rgba(10, 11, 28, 0.93);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --border-glow: rgba(0, 243, 255, 0.5);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #00ff7f;
+      --neon-amber: #ffaa00;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(2, 2, 8, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--neon-cyan);
+      text-shadow: var(--glow-shadow);
+      letter-spacing: 2px;
+    }
+
+    .tagline {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+      font-size: 12px;
+      display: none;
+    }
+
+    @media (min-width: 600px) {
+      .tagline { display: inline; }
+    }
+
+    .back-link {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-magenta);
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px dashed var(--neon-magenta);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .back-link:hover {
+      background: rgba(255, 0, 127, 0.1);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+      text-shadow: 0 0 5px var(--neon-magenta);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
+    }
+
+    @media (min-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 360px 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: var(--neon-cyan);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .presets-grid button {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      color: var(--text-color);
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .presets-grid button:hover {
+      background: rgba(0, 243, 255, 0.2);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    .presets-grid button.active {
+      background: rgba(0, 243, 255, 0.25);
+      border-color: var(--neon-cyan);
+      color: #fff;
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .control-label span.val {
+      color: var(--neon-cyan);
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: #1a1a2e;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--neon-cyan);
+      transition: all 0.1s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="range"]:disabled::-webkit-slider-thumb {
+      background: var(--text-dim);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: 'Share Tech Mono', monospace;
+      user-select: none;
+    }
+
+    .checkbox-container input {
+      display: none;
+    }
+
+    .custom-checkbox {
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgba(0, 243, 255, 0.4);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .checkbox-container input:checked + .custom-checkbox {
+      background: rgba(0, 243, 255, 0.2);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+    }
+
+    .checkbox-container input:checked + .custom-checkbox::after {
+      content: "✓";
+      color: var(--neon-cyan);
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .radio-option input {
+      display: none;
+    }
+
+    .custom-radio {
+      width: 14px;
+      height: 14px;
+      border: 1px solid rgba(0, 243, 255, 0.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .radio-option input:checked + .custom-radio {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 6px var(--neon-cyan);
+    }
+
+    .radio-option input:checked + .custom-radio::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: var(--neon-cyan);
+      border-radius: 50%;
+    }
+
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .canvas-container {
+      position: relative;
+      background: #030309;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    #sim-canvas {
+      cursor: grab;
+    }
+
+    #sim-canvas:active {
+      cursor: grabbing;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    @media (min-width: 640px) {
+      .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .stat-card {
+      background: rgba(10, 11, 28, 0.6);
+      border: 1px solid rgba(0, 243, 255, 0.1);
+      border-radius: 4px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: bold;
+      font-family: 'Share Tech Mono', monospace;
+      margin-top: 4px;
+    }
+
+    .stat-value.cyan { color: var(--neon-cyan); }
+    .stat-value.magenta { color: var(--neon-magenta); }
+    .stat-value.green { color: var(--neon-green); }
+    .stat-value.amber { color: var(--neon-amber); }
+
+    .help-panel {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #a0aec0;
+    }
+
+    .help-panel p {
+      margin-bottom: 12px;
+    }
+
+    .help-panel strong {
+      color: var(--neon-cyan);
+    }
+
+    .audio-btn {
+      background: rgba(255, 0, 127, 0.05);
+      border: 1px solid rgba(255, 0, 127, 0.3);
+      color: var(--neon-magenta);
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Share Tech Mono', monospace;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .audio-btn:hover {
+      background: rgba(255, 0, 127, 0.2);
+      border-color: var(--neon-magenta);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+    }
+
+    .audio-btn.active {
+      background: rgba(255, 0, 127, 0.3);
+      border-color: var(--neon-magenta);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.5);
+    }
+
+    .plot-container {
+      background: #030309;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+
+    .nav-tabs button {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: all 0.2s;
+    }
+
+    .nav-tabs button.active {
+      color: var(--neon-cyan);
+      border-bottom: 2px solid var(--neon-cyan);
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo">CONFORMAL-FLIGHT</div>
+      <div class="tagline">// potential flow joukowsky airfoil physics sandbox</div>
+    </div>
+    <a href="../index.html" class="back-link">&lt;&lt; back to index</a>
+  </header>
+
+  <div class="main-layout">
+    
+    <!-- Controls Sidebar -->
+    <div class="panel">
+      <div class="panel-title">Presets</div>
+      <div class="presets-grid">
+        <button id="preset-flat" class="active">Flat Plate (α=8°)</button>
+        <button id="preset-sym">Symmetric (NACA 0012)</button>
+        <button id="preset-camber">Cambered (NACA 4412)</button>
+        <button id="preset-highlift">High Camber (Sail)</button>
+        <button id="preset-stall" class="full-width">Extreme AoA (Stall Demonstration)</button>
+        <button id="preset-kutta" class="full-width">Kutta Condition Violation</button>
+      </div>
+
+      <div class="panel-title">Airfoil Geometry</div>
+      
+      <div class="control-group">
+        <div class="control-label">
+          <span>Center X (Thickness $\mu_x$)</span>
+          <span id="val-mux" class="val">-0.08</span>
+        </div>
+        <input type="range" id="slider-mux" min="-0.30" max="-0.005" step="0.005" value="-0.08">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Center Y (Camber $\mu_y$)</span>
+          <span id="val-muy" class="val">0.05</span>
+        </div>
+        <input type="range" id="slider-muy" min="-0.25" max="0.25" step="0.005" value="0.05">
+      </div>
+
+      <div class="panel-title">Flow Parameters</div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Angle of Attack ($\alpha$)</span>
+          <span id="val-alpha" class="val">8°</span>
+        </div>
+        <input type="range" id="slider-alpha" min="-45" max="45" step="0.5" value="8">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">
+          <span>Wind Speed ($U_\infty$)</span>
+          <span id="val-uinf" class="val">1.50</span>
+        </div>
+        <input type="range" id="slider-uinf" min="0.50" max="3.00" step="0.05" value="1.50">
+      </div>
+
+      <div class="control-group">
+        <label class="checkbox-container">
+          <input type="checkbox" id="check-kutta" checked>
+          <span class="custom-checkbox"></span>
+          <span>Enforce Kutta Condition</span>
+        </label>
+      </div>
+
+      <div class="control-group" id="group-gamma" style="opacity: 0.5;">
+        <div class="control-label">
+          <span>Manual Circulation ($\Gamma$)</span>
+          <span id="val-gamma" class="val">0.00</span>
+        </div>
+        <input type="range" id="slider-gamma" min="-6.00" max="6.00" step="0.05" value="0.00" disabled>
+      </div>
+
+      <div class="panel-title">Visualization Mode</div>
+      <div class="radio-group">
+        <label class="radio-option">
+          <input type="radio" name="viz-mode" value="flow" checked>
+          <span class="custom-radio"></span>
+          <span>Neon Streamlines & Smoke Particles</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="viz-mode" value="pressure">
+          <span class="custom-radio"></span>
+          <span>Pressure Heatmap ($C_p$)</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="viz-mode" value="velocity">
+          <span class="custom-radio"></span>
+          <span>Velocity Magnitude Heatmap</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="viz-mode" value="vectors">
+          <span class="custom-radio"></span>
+          <span>Vector Velocity Field</span>
+        </label>
+      </div>
+
+      <div class="panel-title">Acoustic Probe</div>
+      <button id="btn-audio" class="audio-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <span>Enable Sound Probe</span>
+      </button>
+
+      <button id="btn-reset-pan" style="background:none; border:1px dashed var(--border-color); color:var(--text-color); font-family:'Share Tech Mono', monospace; padding:8px; border-radius:4px; cursor:pointer;">
+        Reset Canvas Pan & Zoom
+      </button>
+    </div>
+
+    <!-- Main Simulator Area -->
+    <div class="right-column">
+      
+      <!-- Statistics Dashboard -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Lift Coefficient ($C_L$)</div>
+          <div id="stat-cl" class="stat-value cyan">0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Circulation ($\Gamma$)</div>
+          <div id="stat-gamma" class="stat-value magenta">0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Chord Length</div>
+          <div id="stat-chord" class="stat-value green">4.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Relative Lift (N)</div>
+          <div id="stat-lift" class="stat-value amber">0.00</div>
+        </div>
+      </div>
+
+      <!-- Simulator Canvas -->
+      <div class="canvas-container">
+        <canvas id="sim-canvas" width="850" height="500"></canvas>
+      </div>
+
+      <!-- Cp Plot Canvas -->
+      <div class="plot-container">
+        <div class="panel-title">
+          <span>Surface Pressure Coefficient ($C_p$) Distribution</span>
+          <span style="font-size:10px; color:var(--text-dim); text-transform:none;">Negative Cp (suction) is plotted upward</span>
+        </div>
+        <canvas id="plot-canvas" width="820" height="180"></canvas>
+      </div>
+
+      <!-- Help/Explanation Box -->
+      <div class="panel">
+        <div class="nav-tabs">
+          <button id="tab-transform" class="active">Joukowsky Transform</button>
+          <button id="tab-kutta">The Kutta Condition</button>
+          <button id="tab-bernoulli">Bernoulli & Lift</button>
+        </div>
+        
+        <div id="desc-transform" class="help-panel">
+          <p>The <strong>Joukowsky Transform</strong> is a conformal mapping defined in the complex plane as <strong>$z = \zeta + \frac{c^2}{\zeta}$</strong> (here $c=1$). It maps a perfect cylinder (circle) in the mathematical $\zeta$-plane to an aerodynamic airfoil shape in the physical $z$-plane.</p>
+          <p>By moving the circle's center ($\zeta_c = \mu_x + i\mu_y$) away from the origin:</p>
+          <ul>
+            <li><strong>$\mu_x < 0$ (Center X)</strong> controls the thickness of the wing. Moving it left rounds the leading edge.</li>
+            <li><strong>$\mu_y$ (Center Y)</strong> controls the camber (curvature) of the wing. Positive values curve it upward.</li>
+          </ul>
+        </div>
+
+        <div id="desc-kutta" class="help-panel" style="display:none;">
+          <p>In potential flow, the fluid can slip past the airfoil boundary with zero viscosity. However, at the sharp trailing edge, a mathematical singularity arises: the fluid must wrap around the sharp corner at infinite speed, which is physically impossible.</p>
+          <p>The <strong>Kutta Condition</strong> states that the fluid must leave the trailing edge smoothly. To achieve this, the flow must develop exactly the right amount of circulation (vorticity) <strong>$\Gamma = 4\pi R U_\infty \sin(\alpha - \beta)$</strong>. This circulation pushes the rear stagnation point exactly onto the sharp trailing edge, eliminating the singularity.</p>
+          <p>Uncheck <em>"Enforce Kutta Condition"</em> to see what happens when the stagnation point drifts off the trailing edge and the flow is forced to wrap around the tip!</p>
+        </div>
+
+        <div id="desc-bernoulli" class="help-panel" style="display:none;">
+          <p>By adding circulation $\Gamma$, the flow speed on top of the airfoil increases, while the flow speed underneath decreases. According to <strong>Bernoulli's Equation</strong> ($P + \frac{1}{2}\rho V^2 = \text{const}$):</p>
+          <ul>
+            <li><strong>Higher speed on top</strong> yields lower pressure (suction).</li>
+            <li><strong>Lower speed underneath</strong> yields higher pressure.</li>
+          </ul>
+          <p>This pressure differential creates <strong>Lift</strong>. The Kutta-Joukowski theorem states the lift per unit span is <strong>$L = \rho U_\infty \Gamma$</strong>. In potential flow, there is no viscosity, so <strong>Drag is exactly zero</strong> (d'Alembert's Paradox).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Constants
+    const C_VAL = 1.0; // Joukowsky constant c = 1.0
+    
+    // State Variables
+    let mux = -0.08;
+    let muy = 0.05;
+    let alphaDeg = 8.0;
+    let Uinf = 1.5;
+    let enforceKutta = true;
+    let GammaManual = 0.0;
+    let vizMode = 'flow'; // 'flow', 'pressure', 'velocity', 'vectors'
+    let audioActive = false;
+
+    // View State (Pan & Zoom)
+    let scale = 140;
+    const defaultScale = 140;
+    let offsetX = -30;
+    const defaultOffsetX = -30;
+    let offsetY = 0;
+    const defaultOffsetY = 0;
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let initialOffset = { x: 0, y: 0 };
+
+    // Canvas Elements
+    const canvas = document.getElementById('sim-canvas');
+    const ctx = canvas.getContext('2d');
+    const plotCanvas = document.getElementById('plot-canvas');
+    const plotCtx = plotCanvas.getContext('2d');
+    
+    // Offscreen Canvas for Heatmap rendering (high performance!)
+    const heatmapCanvas = document.createElement('canvas');
+    heatmapCanvas.width = 120;
+    heatmapCanvas.height = 70;
+    const hCtx = heatmapCanvas.getContext('2d');
+
+    // UI Elements
+    const sMux = document.getElementById('slider-mux');
+    const sMuy = document.getElementById('slider-muy');
+    const sAlpha = document.getElementById('slider-alpha');
+    const sUinf = document.getElementById('slider-uinf');
+    const sGamma = document.getElementById('slider-gamma');
+    const cKutta = document.getElementById('check-kutta');
+    
+    const vMux = document.getElementById('val-mux');
+    const vMuy = document.getElementById('val-muy');
+    const vAlpha = document.getElementById('val-alpha');
+    const vUinf = document.getElementById('val-uinf');
+    const vGamma = document.getElementById('val-gamma');
+
+    const btnAudio = document.getElementById('btn-audio');
+    
+    // Stats Readouts
+    const statCl = document.getElementById('stat-cl');
+    const statGamma = document.getElementById('stat-gamma');
+    const statChord = document.getElementById('stat-chord');
+    const statLift = document.getElementById('stat-lift');
+
+    // Audio Probe state
+    let probe = {
+      x: 0, // mathematical x
+      y: 1.2, // mathematical y
+      screenX: 0,
+      screenY: 0,
+      radius: 12,
+      dragging: false
+    };
+    
+    // Web Audio Variables
+    let audioCtx = null;
+    let osc = null;
+    let gainNode = null;
+    let filter = null;
+
+    // Presets Definition
+    const presets = {
+      flat: { mux: -0.008, muy: 0.0, alpha: 8.0, uinf: 1.5, kutta: true, gamma: 0 },
+      sym: { mux: -0.08, muy: 0.0, alpha: 10.0, uinf: 1.5, kutta: true, gamma: 0 },
+      camber: { mux: -0.08, muy: 0.06, alpha: 5.0, uinf: 1.5, kutta: true, gamma: 0 },
+      highlift: { mux: -0.06, muy: 0.15, alpha: 0.0, uinf: 1.5, kutta: true, gamma: 0 },
+      stall: { mux: -0.08, muy: 0.05, alpha: 26.0, uinf: 1.5, kutta: true, gamma: 0 },
+      kutta: { mux: -0.08, muy: 0.05, alpha: 8.0, uinf: 1.5, kutta: false, gamma: -1.8 }
+    };
+
+    // Smoke Particles System
+    const particles = [];
+    const numParticles = 140;
+
+    function initParticles() {
+      particles.length = 0;
+      for (let i = 0; i < numParticles; i++) {
+        particles.push({
+          x: -4.0 - Math.random() * 2.0, // spread start positions on the left
+          y: -2.5 + Math.random() * 5.0,
+          history: [],
+          life: Math.random() * 100
+        });
+      }
+    }
+
+    // Mathematical Solver Utilities
+    
+    // Complex number square root helper
+    function complexSqrt(r, i) {
+      const mag = Math.sqrt(r*r + i*i);
+      const sr = Math.sqrt((mag + r) / 2);
+      const si = Math.sign(i || 1) * Math.sqrt((mag - r) / 2);
+      return { r: sr, i: si };
+    }
+
+    // Inverse Joukowsky transform z -> zeta
+    function inverseJoukowsky(zx, zy) {
+      // Solve zeta^2 - z*zeta + c^2 = 0 where c = 1
+      // disc = z^2 - 4 = (zx + i*zy)^2 - 4 = (zx^2 - zy^2 - 4) + i * 2*zx*zy
+      const discR = zx*zx - zy*zy - 4 * C_VAL*C_VAL;
+      const discI = 2 * zx * zy;
+      const s = complexSqrt(discR, discI);
+      
+      // Two roots: zeta1 = (z + s)/2, zeta2 = (z - s)/2
+      const z1r = (zx + s.r) / 2;
+      const z1i = (zy + s.i) / 2;
+      const z2r = (zx - s.r) / 2;
+      const z2i = (zy - s.i) / 2;
+      
+      // Choose the root that maps outside the circle (magnitude >= c = 1.0)
+      const m1 = z1r*z1r + z1i*z1i;
+      const m2 = z2r*z2r + z2i*z2i;
+      
+      return m1 >= m2 ? { r: z1r, i: z1i } : { r: z2r, i: z2i };
+    }
+
+    // Forward Joukowsky transform zeta -> z
+    function forwardJoukowsky(zetaR, zetaI) {
+      const denom = zetaR*zetaR + zetaI*zetaI;
+      if (denom < 1e-8) return { x: 0, y: 0 };
+      return {
+        x: zetaR + (C_VAL*C_VAL * zetaR) / denom,
+        y: zetaI - (C_VAL*C_VAL * zetaI) / denom
+      };
+    }
+
+    // Get circle radius and trailing edge angle
+    function getCircleParams() {
+      const R = Math.sqrt((C_VAL - mux)*(C_VAL - mux) + muy*muy);
+      const beta = Math.atan2(-muy, C_VAL - mux); // trailing edge angle from circle center
+      return { R, beta };
+    }
+
+    // Calculate circulation based on Kutta condition
+    function getKuttaCirculation(R, beta, alphaRad) {
+      return 4 * Math.PI * R * Uinf * Math.sin(alphaRad - beta);
+    }
+
+    // Complex velocity in zeta-plane (cylinder flow)
+    function getVelocityZeta(zetaR, zetaI, R, alphaRad, circulation) {
+      const wr = zetaR - mux;
+      const wi = zetaI - muy;
+      const r2 = wr*wr + wi*wi;
+      if (r2 < 1e-6) return { r: 0, i: 0 };
+      
+      const cosA = Math.cos(alphaRad);
+      const sinA = Math.sin(alphaRad);
+      
+      // term1 = cosA - i*sinA
+      const t1r = cosA;
+      const t1i = -sinA;
+      
+      // term2 = R^2 * e^(i*alpha) / w^2
+      // w^2 = (wr^2 - wi^2) + i * 2*wr*wi
+      const w2r = wr*wr - wi*wi;
+      const w2i = 2 * wr * wi;
+      const r4 = r2 * r2;
+      // e^(i*alpha) / w^2 = (cosA + i*sinA) * (w2r - i*w2i) / r4
+      const numR = cosA * w2r + sinA * w2i;
+      const numI = sinA * w2r - cosA * w2i;
+      const t2r = R*R * numR / r4;
+      const t2i = R*R * numI / r4;
+      
+      // term3 = i * Gamma / (2 * pi * w) = i * Gamma * (wr - i*wi) / (2 * pi * r2)
+      // = Gamma / (2 * pi * r2) * (wi + i*wr)
+      const factor = circulation / (2 * Math.PI * r2);
+      const t3r = factor * wi;
+      const t3i = factor * wr;
+      
+      const dWdzetaR = Uinf * (t1r - t2r) + t3r;
+      const dWdzetaI = Uinf * (t1i - t2i) + t3i;
+      
+      return { r: dWdzetaR, i: dWdzetaI };
+    }
+
+    // Physical complex velocity in z-plane (airfoil flow)
+    function getVelocityZ(zx, zy, R, beta, alphaRad, circulation) {
+      const zeta = inverseJoukowsky(zx, zy);
+      const z2 = zeta.r*zeta.r + zeta.i*zeta.i;
+      
+      // Check collision with the cylinder inside
+      const distSq = (zeta.r - mux)*(zeta.r - mux) + (zeta.i - muy)*(zeta.i - muy);
+      if (distSq < R*R * 0.998) {
+        return { vx: 0, vy: 0, inside: true };
+      }
+      
+      const dWdzeta = getVelocityZeta(zeta.r, zeta.i, R, alphaRad, circulation);
+      
+      // dz/dzeta = 1 - c^2/zeta^2 => 1 - 1/zeta^2
+      const zeta2r = zeta.r*zeta.r - zeta.i*zeta.i;
+      const zeta2i = 2 * zeta.r * zeta.i;
+      const z4 = z2 * z2;
+      
+      const dzDzetaR = 1 - zeta2r / z4;
+      const dzDzetaI = zeta2i / z4;
+      
+      const denom = dzDzetaR*dzDzetaR + dzDzetaI*dzDzetaI;
+      if (denom < 1e-5) {
+        // Singularity at trailing edge branch point.
+        // Perturb coordinate slightly outward to resolve value numerically.
+        return getVelocityZ(zx + 1e-4, zy + 1e-4 * Math.sign(zy || 1), R, beta, alphaRad, circulation);
+      }
+      
+      // Complex division: dW/dz = (dW/dzeta) / (dz/dzeta)
+      // v_x = Re(dW/dz), v_y = -Im(dW/dz)
+      const vx = (dWdzeta.r * dzDzetaR + dWdzeta.i * dzDzetaI) / denom;
+      const vy = (dWdzeta.r * dzDzetaI - dWdzeta.i * dzDzetaR) / denom;
+      
+      return { vx, vy, inside: false };
+    }
+
+    // Draw coordinate conversions
+    function toScreen(mx, my) {
+      return {
+        x: canvas.width / 2 + offsetX + mx * scale,
+        y: canvas.height / 2 + offsetY - my * scale
+      };
+    }
+
+    function toMath(sx, sy) {
+      return {
+        x: (sx - canvas.width / 2 - offsetX) / scale,
+        y: (canvas.height / 2 + offsetY - sy) / scale
+      };
+    }
+
+    // Render Helpers
+    
+    // Draw neon vectors
+    function drawArrow(ctx, fromX, fromY, toX, toY, color, width = 2, arrowSize = 6) {
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.stroke();
+      
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - arrowSize * Math.cos(angle - Math.PI/6), toY - arrowSize * Math.sin(angle - Math.PI/6));
+      ctx.lineTo(toX - arrowSize * Math.cos(angle + Math.PI/6), toY - arrowSize * Math.sin(angle + Math.PI/6));
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    // Trace a single streamline using Runge-Kutta 2nd order (Heun's Method)
+    function getStreamline(startY, R, beta, alphaRad, circulation) {
+      const pts = [];
+      let x = -5.0;
+      let y = startY;
+      pts.push({ x, y });
+      
+      const maxSteps = 200;
+      const dt = 0.07;
+      
+      for (let s = 0; s < maxSteps; s++) {
+        const vel1 = getVelocityZ(x, y, R, beta, alphaRad, circulation);
+        if (vel1.inside) break;
+        
+        // Predictor step
+        const px = x + vel1.vx * dt;
+        const py = y + vel1.vy * dt;
+        
+        const vel2 = getVelocityZ(px, py, R, beta, alphaRad, circulation);
+        if (vel2.inside) {
+          pts.push({ x: px, y: py });
+          break;
+        }
+        
+        // Corrector step
+        x += 0.5 * (vel1.vx + vel2.vx) * dt;
+        y += 0.5 * (vel1.vy + vel2.vy) * dt;
+        pts.push({ x, y });
+        
+        if (x > 5.0 || Math.abs(y) > 3.0) break;
+      }
+      return pts;
+    }
+
+    // Generate closed polygon points of the airfoil
+    function getAirfoilPoints(R, N = 180) {
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        const theta = (i / N) * 2 * Math.PI;
+        const zetaR = mux + R * Math.cos(theta);
+        const zetaI = muy + R * Math.sin(theta);
+        const z = forwardJoukowsky(zetaR, zetaI);
+        pts.push(z);
+      }
+      return pts;
+    }
+
+    // Calculate stagnation points in math coordinates
+    function getStagnationPoints(R, beta, alphaRad, circulation) {
+      const gamma = circulation / (4 * Math.PI * R * Uinf);
+      const cosA = Math.cos(alphaRad);
+      const sinA = Math.sin(alphaRad);
+      const stags = [];
+      
+      if (Math.abs(gamma) <= 1.0) {
+        const phi = Math.asin(-gamma);
+        
+        // Two stagnation points on the cylinder surface
+        const t1 = alphaRad + phi;
+        const z1 = forwardJoukowsky(mux + R * Math.cos(t1), muy + R * Math.sin(t1));
+        
+        const t2 = alphaRad + Math.PI - phi;
+        const z2 = forwardJoukowsky(mux + R * Math.cos(t2), muy + R * Math.sin(t2));
+        
+        stags.push(z1, z2);
+      } else {
+        // One stagnation point gets ejected into the free stream, one gets pushed inside (ignored)
+        const term = Math.sqrt(gamma*gamma - 1);
+        let factor = (gamma > 1) ? -(gamma + term) : -(gamma - term);
+        
+        const wr = R * factor * (-sinA);
+        const wi = R * factor * cosA;
+        const zOut = forwardJoukowsky(mux + wr, muy + wi);
+        stags.push(zOut);
+      }
+      return stags;
+    }
+
+    // High Performance Heatmap generation (80x50 cells scaled up by browser interpolation)
+    function renderHeatmap(R, beta, alphaRad, circulation) {
+      const hw = heatmapCanvas.width;
+      const hh = heatmapCanvas.height;
+      const imgData = hCtx.createImageData(hw, hh);
+      
+      for (let py = 0; py < hh; py++) {
+        for (let px = 0; px < hw; px++) {
+          // Map to canvas coordinate system
+          const screenX = (px / hw) * canvas.width;
+          const screenY = (py / hh) * canvas.height;
+          const math = toMath(screenX, screenY);
+          
+          const vel = getVelocityZ(math.x, math.y, R, beta, alphaRad, circulation);
+          
+          let r = 2, g = 2, b = 6; // Background default dark space
+          
+          if (!vel.inside) {
+            const V = Math.sqrt(vel.vx*vel.vx + vel.vy*vel.vy);
+            
+            if (vizMode === 'pressure') {
+              // Cp = 1 - (V/Uinf)^2
+              const Cp = 1.0 - (V*V) / (Uinf*Uinf);
+              // Normalize Cp from -2.5 (suction, magenta) to 1.0 (stagnation, cyan)
+              let u = (Cp + 2.5) / 3.5;
+              u = Math.max(0, Math.min(1, u));
+              
+              if (u < 0.5) {
+                // magenta (255, 0, 127) to dark background (2, 2, 8)
+                const t = u / 0.5;
+                r = Math.floor((1 - t) * 255 + t * 2);
+                g = Math.floor(t * 2);
+                b = Math.floor((1 - t) * 127 + t * 6);
+              } else {
+                // dark background (2, 2, 8) to cyan (0, 243, 255)
+                const t = (u - 0.5) / 0.5;
+                r = Math.floor((1 - t) * 2);
+                g = Math.floor((1 - t) * 2 + t * 243);
+                b = Math.floor((1 - t) * 6 + t * 255);
+              }
+            } else if (vizMode === 'velocity') {
+              // Normalize velocity from 0 (blue) to 2.5 * Uinf (yellow/red)
+              const maxV = 2.5 * Uinf;
+              let u = V / maxV;
+              u = Math.max(0, Math.min(1, u));
+              
+              // Blue (low velocity) -> Purple -> Yellow/Red (high velocity)
+              r = Math.floor(u * 255);
+              g = Math.floor(Math.max(0, u - 0.5) * 2 * 200);
+              b = Math.floor((1 - u) * 150 + u * 50);
+            }
+          } else {
+            // Inside airfoil
+            r = 0; g = 0; b = 0;
+          }
+          
+          const idx = (py * hw + px) * 4;
+          imgData.data[idx] = r;
+          imgData.data[idx+1] = g;
+          imgData.data[idx+2] = b;
+          imgData.data[idx+3] = 255;
+        }
+      }
+      hCtx.putImageData(imgData, 0, 0);
+      ctx.drawImage(heatmapCanvas, 0, 0, canvas.width, canvas.height);
+    }
+
+    // Render flow vectors on a grid
+    function renderVectors(R, beta, alphaRad, circulation) {
+      const stepSize = 40;
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+      ctx.lineWidth = 1.0;
+      
+      for (let sx = stepSize / 2; sx < canvas.width; sx += stepSize) {
+        for (let sy = stepSize / 2; sy < canvas.height; sy += stepSize) {
+          const math = toMath(sx, sy);
+          const vel = getVelocityZ(math.x, math.y, R, beta, alphaRad, circulation);
+          
+          if (!vel.inside) {
+            const V = Math.sqrt(vel.vx*vel.vx + vel.vy*vel.vy);
+            if (V < 0.05) continue;
+            
+            // Vector length on screen
+            const len = Math.min(25, V * 10);
+            const dx = (vel.vx / V) * len;
+            const dy = -(vel.vy / V) * len; // minus due to flipped screen coordinates
+            
+            // Colors from green (slow) to cyan/purple (fast)
+            const u = Math.min(1.0, V / (2.5 * Uinf));
+            const color = `rgba(${Math.floor(u * 200)}, 255, ${Math.floor(255 - u * 100)}, 0.4)`;
+            
+            drawArrow(ctx, sx, sy, sx + dx, sy + dy, color, 1, 4);
+          }
+        }
+      }
+    }
+
+    // Update particles position and wrap-around logic
+    function updateAndDrawParticles(R, beta, alphaRad, circulation) {
+      ctx.fillStyle = 'rgba(0, 255, 127, 0.75)';
+      
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // Compute velocity at particle location
+        const vel = getVelocityZ(p.x, p.y, R, beta, alphaRad, circulation);
+        
+        if (vel.inside || Math.abs(p.y) > 3.0 || p.x > 4.5 || vel.singularity) {
+          // Reset particle to inlet
+          p.x = -4.0 - Math.random() * 1.5;
+          p.y = -2.5 + Math.random() * 5.0;
+          p.history = [];
+          continue;
+        }
+        
+        // Runge-Kutta 2nd order to move particles smoothly
+        const dt = 0.035;
+        const px = p.x + vel.vx * dt;
+        const py = p.y + vel.vy * dt;
+        const vel2 = getVelocityZ(px, py, R, beta, alphaRad, circulation);
+        
+        if (vel2.inside) {
+          p.x = -4.0 - Math.random() * 1.5;
+          p.y = -2.5 + Math.random() * 5.0;
+          p.history = [];
+          continue;
+        }
+        
+        p.x += 0.5 * (vel.vx + vel2.vx) * dt;
+        p.y += 0.5 * (vel.vy + vel2.vy) * dt;
+        
+        // Save trail history
+        p.history.push({ x: p.x, y: p.y });
+        if (p.history.length > 8) {
+          p.history.shift();
+        }
+        
+        // Draw smoke streak
+        ctx.beginPath();
+        for (let h = 0; h < p.history.length; h++) {
+          const ptScr = toScreen(p.history[h].x, p.history[h].y);
+          if (h === 0) ctx.moveTo(ptScr.x, ptScr.y);
+          else ctx.lineTo(ptScr.x, ptScr.y);
+        }
+        ctx.strokeStyle = `rgba(0, 255, 127, ${0.1 + (i % 3) * 0.15})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        
+        // Draw particle tip
+        const ptScr = toScreen(p.x, p.y);
+        ctx.fillRect(ptScr.x - 1, ptScr.y - 1, 2, 2);
+      }
+    }
+
+    // Render the Cp (Pressure Coefficient) plot below the simulator
+    function renderCpPlot(R, beta, alphaRad, circulation) {
+      const pw = plotCanvas.width;
+      const ph = plotCanvas.height;
+      
+      // Clear plot canvas
+      plotCtx.fillStyle = '#030308';
+      plotCtx.fillRect(0, 0, pw, ph);
+      
+      // Draw grid lines
+      plotCtx.strokeStyle = 'rgba(0, 243, 255, 0.08)';
+      plotCtx.lineWidth = 1;
+      
+      // X grid
+      for (let x = 60; x < pw - 20; x += 100) {
+        plotCtx.beginPath();
+        plotCtx.moveTo(x, 10);
+        plotCtx.lineTo(x, ph - 25);
+        plotCtx.stroke();
+      }
+      // Y grid (Cp lines)
+      const cpGridLines = [-2, -1, 0, 1];
+      const getPlotY = (cp) => {
+        // Map Cp = -3.0 (top) to +1.0 (bottom) for aeronautical convention (negative Cp up)
+        const cpMin = -3.0;
+        const cpMax = 1.0;
+        return 15 + ((cp - cpMin) / (cpMax - cpMin)) * (ph - 45);
+      };
+      
+      plotCtx.fillStyle = 'rgba(255,255,255,0.3)';
+      plotCtx.font = '10px Share Tech Mono';
+      
+      cpGridLines.forEach(cp => {
+        const y = getPlotY(cp);
+        plotCtx.beginPath();
+        plotCtx.moveTo(50, y);
+        plotCtx.lineTo(pw - 20, y);
+        plotCtx.stroke();
+        plotCtx.fillText(`Cp=${cp.toFixed(1)}`, 10, y + 3);
+      });
+      
+      // Compute Cp on Upper and Lower Surfaces
+      const upperPts = [];
+      const lowerPts = [];
+      
+      // Number of coordinates to evaluate along airfoil
+      const numPts = 100;
+      
+      // Upper surface: from beta to beta + PI
+      for (let i = 0; i <= numPts; i++) {
+        const theta = beta + (i / numPts) * Math.PI;
+        // Evaluate slightly outside boundary (1.002 * R) to avoid numerical clipping
+        const zR = mux + 1.002 * R * Math.cos(theta);
+        const zI = muy + 1.002 * R * Math.sin(theta);
+        
+        const dWdzeta = getVelocityZeta(zR, zI, R, alphaRad, circulation);
+        const z2 = zR*zR + zI*zI;
+        const z4 = z2 * z2;
+        const z2r = zR*zR - zI*zI;
+        const z2i = 2 * zR * zI;
+        const dzDzetaR = 1 - z2r / z4;
+        const dzDzetaI = z2i / z4;
+        const denom = dzDzetaR*dzDzetaR + dzDzetaI*dzDzetaI;
+        
+        if (denom > 1e-6) {
+          const vx = (dWdzeta.r * dzDzetaR + dWdzeta.i * dzDzetaI) / denom;
+          const vy = (dWdzeta.r * dzDzetaI - dWdzeta.i * dzDzetaR) / denom;
+          const V = Math.sqrt(vx*vx + vy*vy);
+          const Cp = 1.0 - (V*V) / (Uinf*Uinf);
+          const physicalZ = forwardJoukowsky(zR, zI);
+          upperPts.push({ x: physicalZ.x, cp: Cp });
+        }
+      }
+
+      // Lower surface: from beta to beta - PI
+      for (let i = 0; i <= numPts; i++) {
+        const theta = beta - (i / numPts) * Math.PI;
+        const zR = mux + 1.002 * R * Math.cos(theta);
+        const zI = muy + 1.002 * R * Math.sin(theta);
+        
+        const dWdzeta = getVelocityZeta(zR, zI, R, alphaRad, circulation);
+        const z2 = zR*zR + zI*zI;
+        const z4 = z2 * z2;
+        const z2r = zR*zR - zI*zI;
+        const z2i = 2 * zR * zI;
+        const dzDzetaR = 1 - z2r / z4;
+        const dzDzetaI = z2i / z4;
+        const denom = dzDzetaR*dzDzetaR + dzDzetaI*dzDzetaI;
+        
+        if (denom > 1e-6) {
+          const vx = (dWdzeta.r * dzDzetaR + dWdzeta.i * dzDzetaI) / denom;
+          const vy = (dWdzeta.r * dzDzetaI - dWdzeta.i * dzDzetaR) / denom;
+          const V = Math.sqrt(vx*vx + vy*vy);
+          const Cp = 1.0 - (V*V) / (Uinf*Uinf);
+          const physicalZ = forwardJoukowsky(zR, zI);
+          lowerPts.push({ x: physicalZ.x, cp: Cp });
+        }
+      }
+      
+      // X-mapping function (math coord -> screen coord in plot)
+      // Chord starts near x = -2.0, ends at x = +2.0
+      const getPlotX = (mx) => {
+        const xMin = -2.2;
+        const xMax = 2.2;
+        return 60 + ((mx - xMin) / (xMax - xMin)) * (pw - 90);
+      };
+      
+      // Plot Upper surface (bright neon magenta)
+      plotCtx.beginPath();
+      upperPts.forEach((pt, idx) => {
+        const sx = getPlotX(pt.x);
+        const sy = getPlotY(pt.cp);
+        if (idx === 0) plotCtx.moveTo(sx, sy);
+        else plotCtx.lineTo(sx, sy);
+      });
+      plotCtx.strokeStyle = varColor('--neon-magenta');
+      plotCtx.lineWidth = 2.0;
+      plotCtx.stroke();
+      
+      // Plot Lower surface (neon cyan)
+      plotCtx.beginPath();
+      lowerPts.forEach((pt, idx) => {
+        const sx = getPlotX(pt.x);
+        const sy = getPlotY(pt.cp);
+        if (idx === 0) plotCtx.moveTo(sx, sy);
+        else plotCtx.lineTo(sx, sy);
+      });
+      plotCtx.strokeStyle = varColor('--neon-cyan');
+      plotCtx.lineWidth = 2.0;
+      plotCtx.stroke();
+      
+      // Label the chord coordinates
+      plotCtx.fillStyle = varColor('--text-dim');
+      plotCtx.fillText("Leading Edge", getPlotX(-2.0) - 20, ph - 8);
+      plotCtx.fillText("Trailing Edge", getPlotX(2.0) - 25, ph - 8);
+      
+      // Draw small legend
+      plotCtx.fillStyle = varColor('--neon-magenta');
+      plotCtx.fillRect(pw - 130, 10, 10, 6);
+      plotCtx.fillText("Upper Surface", pw - 115, 16);
+      
+      plotCtx.fillStyle = varColor('--neon-cyan');
+      plotCtx.fillRect(pw - 130, 24, 10, 6);
+      plotCtx.fillText("Lower Surface", pw - 115, 30);
+    }
+
+    function varColor(cssVarName) {
+      return getComputedStyle(document.documentElement).getPropertyValue(cssVarName).trim();
+    }
+
+    // Audio Engine initialization and synthesis
+    function toggleAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        osc = audioCtx.createOscillator();
+        osc.type = 'triangle'; // rich, wind-like tone
+        
+        gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        
+        filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+        
+        osc.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start();
+      }
+      
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      audioActive = !audioActive;
+      if (audioActive) {
+        btnAudio.classList.add('active');
+        btnAudio.querySelector('span').innerText = "Disable Sound Probe";
+      } else {
+        btnAudio.classList.remove('active');
+        btnAudio.querySelector('span').innerText = "Enable Sound Probe";
+        if (gainNode) {
+          gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        }
+      }
+    }
+
+    // Main Simulation Loop
+    function update() {
+      const alphaRad = (alphaDeg * Math.PI) / 180;
+      const { R, beta } = getCircleParams();
+      
+      // Set circulation depending on mode
+      let circulation;
+      if (enforceKutta) {
+        circulation = getKuttaCirculation(R, beta, alphaRad);
+        // Sync manual control slider for consistency
+        sGamma.value = circulation.toFixed(2);
+        vGamma.innerText = circulation.toFixed(2);
+      } else {
+        circulation = GammaManual;
+      }
+      
+      // Calculate dashboard statistics
+      // Chord length is approximate image of the circle diameter on x-axis
+      const zLeft = mux - R;
+      const physicalLeftZ = zLeft + (C_VAL*C_VAL) / zLeft;
+      const chordLength = 2.0 * C_VAL - physicalLeftZ;
+      
+      const cl = circulation / (0.5 * Uinf * chordLength);
+      const densityScale = 1.225; // standard air density
+      const liftForceVal = densityScale * Uinf * circulation * 10; // scaled for visibility
+
+      statCl.innerText = cl.toFixed(3);
+      statGamma.innerText = circulation.toFixed(2);
+      statChord.innerText = chordLength.toFixed(3);
+      statLift.innerText = liftForceVal.toFixed(1);
+      
+      // Clear Main Screen Canvas
+      ctx.fillStyle = '#020206';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 1. Render Background Heatmap if selected
+      if (vizMode === 'pressure' || vizMode === 'velocity') {
+        renderHeatmap(R, beta, alphaRad, circulation);
+      }
+      
+      // 2. Draw standard grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.lineWidth = 1;
+      const gridSpacing = 50;
+      for (let x = 0; x < canvas.width; x += gridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // 3. Render Vector Field if selected
+      if (vizMode === 'vectors') {
+        renderVectors(R, beta, alphaRad, circulation);
+      }
+
+      // 4. Render Streamlines
+      if (vizMode === 'flow') {
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.22)';
+        ctx.lineWidth = 1.5;
+        
+        // Spawn streamlines starting from -4.5 at uniform y positions
+        const numStreamlines = 24;
+        for (let i = 0; i < numStreamlines; i++) {
+          const startY = -2.2 + (i / (numStreamlines - 1)) * 4.4;
+          // Skip lines straight through the wing boundary to keep rendering clean
+          if (Math.abs(startY - muy) < 0.08 && mux < 0.1) continue;
+          
+          const pts = getStreamline(startY, R, beta, alphaRad, circulation);
+          
+          ctx.beginPath();
+          pts.forEach((pt, idx) => {
+            const scr = toScreen(pt.x, pt.y);
+            if (idx === 0) ctx.moveTo(scr.x, scr.y);
+            else ctx.lineTo(scr.x, scr.y);
+          });
+          ctx.stroke();
+        }
+      }
+
+      // 5. Update & draw smoke particles
+      if (vizMode === 'flow') {
+        updateAndDrawParticles(R, beta, alphaRad, circulation);
+      }
+
+      // 6. Draw Airfoil Geometry
+      const airfoilPts = getAirfoilPoints(R);
+      ctx.beginPath();
+      airfoilPts.forEach((pt, idx) => {
+        const scr = toScreen(pt.x, pt.y);
+        if (idx === 0) ctx.moveTo(scr.x, scr.y);
+        else ctx.lineTo(scr.x, scr.y);
+      });
+      ctx.closePath();
+      
+      // Glow effect around the airfoil boundary
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = varColor('--neon-cyan');
+      ctx.fillStyle = 'rgba(10, 11, 28, 0.95)';
+      ctx.fill();
+      ctx.strokeStyle = varColor('--neon-cyan');
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.shadowBlur = 0; // reset shadow glow
+      
+      // 7. Draw Stagnation Points (Neon Orange)
+      const stags = getStagnationPoints(R, beta, alphaRad, circulation);
+      stags.forEach(pt => {
+        const scr = toScreen(pt.x, pt.y);
+        ctx.beginPath();
+        ctx.arc(scr.x, scr.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = varColor('--neon-amber');
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = varColor('--neon-amber');
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // 8. Draw Lift Vector Arrow (Glowing Green)
+      // Vector origins at airfoil center
+      const centerScr = toScreen(mux + C_VAL/2, muy);
+      const liftMag = liftForceVal * 2.0; // scale arrow length
+      if (Math.abs(liftMag) > 2.0) {
+        // lift vector direction is perpendicular to alpha (upward and slightly left/right)
+        // flow angle = alphaRad => perpendicular = alphaRad + PI/2
+        const liftAngle = alphaRad + Math.PI / 2;
+        const dx = Math.cos(liftAngle) * liftMag;
+        const dy = -Math.sin(liftAngle) * liftMag; // canvas y is flipped
+        
+        drawArrow(ctx, centerScr.x, centerScr.y, centerScr.x + dx, centerScr.y + dy, varColor('--neon-green'), 3, 8);
+        ctx.fillStyle = varColor('--neon-green');
+        ctx.font = 'bold 11px Share Tech Mono';
+        ctx.fillText("LIFT FORCE", centerScr.x + dx + 10, centerScr.y + dy - 5);
+      }
+
+      // 9. Draw Audio Probe Target Crosshairs if active
+      if (audioActive) {
+        const scr = toScreen(probe.x, probe.y);
+        probe.screenX = scr.x;
+        probe.screenY = scr.y;
+        
+        // Draw dotted selector circle
+        ctx.beginPath();
+        ctx.arc(scr.x, scr.y, probe.radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = varColor('--neon-magenta');
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Crosshair reticle
+        ctx.beginPath();
+        ctx.moveTo(scr.x - 18, scr.y);
+        ctx.lineTo(scr.x + 18, scr.y);
+        ctx.moveTo(scr.x, scr.y - 18);
+        ctx.lineTo(scr.x, scr.y + 18);
+        ctx.strokeStyle = varColor('--neon-magenta');
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(scr.x, scr.y, 3, 0, 2 * Math.PI);
+        ctx.fillStyle = varColor('--neon-magenta');
+        ctx.fill();
+        
+        // Audio synthesis velocity mapping
+        if (osc && gainNode) {
+          const vel = getVelocityZ(probe.x, probe.y, R, beta, alphaRad, circulation);
+          
+          if (vel.inside) {
+            gainNode.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.05);
+          } else {
+            const V = Math.sqrt(vel.vx*vel.vx + vel.vy*vel.vy);
+            
+            // Map velocity directly to sound pitch: faster = higher pitch
+            const targetFreq = 120 + V * 160;
+            osc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.05);
+            
+            // Map velocity to loudness, adding standard atmospheric noise/shimmer
+            const windNoise = 0.03 * Math.sin(Date.now() / 80) * (V / Uinf);
+            const targetGain = Math.min(0.12, 0.04 + (V / 4.0) * 0.05) + windNoise;
+            gainNode.gain.setTargetAtTime(Math.max(0.01, targetGain), audioCtx.currentTime, 0.05);
+          }
+        }
+      }
+
+      // 10. Update Cp plot canvas
+      renderCpPlot(R, beta, alphaRad, circulation);
+
+      requestAnimationFrame(update);
+    }
+
+    // UI Event Handlers
+    
+    function applyPreset(p) {
+      mux = p.mux;
+      muy = p.muy;
+      alphaDeg = p.alpha;
+      Uinf = p.uinf;
+      enforceKutta = p.kutta;
+      GammaManual = p.gamma;
+      
+      // Update Sliders
+      sMux.value = mux;
+      sMuy.value = muy;
+      sAlpha.value = alphaDeg;
+      sUinf.value = Uinf;
+      sGamma.value = GammaManual;
+      cKutta.checked = enforceKutta;
+      
+      // Update values text
+      vMux.innerText = mux.toFixed(3);
+      vMuy.innerText = muy.toFixed(2);
+      vAlpha.innerText = alphaDeg.toFixed(1) + '°';
+      vUinf.innerText = Uinf.toFixed(2);
+      vGamma.innerText = GammaManual.toFixed(2);
+      
+      // Adjust circulation display state
+      const grp = document.getElementById('group-gamma');
+      if (enforceKutta) {
+        sGamma.disabled = true;
+        grp.style.opacity = '0.5';
+      } else {
+        sGamma.disabled = false;
+        grp.style.opacity = '1.0';
+      }
+    }
+
+    // Connect slider listeners
+    sMux.addEventListener('input', (e) => {
+      mux = parseFloat(e.target.value);
+      vMux.innerText = mux.toFixed(3);
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+    });
+    sMuy.addEventListener('input', (e) => {
+      muy = parseFloat(e.target.value);
+      vMuy.innerText = muy.toFixed(2);
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+    });
+    sAlpha.addEventListener('input', (e) => {
+      alphaDeg = parseFloat(e.target.value);
+      vAlpha.innerText = alphaDeg.toFixed(1) + '°';
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+    });
+    sUinf.addEventListener('input', (e) => {
+      Uinf = parseFloat(e.target.value);
+      vUinf.innerText = Uinf.toFixed(2);
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+    });
+    sGamma.addEventListener('input', (e) => {
+      GammaManual = parseFloat(e.target.value);
+      vGamma.innerText = GammaManual.toFixed(2);
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+    });
+    cKutta.addEventListener('change', (e) => {
+      enforceKutta = e.target.checked;
+      const grp = document.getElementById('group-gamma');
+      if (enforceKutta) {
+        sGamma.disabled = true;
+        grp.style.opacity = '0.5';
+      } else {
+        sGamma.disabled = false;
+        grp.style.opacity = '1.0';
+        GammaManual = parseFloat(sGamma.value);
+      }
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+    });
+
+    // Preset button events
+    document.getElementById('preset-flat').addEventListener('click', (e) => {
+      setActivePresetBtn(e.target);
+      applyPreset(presets.flat);
+    });
+    document.getElementById('preset-sym').addEventListener('click', (e) => {
+      setActivePresetBtn(e.target);
+      applyPreset(presets.sym);
+    });
+    document.getElementById('preset-camber').addEventListener('click', (e) => {
+      setActivePresetBtn(e.target);
+      applyPreset(presets.camber);
+    });
+    document.getElementById('preset-highlift').addEventListener('click', (e) => {
+      setActivePresetBtn(e.target);
+      applyPreset(presets.highlift);
+    });
+    document.getElementById('preset-stall').addEventListener('click', (e) => {
+      setActivePresetBtn(e.target);
+      applyPreset(presets.stall);
+    });
+    document.getElementById('preset-kutta').addEventListener('click', (e) => {
+      setActivePresetBtn(e.target);
+      applyPreset(presets.kutta);
+    });
+
+    function setActivePresetBtn(btn) {
+      document.querySelectorAll('.presets-grid button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // Visualization Radio buttons
+    document.querySelectorAll('input[name="viz-mode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        vizMode = e.target.value;
+      });
+    });
+
+    // Audio Probe Activation
+    btnAudio.addEventListener('click', toggleAudio);
+
+    // Reset Zoom/Pan
+    document.getElementById('btn-reset-pan').addEventListener('click', () => {
+      scale = defaultScale;
+      offsetX = defaultOffsetX;
+      offsetY = defaultOffsetY;
+    });
+
+    // Mouse & Drag interactions for canvas pan and audio probe placement
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      if (audioActive) {
+        // Check if user clicked close to the audio probe
+        const dist = Math.sqrt((mouseX - probe.screenX)*(mouseX - probe.screenX) + (mouseY - probe.screenY)*(mouseY - probe.screenY));
+        if (dist <= probe.radius + 8) {
+          probe.dragging = true;
+          return;
+        }
+      }
+      
+      // Default behavior: Drag-pan canvas
+      isDragging = true;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+      initialOffset.x = offsetX;
+      initialOffset.y = offsetY;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      if (probe.dragging) {
+        const mathCoord = toMath(mouseX, mouseY);
+        probe.x = mathCoord.x;
+        probe.y = mathCoord.y;
+        return;
+      }
+      
+      if (isDragging) {
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+        offsetX = initialOffset.x + dx;
+        offsetY = initialOffset.y + dy;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+      probe.dragging = false;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isDragging = false;
+      probe.dragging = false;
+    });
+
+    // Zooming using the mouse wheel
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Get math coordinate of cursor before zoom
+      const mathBefore = toMath(mouseX, mouseY);
+      
+      // Change zoom factor
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      scale = Math.max(30, Math.min(600, scale * zoomFactor));
+      
+      // Shift offset to keep cursor pinned to the same mathematical point
+      const newScreen = toScreen(mathBefore.x, mathBefore.y);
+      offsetX += (mouseX - newScreen.x);
+      offsetY += (mouseY - newScreen.y);
+    });
+
+    // Documentation Tab selectors
+    function setupTabs(btnId, descId) {
+      document.getElementById(btnId).addEventListener('click', (e) => {
+        document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.help-panel').forEach(p => p.style.display = 'none');
+        
+        e.target.classList.add('active');
+        document.getElementById(descId).style.display = 'block';
+      });
+    }
+    setupTabs('tab-transform', 'desc-transform');
+    setupTabs('tab-kutta', 'desc-kutta');
+    setupTabs('tab-bernoulli', 'desc-bernoulli');
+
+    // Startup Initialization
+    initParticles();
+    applyPreset(presets.flat);
+    requestAnimationFrame(update);
+
+  </script>
+</body>
+</html>
