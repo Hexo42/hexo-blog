@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>rossby-flow: planetary waves & barotropic geophysical fluid dynamics sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #020206;
+      --bg-panel: rgba(10, 11, 28, 0.93);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --border-glow: rgba(0, 243, 255, 0.5);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #00ff7f;
+      --neon-yellow: #ffaa00;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(2, 2, 8, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--neon-cyan);
+      text-shadow: var(--glow-shadow);
+      letter-spacing: 2px;
+    }
+
+    .tagline {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+      font-size: 12px;
+      display: none;
+    }
+
+    @media (min-width: 600px) {
+      .tagline { display: inline; }
+    }
+
+    .back-link {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-magenta);
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px dashed var(--neon-magenta);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .back-link:hover {
+      background: rgba(255, 0, 127, 0.1);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+      text-shadow: 0 0 5px var(--neon-magenta);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
+    }
+
+    @media (min-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 360px 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      height: fit-content;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: var(--neon-cyan);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .presets-grid button {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      color: var(--text-color);
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .presets-grid button:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .control-label span.val {
+      color: var(--neon-cyan);
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #0d1225;
+      border-radius: 3px;
+      outline: none;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: all 0.1s;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .brush-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .brush-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-dim);
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brush-btn.active {
+      color: var(--text-color);
+      border-color: var(--neon-magenta);
+      background: rgba(255, 0, 127, 0.08);
+      box-shadow: 0 0 8px rgba(255, 0, 127, 0.2);
+    }
+
+    .brush-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-color);
+    }
+
+    .indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .indicator.pos { background: var(--neon-magenta); box-shadow: 0 0 5px var(--neon-magenta); }
+    .indicator.neg { background: var(--neon-cyan); box-shadow: 0 0 5px var(--neon-cyan); }
+    .indicator.mnt { background: var(--neon-yellow); box-shadow: 0 0 5px var(--neon-yellow); }
+    .indicator.ers { background: #64748b; }
+
+    .action-btn {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: rgba(0, 255, 127, 0.07);
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    .btn-primary:hover {
+      background: rgba(0, 255, 127, 0.18);
+      box-shadow: 0 0 12px rgba(0, 255, 127, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 0, 127, 0.05);
+      border-color: var(--neon-magenta);
+      color: var(--neon-magenta);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 0, 127, 0.15);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+    }
+
+    .btn-danger {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: var(--text-dim);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-color);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-dim);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .toggle-btn.active {
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+      background: rgba(0, 243, 255, 0.06);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.15);
+    }
+
+    .toggle-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-color);
+    }
+
+    .sim-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      background: #010103;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      box-shadow: inset 0 0 30px rgba(0, 243, 255, 0.05);
+      display: grid;
+      grid-template-columns: 1fr 100px;
+      gap: 0;
+      overflow: hidden;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    #simCanvas {
+      display: block;
+      cursor: crosshair;
+      background: transparent;
+    }
+
+    #profileCanvas {
+      display: block;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .osc-wrapper {
+      background: #010103;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      height: 100px;
+      width: 100%;
+    }
+
+    #oscCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .info-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-dim);
+    }
+
+    .info-card strong {
+      color: var(--text-color);
+    }
+
+    .help-tooltip {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--neon-yellow);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo">ROSSBY-FLOW</div>
+      <div class="tagline">planetary waves & barotropic geophysical fluid dynamics sandbox</div>
+    </div>
+    <a href="../index.html" class="back-link">&lt;&lt; back to index</a>
+  </header>
+
+  <div class="main-layout">
+    
+    <!-- Sidebar Control Panel -->
+    <div class="panel">
+      
+      <div class="control-group">
+        <div class="panel-title">Presets</div>
+        <div class="presets-grid">
+          <button onclick="loadPreset('mountain')">1. Mountain Wave</button>
+          <button onclick="loadPreset('turbulence')">2. Beta Turbulence</button>
+          <button onclick="loadPreset('modon')">3. Modon Dipole</button>
+          <button onclick="loadPreset('blocking')">4. Blocking High</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="panel-title">Physics Params</div>
+        
+        <div class="control-group">
+          <div class="control-label">Background Wind (U0) <span class="val" id="u0Val">0.8</span></div>
+          <input type="range" class="slider" id="u0Slider" min="-0.5" max="2.0" step="0.1" value="0.8">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Coriolis Beta (β) <span class="val" id="betaVal">0.08</span></div>
+          <input type="range" class="slider" id="betaSlider" min="0.0" max="0.3" step="0.01" value="0.08">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Inv. Rossby Radius (α) <span class="val" id="alphaVal">0.005</span></div>
+          <input type="range" class="slider" id="alphaSlider" min="0.0" max="0.04" step="0.001" value="0.005">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Viscosity (ν) <span class="val" id="viscVal">0.015</span></div>
+          <input type="range" class="slider" id="viscSlider" min="0.001" max="0.1" step="0.001" value="0.015">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">Bottom Drag (r) <span class="val" id="dragVal">0.004</span></div>
+          <input type="range" class="slider" id="dragSlider" min="0.0" max="0.03" step="0.001" value="0.004">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="panel-title">Interactive Brush</div>
+        <div class="brush-grid">
+          <button class="brush-btn active" id="btn-cyclone" onclick="setTool('cyclone')">
+            <span class="indicator pos"></span> Cyclone (+)
+          </button>
+          <button class="brush-btn" id="btn-anticyclone" onclick="setTool('anticyclone')">
+            <span class="indicator neg"></span> Anti-C (-)
+          </button>
+          <button class="brush-btn" id="btn-mountain" onclick="setTool('mountain')">
+            <span class="indicator mnt"></span> Mountain
+          </button>
+          <button class="brush-btn" id="btn-eraser" onclick="setTool('eraser')">
+            <span class="indicator ers"></span> Eraser
+          </button>
+        </div>
+        <div style="margin-top: 5px;">
+          <div class="control-label">Brush Radius <span class="val" id="brushVal">4</span></div>
+          <input type="range" class="slider" id="brushSlider" min="1.5" max="10" step="0.5" value="4">
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="panel-title">Visualization</div>
+        <div class="control-group">
+          <div class="control-label">View Field</div>
+          <div class="toggle-group">
+            <button class="toggle-btn active" id="view-vorticity" onclick="setViewMode('vorticity')">Vorticity</button>
+            <button class="toggle-btn" id="view-speed" onclick="setViewMode('speed')">Wind Speed</button>
+            <button class="toggle-btn" id="view-pv" onclick="setViewMode('pv')">Pot. Vorticity</button>
+          </div>
+        </div>
+        <div class="toggle-group" style="margin-top: 5px;">
+          <button class="toggle-btn active" id="toggle-particles" onclick="toggleParticles()">Tracer Particles</button>
+          <button class="toggle-btn active" id="toggle-topo" onclick="toggleTopo()">Show Mountains</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="panel-title">Audio Sonification</div>
+        <button class="action-btn btn-secondary" id="audioBtn" onclick="toggleAudio()">Enable Sonification</button>
+        <div class="help-tooltip">
+          <span>⚠️</span> Drag the yellow crosshair probe in the simulation to listen!
+        </div>
+      </div>
+
+      <div class="toggle-group" style="margin-top: 10px;">
+        <button class="action-btn btn-primary" id="playBtn" style="flex: 1.5;" onclick="togglePlay()">Pause</button>
+        <button class="action-btn btn-danger" style="flex: 1;" onclick="clearSimulation()">Clear</button>
+      </div>
+
+      <div class="info-card">
+        <strong>Geophysical Fluid Dynamics Solver</strong><br>
+        quasi-geostrophic potential vorticity (qgpv) advection on a β-plane. uses a semi-lagrangian advection model and successive over-relaxation (sor) helmholtz streamfunction solver. periodic in longitude (left-right), solid walls at latitude boundaries (top-bottom).
+      </div>
+
+    </div>
+
+    <!-- Simulation Main Panels -->
+    <div class="sim-container">
+      
+      <!-- Canvas Wrapper combining simulation grid and vertical wind profile side-by-side -->
+      <div class="canvas-wrapper">
+        <canvas id="simCanvas" width="800" height="400"></canvas>
+        <canvas id="profileCanvas" width="100" height="400"></canvas>
+      </div>
+
+      <!-- Real-time Oscilloscope displaying probe time-series below the main canvas -->
+      <div class="osc-wrapper">
+        <canvas id="oscCanvas" width="900" height="100"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // --- Simulation Grid Configuration ---
+    const W = 128;
+    const H = 64;
+    
+    // Physical state fields
+    const q = new Float32Array(W * H);
+    const q_prev = new Float32Array(W * H);
+    const psi = new Float32Array(W * H);
+    const u = new Float32Array(W * H);
+    const v = new Float32Array(W * H);
+    const topo = new Float32Array(W * H);
+    const rhs = new Float32Array(W * H);
+
+    // Default simulation parameters (synced with slider defaults)
+    let u0 = 0.8;
+    let beta = 0.08;
+    let alpha = 0.005;
+    let viscosity = 0.015;
+    let friction = 0.004;
+    let dt = 0.2;
+    let omega_sor = 1.65;
+    let num_iterations = 35;
+
+    // Simulation states
+    let isPlaying = true;
+    let viewMode = 'vorticity'; // 'vorticity', 'speed', 'pv'
+    let showParticles = true;
+    let showTopo = true;
+    let activeTool = 'cyclone';
+    let brushRadius = 4;
+
+    // Canvas elements & contexts
+    const mainCanvas = document.getElementById('simCanvas');
+    const mainCtx = mainCanvas.getContext('2d');
+    const profileCanvas = document.getElementById('profileCanvas');
+    const oscCanvas = document.getElementById('oscCanvas');
+
+    // Offscreen render canvas for drawing the grid at 1:1 pixel scale
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = W;
+    tempCanvas.height = H;
+    const tempCtx = tempCanvas.getContext('2d');
+    const imgData = tempCtx.createImageData(W, H);
+
+    // --- Interactive Mouse & Dragging State ---
+    let isMouseDown = false;
+    let mouseX = 0;
+    let mouseY = 0;
+
+    // Sonification Probe position (in screen coordinates on main canvas)
+    let probeX = 580;
+    let probeY = 200;
+    let isDraggingProbe = false;
+
+    // --- Tracer Particles System ---
+    const numParticles = 1400;
+    const particles = [];
+    for (let k = 0; k < numParticles; k++) {
+      particles.push({
+        x: Math.random() * W,
+        y: 1.5 + Math.random() * (H - 3.0),
+        age: Math.random() * 250
+      });
+    }
+
+    // --- Web Audio Sonification Configuration ---
+    let audioCtx = null;
+    let windNode = null;
+    let windFilter = null;
+    let windGain = null;
+    let oscHum = null;
+    let humGain = null;
+    let audioEnabled = false;
+
+    // --- Core Solver Algorithms ---
+
+    // Initialize potential vorticity and streamfunction to the steady-state laminar jet
+    function initSimulation() {
+      for (let j = 0; j < H; j++) {
+        for (let i = 0; i < W; i++) {
+          let idx = j * W + i;
+          // Background potential vorticity: q = \beta(y - H/2) + \alpha \psi_{bg}
+          q[idx] = (beta + alpha * u0) * (j - H / 2);
+          psi[idx] = -u0 * (j - H / 2);
+          u[idx] = u0;
+          v[idx] = 0;
+        }
+      }
+    }
+
+    // Bilinear interpolation for semi-Lagrangian advection and particle velocity evaluation
+    function interpolate(field, x, y) {
+      let x0 = Math.floor(x);
+      let x1 = x0 + 1;
+      let tx = x - x0;
+      x0 = (x0 % W + W) % W;
+      x1 = (x1 % W + W) % W;
+
+      let y0 = Math.floor(y);
+      if (y0 < 0) y0 = 0;
+      if (y0 > H - 1) y0 = H - 1;
+      let y1 = y0 + 1;
+      if (y1 > H - 1) y1 = H - 1;
+      let ty = y - y0;
+
+      let v00 = field[y0 * W + x0];
+      let v10 = field[y0 * W + x1];
+      let v01 = field[y1 * W + x0];
+      let v11 = field[y1 * W + x1];
+
+      let val0 = v00 * (1 - tx) + v10 * tx;
+      let val1 = v01 * (1 - tx) + v11 * tx;
+
+      return val0 * (1 - ty) + val1 * ty;
+    }
+
+    // Enforce fixed boundary streamfunction values to drive the net flow
+    function setPsiBoundaries() {
+      for (let i = 0; i < W; i++) {
+        psi[0 * W + i] = u0 * (H / 2);
+        psi[(H - 1) * W + i] = -u0 * (H / 2 - 1);
+      }
+    }
+
+    // Quasi-Geostrophic Helmholtz solver: inverts \nabla^2 \psi - \alpha \psi = q'
+    function solvePoisson() {
+      setPsiBoundaries();
+
+      // Precompute right-hand side of equation
+      for (let j = 1; j < H - 1; j++) {
+        for (let i = 0; i < W; i++) {
+          let idx = j * W + i;
+          // q' = q - \beta(y - H/2) - \eta
+          rhs[idx] = q[idx] - beta * (j - H / 2) - topo[idx];
+        }
+      }
+
+      // Successive Over-Relaxation (SOR) iteration loop
+      for (let iter = 0; iter < num_iterations; iter++) {
+        for (let j = 1; j < H - 1; j++) {
+          let jp1 = j + 1;
+          let jm1 = j - 1;
+          for (let i = 0; i < W; i++) {
+            let ip1 = (i + 1) % W;
+            let im1 = (i - 1 + W) % W;
+            let idx = j * W + i;
+
+            let sum = psi[jp1 * W + i] + psi[jm1 * W + i] + psi[j * W + ip1] + psi[j * W + im1];
+            let val = (sum - rhs[idx]) / (4 + alpha);
+
+            psi[idx] = (1 - omega_sor) * psi[idx] + omega_sor * val;
+          }
+        }
+      }
+    }
+
+    // Derive velocities from the streamfunction: u = -\partial\psi/\partial y, v = \partial\psi/\partial x
+    function computeVelocity() {
+      for (let j = 1; j < H - 1; j++) {
+        let jp1 = j + 1;
+        let jm1 = j - 1;
+        for (let i = 0; i < W; i++) {
+          let ip1 = (i + 1) % W;
+          let im1 = (i - 1 + W) % W;
+          let idx = j * W + i;
+
+          u[idx] = -(psi[jp1 * W + i] - psi[jm1 * W + i]) / 2;
+          v[idx] = (psi[j * W + ip1] - psi[j * W + im1]) / 2;
+        }
+      }
+
+      // Free-slip boundaries at the channel walls
+      for (let i = 0; i < W; i++) {
+        u[0 * W + i] = u0;
+        v[0 * W + i] = 0;
+        u[(H - 1) * W + i] = u0;
+        v[(H - 1) * W + i] = 0;
+      }
+    }
+
+    // Advect potential vorticity using semi-Lagrangian backtracing
+    function advectQ() {
+      q_prev.set(q);
+
+      for (let j = 1; j < H - 1; j++) {
+        for (let i = 0; i < W; i++) {
+          let idx = j * W + i;
+
+          // Trace backward in time
+          let prevX = i - u[idx] * dt;
+          let prevY = j - v[idx] * dt;
+
+          let qVal = interpolate(q_prev, prevX, prevY);
+
+          // Compute diffusion using discrete Laplacian
+          let ip1 = (i + 1) % W;
+          let im1 = (i - 1 + W) % W;
+          let jp1 = j + 1;
+          let jm1 = j - 1;
+
+          let q_jp1 = (jp1 === H - 1) ? (beta + alpha * u0) * (jp1 - H / 2) : q_prev[jp1 * W + i];
+          let q_jm1 = (jm1 === 0) ? (beta + alpha * u0) * (jm1 - H / 2) : q_prev[jm1 * W + i];
+
+          let laplacian = q_prev[j * W + ip1] + q_prev[j * W + im1] + q_jp1 + q_jm1 - 4 * q_prev[idx];
+
+          // Target background PV value for drag relaxation
+          let q0_val = (beta + alpha * u0) * (j - H / 2);
+
+          // PV equation with diffusion and friction relaxation terms
+          q[idx] = qVal + viscosity * laplacian * dt - friction * (q_prev[idx] - q0_val) * dt;
+        }
+      }
+
+      // Boundary values clamped to background state values
+      for (let i = 0; i < W; i++) {
+        q[0 * W + i] = (beta + alpha * u0) * (0 - H / 2);
+        q[(H - 1) * W + i] = (beta + alpha * u0) * (H - 1 - H / 2);
+      }
+    }
+
+    // Apply cyclones, anticyclones, or topography painted by the user
+    function applyUserInput() {
+      if (!isMouseDown) return;
+
+      let gridX = (mouseX / mainCanvas.width) * W;
+      let gridY = (mouseY / mainCanvas.height) * H;
+      let r_grid = brushRadius;
+
+      for (let j = 0; j < H; j++) {
+        for (let i = 0; i < W; i++) {
+          // Wrapped periodic distance calculation in longitude
+          let dx = Math.abs(i - gridX);
+          if (dx > W / 2) dx = W - dx;
+          let dy = j - gridY;
+          let distSq = dx * dx + dy * dy;
+
+          if (distSq < r_grid * r_grid) {
+            let idx = j * W + i;
+            let factor = Math.exp(-distSq / (2 * r_grid * r_grid / 4));
+
+            if (activeTool === 'cyclone') {
+              q[idx] += 0.9 * factor;
+            } else if (activeTool === 'anticyclone') {
+              q[idx] -= 0.9 * factor;
+            } else if (activeTool === 'mountain') {
+              topo[idx] = Math.min(3.0, topo[idx] + 0.16 * factor);
+            } else if (activeTool === 'eraser') {
+              topo[idx] = Math.max(0, topo[idx] - 0.3 * factor);
+            }
+          }
+        }
+      }
+    }
+
+    // Update coordinates and decay/reinject fluid tracer particles
+    function updateParticles() {
+      if (!showParticles) return;
+
+      for (let k = 0; k < numParticles; k++) {
+        let p = particles[k];
+        let velU = interpolate(u, p.x, p.y);
+        let velV = interpolate(v, p.x, p.y);
+
+        p.x += velU * dt;
+        p.y += velV * dt;
+        p.age += 1;
+
+        p.x = (p.x % W + W) % W;
+
+        // Reset if out of bounds or age threshold is hit
+        if (p.y < 0.5 || p.y > H - 1.5 || p.age > 240 + Math.random() * 100) {
+          p.x = Math.random() * W;
+          p.y = 1.2 + Math.random() * (H - 2.4);
+          p.age = 0;
+        }
+      }
+    }
+
+    // --- Rendering Functions ---
+
+    // Map potential vorticity, wind speed, or absolute vorticity to colors on canvas
+    function renderField() {
+      for (let j = 0; j < H; j++) {
+        for (let i = 0; i < W; i++) {
+          let idx = j * W + i;
+          let val = 0;
+
+          // Normalized values for appropriate rendering ranges
+          if (viewMode === 'vorticity') {
+            let relVort = q[idx] - beta * (j - H / 2) - topo[idx];
+            val = relVort * 3.5;
+          } else if (viewMode === 'speed') {
+            let speed = Math.sqrt(u[idx] * u[idx] + v[idx] * v[idx]);
+            val = speed * 0.8;
+          } else {
+            val = q[idx] * 0.4;
+          }
+
+          let r = 0, g = 0, b = 0;
+
+          if (viewMode === 'vorticity') {
+            // Neon pink/magenta for positive vorticity, cyan/green for negative
+            if (val > 0) {
+              r = Math.min(255, val * 255);
+              g = 0;
+              b = Math.min(255, val * 130);
+            } else {
+              r = 0;
+              g = Math.min(255, -val * 170);
+              b = Math.min(255, -val * 255);
+            }
+          } else if (viewMode === 'speed') {
+            // Wind speed heatmap: blue (slow) to green to yellow (fast)
+            r = Math.min(255, Math.max(0, (val - 0.45) * 2 * 255));
+            g = Math.min(255, val * 255);
+            b = Math.min(255, (1 - val) * 110 + 25);
+          } else {
+            // Potential vorticity distribution: purple to indigo to cyan
+            let norm = (val + 1) / 2;
+            norm = Math.max(0, Math.min(1, norm));
+            r = Math.min(255, norm * 150 + 20);
+            g = Math.min(255, (1 - Math.abs(norm - 0.5) * 2) * 180);
+            b = Math.min(255, (1 - norm) * 240 + 40);
+          }
+
+          // Shading overlay to represent physical mountain barriers
+          if (showTopo && topo[idx] > 0.05) {
+            let t = Math.min(0.85, topo[idx] * 0.5);
+            r = Math.round(r * (1 - t) + 120 * t);
+            g = Math.round(g * (1 - t) + 85 * t);
+            b = Math.round(b * (1 - t) + 55 * t);
+          }
+
+          let pixelIdx = idx * 4;
+          imgData.data[pixelIdx + 0] = r;
+          imgData.data[pixelIdx + 1] = g;
+          imgData.data[pixelIdx + 2] = b;
+          imgData.data[pixelIdx + 3] = 255;
+        }
+      }
+
+      tempCtx.putImageData(imgData, 0, 0);
+      mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+      
+      // Draw grid with automatic hardware bilinear interpolation
+      mainCtx.drawImage(tempCanvas, 0, 0, mainCanvas.width, mainCanvas.height);
+    }
+
+    // Draw overlay items: particles, mountain contour guides, and the audio probe
+    function drawOverlays() {
+      let w = mainCanvas.width;
+      let h = mainCanvas.height;
+
+      // Render flow tracer particles
+      if (showParticles) {
+        mainCtx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        for (let k = 0; k < numParticles; k++) {
+          let p = particles[k];
+          let cx = (p.x / W) * w;
+          let cy = (p.y / H) * h;
+          // Subpixel draw using 1.8x1.8 blocks for speed
+          mainCtx.fillRect(cx, cy, 1.8, 1.8);
+        }
+      }
+
+      // Draw contour boundaries around mountains to show topology height
+      if (showTopo) {
+        mainCtx.strokeStyle = 'rgba(255, 170, 0, 0.35)';
+        mainCtx.lineWidth = 1.5;
+        for (let j = 1; j < H - 1; j += 2) {
+          for (let i = 1; i < W - 1; i += 2) {
+            let idx = j * W + i;
+            if (topo[idx] > 0.4 && topo[idx] < 0.6) {
+              mainCtx.fillStyle = 'rgba(255, 170, 0, 0.2)';
+              mainCtx.fillRect((i / W) * w, (j / H) * h, 3, 3);
+            }
+          }
+        }
+      }
+
+      // Render the yellow interactive crosshair probe for audio feedback
+      mainCtx.strokeStyle = '#ffaa00';
+      mainCtx.lineWidth = 2;
+      mainCtx.beginPath();
+      // Outer ring
+      mainCtx.arc(probeX, probeY, 8, 0, Math.PI * 2);
+      // Crosshairs
+      mainCtx.moveTo(probeX - 14, probeY);
+      mainCtx.lineTo(probeX + 14, probeY);
+      mainCtx.moveTo(probeX, probeY - 14);
+      mainCtx.lineTo(probeX, probeY + 14);
+      mainCtx.stroke();
+
+      // Probe core point
+      mainCtx.fillStyle = '#ffaa00';
+      mainCtx.beginPath();
+      mainCtx.arc(probeX, probeY, 2.5, 0, Math.PI * 2);
+      mainCtx.fill();
+    }
+
+    // Render the real-time vertical plot of the average wind profile
+    function drawZonalProfile() {
+      let pCtx = profileCanvas.getContext('2d');
+      let w = profileCanvas.width;
+      let h = profileCanvas.height;
+      pCtx.fillStyle = '#020206';
+      pCtx.fillRect(0, 0, w, h);
+
+      // Zonal grid division line
+      pCtx.strokeStyle = 'rgba(0, 243, 255, 0.15)';
+      pCtx.lineWidth = 1;
+      pCtx.beginPath();
+      pCtx.moveTo(w / 2, 0);
+      pCtx.lineTo(w / 2, h);
+      pCtx.stroke();
+
+      pCtx.fillStyle = '#64748b';
+      pCtx.font = '8px "Share Tech Mono"';
+      pCtx.textAlign = 'center';
+      pCtx.fillText("MEAN U(y)", w / 2, 14);
+      pCtx.fillText("< W | E >", w / 2, h - 8);
+
+      let means = new Float32Array(H);
+      let maxVal = 0.5;
+      for (let j = 0; j < H; j++) {
+        let sum = 0;
+        for (let i = 0; i < W; i++) {
+          sum += u[j * W + i];
+        }
+        means[j] = sum / W;
+        if (Math.abs(means[j]) > maxVal) {
+          maxVal = Math.abs(means[j]);
+        }
+      }
+
+      // Draw the wind speed line trace
+      pCtx.strokeStyle = '#00f3ff';
+      pCtx.lineWidth = 2;
+      pCtx.shadowColor = '#00f3ff';
+      pCtx.shadowBlur = 4;
+      pCtx.beginPath();
+
+      for (let j = 0; j < H; j++) {
+        // Map j=0 (bottom) to the bottom of the canvas space
+        let screenY = h - 25 - (j / (H - 1)) * (h - 50);
+        let val = means[j];
+        let screenX = w / 2 + (val / maxVal) * (w / 2 - 8);
+
+        if (j === 0) {
+          pCtx.moveTo(screenX, screenY);
+        } else {
+          pCtx.lineTo(screenX, screenY);
+        }
+      }
+      pCtx.stroke();
+      pCtx.shadowBlur = 0;
+    }
+
+    // Render the probe oscilloscope time series graph
+    const probeHistory = [];
+    const maxHistory = 360;
+    function drawOscilloscope() {
+      let oCtx = oscCanvas.getContext('2d');
+      let w = oscCanvas.width;
+      let h = oscCanvas.height;
+      oCtx.fillStyle = '#020206';
+      oCtx.fillRect(0, 0, w, h);
+
+      // Grid guides
+      oCtx.strokeStyle = 'rgba(0, 243, 255, 0.1)';
+      oCtx.lineWidth = 1;
+      oCtx.beginPath();
+      for (let x = 0; x < w; x += 120) {
+        oCtx.moveTo(x, 0);
+        oCtx.lineTo(x, h);
+      }
+      oCtx.moveTo(0, h / 2);
+      oCtx.lineTo(w, h / 2);
+      oCtx.stroke();
+
+      oCtx.fillStyle = '#64748b';
+      oCtx.font = '10px "Share Tech Mono"';
+      oCtx.textAlign = 'left';
+      oCtx.fillText("PROBE OSCILLOSCOPE SIGNAL", 15, 16);
+
+      // Evaluate signal value at probe coordinates
+      let px = Math.floor((probeX / mainCanvas.width) * W);
+      let py = Math.floor((probeY / mainCanvas.height) * H);
+      px = Math.max(0, Math.min(W - 1, px));
+      py = Math.max(0, Math.min(H - 1, py));
+      let idx = py * W + px;
+
+      let val = 0;
+      let label = "";
+      if (viewMode === 'vorticity') {
+        val = q[idx] - beta * (py - H/2) - topo[idx];
+        label = `Vorticity: ${val.toFixed(3)}`;
+      } else if (viewMode === 'speed') {
+        val = Math.sqrt(u[idx] * u[idx] + v[idx] * v[idx]);
+        label = `Speed: ${val.toFixed(3)}`;
+      } else {
+        val = q[idx];
+        label = `Pot. Vorticity: ${val.toFixed(3)}`;
+      }
+
+      oCtx.fillStyle = '#e2e8f0';
+      oCtx.fillText(label, w - 160, 16);
+
+      probeHistory.push(val);
+      if (probeHistory.length > maxHistory) {
+        probeHistory.shift();
+      }
+
+      if (probeHistory.length < 2) return;
+
+      // Find boundaries to scale the graph dynamically
+      let minVal = -0.4;
+      let maxVal = 0.4;
+      if (viewMode === 'speed') {
+        minVal = 0;
+        maxVal = 1.6;
+      } else {
+        for (let k = 0; k < probeHistory.length; k++) {
+          if (probeHistory[k] < minVal) minVal = probeHistory[k];
+          if (probeHistory[k] > maxVal) maxVal = probeHistory[k];
+        }
+      }
+      let diff = maxVal - minVal;
+      if (diff < 0.1) diff = 0.1;
+      minVal -= diff * 0.1;
+      maxVal += diff * 0.1;
+
+      // Draw the wave trace
+      oCtx.strokeStyle = '#ff007f';
+      oCtx.lineWidth = 1.8;
+      oCtx.shadowColor = '#ff007f';
+      oCtx.shadowBlur = 4;
+      oCtx.beginPath();
+      for (let k = 0; k < probeHistory.length; k++) {
+        let screenX = (k / (maxHistory - 1)) * (w - 30) + 15;
+        let norm = (probeHistory[k] - minVal) / (maxVal - minVal);
+        let screenY = h - 16 - norm * (h - 32);
+
+        if (k === 0) {
+          oCtx.moveTo(screenX, screenY);
+        } else {
+          oCtx.lineTo(screenX, screenY);
+        }
+      }
+      oCtx.stroke();
+      oCtx.shadowBlur = 0;
+    }
+
+    // --- Web Audio Synthesizer Update ---
+    function updateAudioSonification() {
+      if (!audioEnabled || !audioCtx) return;
+
+      let px = Math.floor((probeX / mainCanvas.width) * W);
+      let py = Math.floor((probeY / mainCanvas.height) * H);
+      px = Math.max(0, Math.min(W - 1, px));
+      py = Math.max(0, Math.min(H - 1, py));
+      let idx = py * W + px;
+
+      // Speed drives wind pitch
+      let speed = Math.sqrt(u[idx] * u[idx] + v[idx] * v[idx]);
+      let targetFreq = 160 + speed * 580;
+      windFilter.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.15);
+
+      // Speed drives wind intensity/volume
+      let targetVol = Math.min(0.20, speed * 0.09);
+      windGain.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.15);
+
+      // Relative vorticity drives oscillator pitch and volume
+      let relVort = q[idx] - beta * (py - H/2) - topo[idx];
+      let targetHum = 85 + Math.min(220, Math.abs(relVort) * 110);
+      oscHum.frequency.setTargetAtTime(targetHum, audioCtx.currentTime, 0.15);
+
+      let targetHumVol = Math.min(0.09, Math.abs(relVort) * 0.025);
+      humGain.gain.setTargetAtTime(targetHumVol, audioCtx.currentTime, 0.15);
+    }
+
+    // Toggle Web Audio API synthesizer nodes
+    function toggleAudio() {
+      const btn = document.getElementById('audioBtn');
+      if (!audioEnabled) {
+        try {
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Prefill loopable noise buffer to prevent deprecated script nodes
+            let bufferSize = audioCtx.sampleRate * 2.0;
+            let noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            let output = noiseBuffer.getChannelData(0);
+            for (let k = 0; k < bufferSize; k++) {
+              output[k] = Math.random() * 2 - 1;
+            }
+
+            windNode = audioCtx.createBufferSource();
+            windNode.buffer = noiseBuffer;
+            windNode.loop = true;
+
+            windFilter = audioCtx.createBiquadFilter();
+            windFilter.type = 'bandpass';
+            windFilter.Q.value = 16;
+
+            windGain = audioCtx.createGain();
+            windGain.gain.value = 0.0;
+
+            oscHum = audioCtx.createOscillator();
+            oscHum.type = 'sine';
+            oscHum.frequency.value = 100;
+
+            humGain = audioCtx.createGain();
+            humGain.gain.value = 0.0;
+
+            // Connect graph
+            windNode.connect(windFilter);
+            windFilter.connect(windGain);
+            windGain.connect(audioCtx.destination);
+
+            oscHum.connect(humGain);
+            humGain.connect(audioCtx.destination);
+
+            windNode.start(0);
+            oscHum.start(0);
+          }
+
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          audioEnabled = true;
+          btn.textContent = 'Mute Sonification';
+          btn.classList.add('active');
+        } catch (e) {
+          console.error("Audio Context Init Failed: ", e);
+        }
+      } else {
+        if (windGain && humGain) {
+          windGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+          humGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+        }
+        audioEnabled = false;
+        btn.textContent = 'Enable Sonification';
+        btn.classList.remove('active');
+      }
+    }
+
+    // --- Interactive Mouse Handlers ---
+    mainCanvas.addEventListener('mousedown', (e) => {
+      let rect = mainCanvas.getBoundingClientRect();
+      let mx = e.clientX - rect.left;
+      let my = e.clientY - rect.top;
+
+      // Handle probe dragging click detection
+      let dx = mx - probeX;
+      let dy = my - probeY;
+      if (Math.sqrt(dx*dx + dy*dy) < 18) {
+        isDraggingProbe = true;
+      } else {
+        isMouseDown = true;
+        mouseX = mx;
+        mouseY = my;
+        applyUserInput();
+      }
+    });
+
+    mainCanvas.addEventListener('mousemove', (e) => {
+      let rect = mainCanvas.getBoundingClientRect();
+      let mx = e.clientX - rect.left;
+      let my = e.clientY - rect.top;
+
+      if (isDraggingProbe) {
+        probeX = Math.max(10, Math.min(mainCanvas.width - 10, mx));
+        probeY = Math.max(10, Math.min(mainCanvas.height - 10, my));
+      } else {
+        mouseX = mx;
+        mouseY = my;
+        if (isMouseDown) {
+          applyUserInput();
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+      isDraggingProbe = false;
+    });
+
+    // Touch support for mobile layouts
+    mainCanvas.addEventListener('touchstart', (e) => {
+      let rect = mainCanvas.getBoundingClientRect();
+      let touch = e.touches[0];
+      let mx = touch.clientX - rect.left;
+      let my = touch.clientY - rect.top;
+
+      let dx = mx - probeX;
+      let dy = my - probeY;
+      if (Math.sqrt(dx*dx + dy*dy) < 22) {
+        isDraggingProbe = true;
+      } else {
+        isMouseDown = true;
+        mouseX = mx;
+        mouseY = my;
+        applyUserInput();
+      }
+    });
+
+    mainCanvas.addEventListener('touchmove', (e) => {
+      let rect = mainCanvas.getBoundingClientRect();
+      let touch = e.touches[0];
+      let mx = touch.clientX - rect.left;
+      let my = touch.clientY - rect.top;
+
+      if (isDraggingProbe) {
+        probeX = Math.max(10, Math.min(mainCanvas.width - 10, mx));
+        probeY = Math.max(10, Math.min(mainCanvas.height - 10, my));
+      } else {
+        mouseX = mx;
+        mouseY = my;
+        if (isMouseDown) {
+          applyUserInput();
+        }
+      }
+    });
+
+    // --- State & Option Modifiers ---
+    function setTool(tool) {
+      activeTool = tool;
+      document.querySelectorAll('.brush-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`btn-${tool}`).classList.add('active');
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      document.querySelectorAll('.toggle-btn').forEach(btn => {
+        if (btn.id.startsWith('view-')) btn.classList.remove('active');
+      });
+      document.getElementById(`view-${mode}`).classList.add('active');
+    }
+
+    function toggleParticles() {
+      showParticles = !showParticles;
+      document.getElementById('toggle-particles').classList.toggle('active');
+    }
+
+    function toggleTopo() {
+      showTopo = !showTopo;
+      document.getElementById('toggle-topo').classList.toggle('active');
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('playBtn').textContent = isPlaying ? 'Pause' : 'Play';
+      document.getElementById('playBtn').classList.toggle('btn-primary');
+      document.getElementById('playBtn').classList.toggle('btn-secondary');
+    }
+
+    function clearSimulation() {
+      q.fill(0);
+      psi.fill(0);
+      u.fill(0);
+      v.fill(0);
+      topo.fill(0);
+      initSimulation();
+      probeHistory.length = 0;
+    }
+
+    // Preset configurations
+    function loadPreset(presetName) {
+      topo.fill(0);
+
+      if (presetName === 'mountain') {
+        u0 = 1.1;
+        beta = 0.08;
+        alpha = 0.005;
+        viscosity = 0.015;
+        friction = 0.004;
+
+        // Circular smooth cosine dome topography
+        let mx = Math.floor(W / 3);
+        let my = Math.floor(H / 2);
+        let radius = 6.5;
+        for (let j = 0; j < H; j++) {
+          for (let i = 0; i < W; i++) {
+            let dx = i - mx;
+            let dy = j - my;
+            let d = Math.sqrt(dx*dx + dy*dy);
+            if (d < radius) {
+              let idx = j * W + i;
+              topo[idx] = 1.9 * Math.cos((Math.PI * d) / (2 * radius));
+            }
+          }
+        }
+        initSimulation();
+      } else if (presetName === 'turbulence') {
+        u0 = 0.0;
+        beta = 0.18;
+        alpha = 0.002;
+        viscosity = 0.008;
+        friction = 0.002;
+
+        initSimulation();
+
+        // Inject random vortex eddies
+        for (let k = 0; k < 35; k++) {
+          let rx = Math.random() * W;
+          let ry = 6 + Math.random() * (H - 12);
+          let strength = (Math.random() - 0.5) * 6.5;
+          let radius = 2.5 + Math.random() * 3.5;
+
+          for (let j = 0; j < H; j++) {
+            for (let i = 0; i < W; i++) {
+              let dx = Math.abs(i - rx);
+              if (dx > W / 2) dx = W - dx;
+              let dy = j - ry;
+              let dSq = dx*dx + dy*dy;
+              if (dSq < radius * radius) {
+                let idx = j * W + i;
+                q[idx] += strength * Math.exp(-dSq / (radius * radius / 4));
+              }
+            }
+          }
+        }
+      } else if (presetName === 'modon') {
+        u0 = 0.0;
+        beta = 0.06;
+        alpha = 0.004;
+        viscosity = 0.008;
+        friction = 0.001;
+
+        initSimulation();
+
+        // Create positive & negative dipolar vortices
+        let cx = W / 3;
+        let cy = H / 2;
+        let sep = 3.5;
+        let radius = 4;
+
+        // Cyclone (+)
+        let cyY = cy - sep;
+        for (let j = 0; j < H; j++) {
+          for (let i = 0; i < W; i++) {
+            let dx = Math.abs(i - cx);
+            if (dx > W / 2) dx = W - dx;
+            let dy = j - cyY;
+            let dSq = dx*dx + dy*dy;
+            if (dSq < radius * radius) {
+              q[j * W + i] += 5.0 * Math.exp(-dSq / (radius * radius / 4));
+            }
+          }
+        }
+
+        // Anticyclone (-)
+        let acY = cy + sep;
+        for (let j = 0; j < H; j++) {
+          for (let i = 0; i < W; i++) {
+            let dx = Math.abs(i - cx);
+            if (dx > W / 2) dx = W - dx;
+            let dy = j - acY;
+            let dSq = dx*dx + dy*dy;
+            if (dSq < radius * radius) {
+              q[j * W + i] -= 5.0 * Math.exp(-dSq / (radius * radius / 4));
+            }
+          }
+        }
+      } else if (presetName === 'blocking') {
+        u0 = 0.8;
+        beta = 0.08;
+        alpha = 0.005;
+        viscosity = 0.015;
+        friction = 0.004;
+
+        initSimulation();
+
+        // Inject large stable anticyclonic block
+        let cx = W / 2;
+        let cy = H / 2 - 3;
+        let radius = 10;
+
+        for (let j = 0; j < H; j++) {
+          for (let i = 0; i < W; i++) {
+            let dx = Math.abs(i - cx);
+            if (dx > W / 2) dx = W - dx;
+            let dy = j - cy;
+            let dSq = dx*dx + dy*dy;
+            if (dSq < radius * radius) {
+              q[j * W + i] -= 6.0 * Math.exp(-dSq / (radius * radius / 4));
+            }
+          }
+        }
+      }
+
+      updateSlidersUI();
+      probeHistory.length = 0;
+    }
+
+    // Match slider controls UI to values
+    function updateSlidersUI() {
+      document.getElementById('u0Slider').value = u0;
+      document.getElementById('u0Val').textContent = u0;
+
+      document.getElementById('betaSlider').value = beta;
+      document.getElementById('betaVal').textContent = beta;
+
+      document.getElementById('alphaSlider').value = alpha;
+      document.getElementById('alphaVal').textContent = alpha.toFixed(3);
+
+      document.getElementById('viscSlider').value = viscosity;
+      document.getElementById('viscVal').textContent = viscosity.toFixed(3);
+
+      document.getElementById('dragSlider').value = friction;
+      document.getElementById('dragVal').textContent = friction.toFixed(3);
+    }
+
+    // Synchronize parameter values as slider inputs change
+    document.getElementById('u0Slider').addEventListener('input', (e) => {
+      u0 = parseFloat(e.target.value);
+      document.getElementById('u0Val').textContent = u0;
+    });
+
+    document.getElementById('betaSlider').addEventListener('input', (e) => {
+      beta = parseFloat(e.target.value);
+      document.getElementById('betaVal').textContent = beta;
+    });
+
+    document.getElementById('alphaSlider').addEventListener('input', (e) => {
+      alpha = parseFloat(e.target.value);
+      document.getElementById('alphaVal').textContent = alpha.toFixed(3);
+    });
+
+    document.getElementById('viscSlider').addEventListener('input', (e) => {
+      viscosity = parseFloat(e.target.value);
+      document.getElementById('viscVal').textContent = viscosity.toFixed(3);
+    });
+
+    document.getElementById('dragSlider').addEventListener('input', (e) => {
+      friction = parseFloat(e.target.value);
+      document.getElementById('dragVal').textContent = friction.toFixed(3);
+    });
+
+    document.getElementById('brushSlider').addEventListener('input', (e) => {
+      brushRadius = parseFloat(e.target.value);
+      document.getElementById('brushVal').textContent = brushRadius;
+    });
+
+    // --- Core Loop Cycle ---
+    function tick() {
+      if (isPlaying) {
+        solvePoisson();
+        computeVelocity();
+        advectQ();
+        updateParticles();
+      }
+
+      renderField();
+      drawOverlays();
+      drawZonalProfile();
+      drawOscilloscope();
+      updateAudioSonification();
+
+      requestAnimationFrame(tick);
+    }
+
+    // Bootstrap run
+    initSimulation();
+    loadPreset('mountain');
+    tick();
+  </script>
+</body>
+</html>
