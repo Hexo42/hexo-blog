@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>dendrite-forge: phase-field crystal growth & snowflake solidification sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #020206;
+      --bg-panel: rgba(10, 11, 28, 0.93);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --border-glow: rgba(0, 243, 255, 0.5);
+      --neon-cyan: #00f3ff;
+      --neon-magenta: #ff007f;
+      --neon-green: #00ff7f;
+      --neon-yellow: #ffaa00;
+      --text-color: #e2e8f0;
+      --text-dim: #64748b;
+      --glow-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: rgba(2, 2, 8, 0.95);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--neon-cyan);
+      text-shadow: var(--glow-shadow);
+      letter-spacing: 2px;
+    }
+
+    .tagline {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text-dim);
+      font-size: 12px;
+      display: none;
+    }
+
+    @media (min-width: 600px) {
+      .tagline { display: inline; }
+    }
+
+    .back-link {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-magenta);
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px dashed var(--neon-magenta);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .back-link:hover {
+      background: rgba(255, 0, 127, 0.1);
+      box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+      text-shadow: 0 0 5px var(--neon-magenta);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
+    }
+
+    @media (min-width: 1024px) {
+      .main-layout {
+        grid-template-columns: 380px 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      height: fit-content;
+    }
+
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      color: var(--neon-cyan);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .presets-grid button {
+      background: rgba(0, 243, 255, 0.05);
+      border: 1px solid rgba(0, 243, 255, 0.3);
+      color: var(--text-color);
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+
+    .presets-grid button:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-label span.val {
+      color: var(--neon-cyan);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 5px var(--neon-cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    select, button.action-btn {
+      background: rgba(10, 11, 28, 0.95);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      outline: none;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    select:focus, select:hover {
+      border-color: var(--neon-cyan);
+      box-shadow: var(--glow-shadow);
+    }
+
+    button.action-btn {
+      text-transform: uppercase;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    button.action-btn.primary {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+
+    button.action-btn.primary:hover {
+      background: rgba(0, 243, 255, 0.2);
+      box-shadow: var(--glow-shadow);
+    }
+
+    button.action-btn.danger {
+      background: rgba(255, 0, 127, 0.1);
+      border-color: var(--neon-magenta);
+      color: var(--neon-magenta);
+    }
+
+    button.action-btn.danger:hover {
+      background: rgba(255, 0, 127, 0.2);
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-color);
+      padding: 8px 4px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .tool-btn.active {
+      background: rgba(0, 255, 127, 0.1);
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+      box-shadow: 0 0 8px rgba(0, 255, 127, 0.2);
+    }
+
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    canvas#simCanvas {
+      background-color: #000;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--glow-shadow);
+      border-radius: 4px;
+      cursor: crosshair;
+      max-width: 100%;
+      aspect-ratio: 1/1;
+    }
+
+    .sim-card {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      text-align: center;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      padding: 8px;
+    }
+
+    .stat-val {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--neon-cyan);
+      margin-bottom: 2px;
+    }
+
+    .stat-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .plot-container {
+      background: rgba(2, 2, 6, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    canvas#plotCanvas {
+      width: 100%;
+      height: 80px;
+      border-radius: 2px;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+    }
+
+    .checkbox-container input {
+      cursor: pointer;
+    }
+
+    .info-section {
+      background: rgba(10, 11, 28, 0.5);
+      border: 1px solid rgba(0, 243, 255, 0.1);
+      border-radius: 6px;
+      padding: 20px;
+      margin-top: 10px;
+    }
+
+    .info-section h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      color: var(--neon-cyan);
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .info-section p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #94a3b8;
+      margin-bottom: 12px;
+    }
+
+    .info-section code {
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon-magenta);
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .layout-columns {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+    }
+
+    @media (min-width: 1200px) {
+      .layout-columns {
+        flex-direction: row;
+      }
+      .sim-card {
+        flex-grow: 1;
+      }
+      .side-card {
+        width: 320px;
+        flex-shrink: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo">DENDRITE FORGE</div>
+      <div class="tagline">phase-field crystal growth & snowflake solidification sandbox</div>
+    </div>
+    <a href="../index.html" class="back-link">&lt;&lt; BACK TO HQ</a>
+  </header>
+
+  <div class="main-layout">
+    
+    <!-- LEFT PANEL: CONTROLS -->
+    <div class="panel">
+      <div class="panel-title">Simulation Control</div>
+      
+      <div style="display: flex; gap: 8px;">
+        <button id="playPauseBtn" class="action-btn primary" style="flex: 2;">Pause</button>
+        <button id="stepBtn" class="action-btn" style="flex: 1;">Step</button>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button id="resetBtn" class="action-btn">Reset Growth</button>
+        <button id="clearAllBtn" class="action-btn danger">Clear All</button>
+      </div>
+
+      <div class="panel-title">Presets</div>
+      <div class="presets-grid">
+        <button onclick="loadPreset('snowflake')">❄️ Snowflake</button>
+        <button onclick="loadPreset('cubic')">⬜ Cubic Dendrite</button>
+        <button onclick="loadPreset('star8')">⭐ 8-Fold Star</button>
+        <button onclick="loadPreset('seaweed')">🌀 Seaweed Maze</button>
+        <button onclick="loadPreset('faceted')">💎 Faceted Plate</button>
+        <button onclick="loadPreset('polycrystal')">🕸️ Frost Grain</button>
+      </div>
+
+      <div class="panel-title">Active Tool</div>
+      <div class="tools-grid">
+        <button class="tool-btn active" id="tool_seed" onclick="setTool('seed')">Seed</button>
+        <button class="tool-btn" id="tool_cold" onclick="setTool('cold')">Frost (-)</button>
+        <button class="tool-btn" id="tool_heat" onclick="setTool('heat')">Warm (+)</button>
+        <button class="tool-btn" id="tool_barrier" onclick="setTool('barrier')">Barrier</button>
+        <button class="tool-btn" id="tool_eraser" onclick="setTool('eraser')">Eraser</button>
+        <button class="tool-btn" id="tool_probe" onclick="setTool('probe')">📍 Probe</button>
+      </div>
+
+      <div class="panel-title">Parameters</div>
+
+      <div class="control-group">
+        <div class="control-label">Symmetry Fold <span id="val_symmetry" class="val">6</span></div>
+        <select id="symmetrySelect" onchange="updateSymmetry()">
+          <option value="3">3-Fold Symmetry</option>
+          <option value="4">4-Fold Symmetry</option>
+          <option value="5">5-Fold Symmetry</option>
+          <option value="6" selected>6-Fold Symmetry (Snowflake)</option>
+          <option value="8">8-Fold Symmetry</option>
+          <option value="12">12-Fold Symmetry</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Anisotropy Strength (&delta;) <span id="val_anisotropy" class="val">0.050</span></div>
+        <input type="range" id="slider_anisotropy" min="0.00" max="0.12" step="0.005" value="0.05" oninput="updateParam('anisotropy', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Latent Heat Release (K) <span id="val_latent" class="val">1.60</span></div>
+        <input type="range" id="slider_latent" min="0.0" max="2.6" step="0.05" value="1.6" oninput="updateParam('latent', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Liquid Temperature (Undercooling) <span id="val_temp" class="val">0.00</span></div>
+        <input type="range" id="slider_temp" min="-0.10" max="0.60" step="0.02" value="0.00" oninput="updateParam('temp', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Growth Micro-Noise <span id="val_noise" class="val">0.03</span></div>
+        <input type="range" id="slider_noise" min="0.00" max="0.10" step="0.005" value="0.03" oninput="updateParam('noise', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Crystal Orientation (&theta;0) <span id="val_orientation" class="val">0°</span></div>
+        <input type="range" id="slider_orientation" min="0" max="360" step="5" value="0" oninput="updateParam('orientation', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Solver Speed (Steps/Frame) <span id="val_speed" class="val">6</span></div>
+        <input type="range" id="slider_speed" min="1" max="15" step="1" value="6" oninput="updateParam('speed', this.value)">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Interface Width (&epsilon;) <span id="val_epsilon" class="val">0.80</span></div>
+        <input type="range" id="slider_epsilon" min="0.40" max="1.20" step="0.05" value="0.80" oninput="updateParam('epsilon', this.value)">
+      </div>
+    </div>
+
+    <!-- RIGHT MAIN COLUMN -->
+    <div class="sim-card">
+      
+      <div class="layout-columns">
+        
+        <!-- CANVAS SIMULATOR -->
+        <div class="canvas-container" style="flex-grow: 1;">
+          <canvas id="simCanvas" width="600" height="600"></canvas>
+        </div>
+
+        <!-- RIGHT TELEMETRY & AUDIO -->
+        <div class="side-card" style="display: flex; flex-direction: column; gap: 15px;">
+          
+          <div class="panel" style="width: 100%;">
+            <div class="panel-title">Chamber Status</div>
+            
+            <div class="stats-row">
+              <div class="stat-box">
+                <div class="stat-val" id="stat_solid">0.0%</div>
+                <div class="stat-label">Solid</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-val" id="stat_temp">0.00</div>
+                <div class="stat-label">Avg Temp</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-val" id="stat_phase">0.08</div>
+                <div class="stat-label">dt_phi</div>
+              </div>
+            </div>
+
+            <div class="plot-container">
+              <div class="control-label">Telemetry Log (Cyan: Solid, Pink: Temp)</div>
+              <canvas id="plotCanvas" width="320" height="90"></canvas>
+            </div>
+          </div>
+
+          <div class="panel" style="width: 100%;">
+            <div class="panel-title">Acoustic Sonification</div>
+            
+            <label class="checkbox-container">
+              <input type="checkbox" id="audioToggle" onchange="toggleAudio(this.checked)">
+              <span>Enable Sonification</span>
+            </label>
+
+            <div class="control-group">
+              <div class="control-label">Volume <span id="val_vol" class="val">30%</span></div>
+              <input type="range" id="slider_vol" min="0" max="100" step="5" value="30" oninput="updateVolume(this.value)">
+            </div>
+            
+            <div class="control-label" style="line-height: 1.4; color: var(--text-dim);">
+              Drag the probe (📍) or hover over the growing dendrites to hear the acoustic emission chimes of phase transformation and the thermal hum of the local microenvironment.
+            </div>
+          </div>
+
+          <div class="panel" style="width: 100%;">
+            <div class="panel-title">Visual Themes</div>
+            <select id="themeSelect" onchange="changeTheme(this.value)">
+              <option value="glacial">Glacial Glow (Neon Pink & Cyan)</option>
+              <option value="magma">Magma Forge (Gold, Crimson & Ash)</option>
+              <option value="aurora">Aurora Borealis (Indigo & Green)</option>
+              <option value="cyber">Bioluminescence (Teal & Lime)</option>
+            </select>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- THEORY / INFO SECTION -->
+      <div class="info-section">
+        <h3>How it Works: The Phase-Field Method</h3>
+        <p>
+          Modeling crystal growth like snowflakes is historically difficult because tracking a sharp, moving boundary is computationally nightmarish. The <strong>Phase-Field Model</strong> solves this by introducing a continuous variable, the phase field <code>&phi;</code>, which goes from <code>0.0</code> (liquid) to <code>1.0</code> (solid). The interface is represented as a narrow transition zone where <code>&phi;</code> changes smoothly.
+        </p>
+        <p>
+          This simulation solves the <strong>Kobayashi Phase-Field Equations</strong> (R. Kobayashi, 1993) on a 150&times;150 grid at up to 900 steps per second. The state updates are governed by two coupled partial differential equations (PDEs):
+        </p>
+        <ul>
+          <li><strong>Phase Evolution (&phi;):</strong> <code>&part;&phi;/&part;t = &nabla; &middot; (&epsilon;&sup2; &nabla;&phi;) + &part;_x(&epsilon;&epsilon;' &part;_y&phi;) - &part;_y(&epsilon;&epsilon;' &part;_x&phi;) + &phi;(1-&phi;)(&phi; - 0.5 + m(T)) + noise</code></li>
+          <li><strong>Thermal Diffusion (T):</strong> <code>&part;T/&part;t = D &nabla;&sup2;T + K &part;&phi;/&part;t</code></li>
+        </ul>
+        <p>
+          Here, <code>m(T) = (&alpha;/&pi;) arctan(&gamma;(1 - T))</code> represents the thermodynamic driving force: supercooled liquid (where <code>T &lt; 1</code>) drives <code>&phi;</code> to expand, releasing latent heat <code>K &part;&phi;/&part;t</code> into the local thermal field. Anisotropy is introduced in the interface thickness parameter <code>&epsilon; = &epsilon;_bar (1 + &delta; cos(j(&theta; - &theta;0)))</code>, which biases growth along the preferred crystal axes (e.g. 6-fold for hexagonal snowflakes, 4-fold for cubic structures), giving rise to the beautifully symmetrical branches.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // Grid settings
+    const W = 150;
+    const H = 150;
+    
+    // Arrays
+    let phi = new Float32Array(W * H);
+    let temp = new Float32Array(W * H);
+    let phiNew = new Float32Array(W * H);
+    let tempNew = new Float32Array(W * H);
+    let obstacles = new Uint8Array(W * H);
+    let theta0Grid = new Float32Array(W * H);
+    let theta0NewGrid = new Float32Array(W * H);
+
+    // Simulation Parameters (tuned defaults for 'snowflake')
+    let j_symmetry = 6;
+    let delta = 0.05;
+    let K = 1.6;
+    let initialUndercooling = 0.0;
+    let noise_amplitude = 0.03;
+    let epsilon_bar = 0.8;
+    let stepsPerFrame = 6;
+    let theta0_global = 0.0; // in radians
+    
+    let dt = 0.08;
+    let dt_T = 0.15;
+    let D = 1.0;
+    const alpha = 0.9;
+    const gamma = 10.0;
+
+    let useLocalTheta0 = false; // flag for polycrystalline grain simulation
+    
+    // UI state
+    let isRunning = true;
+    let activeTool = 'seed';
+    let isDrawing = false;
+    let lastGridX = -1;
+    let lastGridY = -1;
+    let probeX = Math.floor(W / 2);
+    let probeY = Math.floor(H / 2);
+    let drawRadius = 2;
+    
+    // Color palettes
+    let activePalette = 'glacial';
+    const palettes = {
+      glacial: {
+        solid: [230, 255, 255],     // bright cyan/white core
+        liquid_cold: [5, 5, 25],    // deep navy
+        liquid_warm: [90, 10, 80],   // purple/violet glow
+        border: [255, 0, 127]       // hot magenta
+      },
+      magma: {
+        solid: [255, 220, 100],     // glowing gold
+        liquid_cold: [15, 5, 5],     // charcoal dark red
+        liquid_warm: [120, 20, 10],   // orange-red glow
+        border: [255, 40, 0]        // bright lava
+      },
+      aurora: {
+        solid: [100, 255, 170],     // emerald green
+        liquid_cold: [5, 10, 30],    // deep indigo
+        liquid_warm: [80, 20, 120],  // royal purple glow
+        border: [180, 100, 255]     // violet fringe
+      },
+      cyber: {
+        solid: [0, 255, 243],       // electric teal
+        liquid_cold: [10, 15, 12],   // slate dark forest
+        liquid_warm: [0, 100, 80],   // deep teal glow
+        border: [0, 255, 127]       // lime green fringe
+      }
+    };
+
+    // Web Audio state
+    let audioCtx = null;
+    let audioEnabled = false;
+    let masterVolume = 0.3;
+    let humOsc = null;
+    let humGain = null;
+    let filterNode = null;
+    let lastChimeTime = 0;
+
+    // Telemetry log history
+    const plotHistory = [];
+    const maxPlotPoints = 150;
+
+    // DOM Elements
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const stepBtn = document.getElementById('stepBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const symmetrySelect = document.getElementById('symmetrySelect');
+    
+    // Offscreen rendering canvas for fast upscaling
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = W;
+    offCanvas.height = H;
+    const offCtx = offCanvas.getContext('2d');
+    const imgData = offCtx.createImageData(W, H);
+
+    // Initialize grids
+    function initGrids() {
+      phi.fill(0.0);
+      temp.fill(initialUndercooling);
+      theta0Grid.fill(theta0_global);
+      obstacles.fill(0);
+      
+      // place a default seed in the center
+      const cx = Math.floor(W / 2);
+      const cy = Math.floor(H / 2);
+      const idx = cy * W + cx;
+      phi[idx] = 1.0;
+      temp[idx] = 0.0;
+      theta0Grid[idx] = theta0_global;
+    }
+
+    // Reset keeping obstacles
+    function resetSim() {
+      phi.fill(0.0);
+      temp.fill(initialUndercooling);
+      theta0Grid.fill(theta0_global);
+      
+      if (useLocalTheta0) {
+        // Polycrystalline initialization: place several random seeds with random grain orientations
+        const seedCount = 10;
+        for (let s = 0; s < seedCount; s++) {
+          const rx = Math.floor(0.15 * W + Math.random() * 0.7 * W);
+          const ry = Math.floor(0.15 * H + Math.random() * 0.7 * H);
+          const r_theta = Math.random() * Math.PI * 2;
+          
+          const r = 2;
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              if (dx*dx + dy*dy <= r*r) {
+                const px = rx + dx;
+                const py = ry + dy;
+                if (px >= 0 && px < W && py >= 0 && py < H) {
+                  const idx = py * W + px;
+                  if (!obstacles[idx]) {
+                    phi[idx] = 1.0;
+                    temp[idx] = 0.0;
+                    theta0Grid[idx] = r_theta;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Single central seed
+        const cx = Math.floor(W / 2);
+        const cy = Math.floor(H / 2);
+        const idx = cy * W + cx;
+        if (!obstacles[idx]) {
+          phi[idx] = 1.0;
+          temp[idx] = 0.0;
+        }
+      }
+      
+      plotHistory.length = 0;
+      if (audioCtx && audioEnabled) {
+        updateHum(0, initialUndercooling);
+      }
+    }
+
+    // Clear all including obstacles
+    function clearAll() {
+      obstacles.fill(0);
+      useLocalTheta0 = false;
+      resetSim();
+    }
+
+    // Solver logic
+    // We compute spatial derivatives of phi, build Fx/Fy vector components, and update phase and heat.
+    const Fx = new Float32Array(W * H);
+    const Fy = new Float32Array(W * H);
+
+    function step() {
+      // 1. Compute anisotropic flux vectors Fx and Fy at cell centers
+      for (let j = 0; j < H; j++) {
+        for (let i = 0; i < W; i++) {
+          const idx = j * W + i;
+          if (obstacles[idx]) {
+            Fx[idx] = 0;
+            Fy[idx] = 0;
+            continue;
+          }
+
+          const phi_val = phi[idx];
+
+          // Reflective zero-flux boundary conditions at edges and obstacles
+          let phi_l = (i > 0 && !obstacles[idx - 1]) ? phi[idx - 1] : phi_val;
+          let phi_r = (i < W - 1 && !obstacles[idx + 1]) ? phi[idx + 1] : phi_val;
+          let phi_u = (j > 0 && !obstacles[idx - W]) ? phi[idx - W] : phi_val;
+          let phi_d = (j < H - 1 && !obstacles[idx + W]) ? phi[idx + W] : phi_val;
+
+          const dx = (phi_r - phi_l) * 0.5;
+          const dy = (phi_d - phi_u) * 0.5;
+
+          const grad2 = dx * dx + dy * dy;
+          if (grad2 < 1e-8) {
+            Fx[idx] = 0;
+            Fy[idx] = 0;
+          } else {
+            const theta = Math.atan2(dy, dx);
+            const theta0 = theta0Grid[idx];
+            const angleTerm = j_symmetry * (theta - theta0);
+            
+            const cosTerm = Math.cos(angleTerm);
+            const sinTerm = Math.sin(angleTerm);
+
+            const epsilon = epsilon_bar * (1.0 + delta * cosTerm);
+            const epsilon_prime = -j_symmetry * epsilon_bar * delta * sinTerm;
+
+            const eps2 = epsilon * epsilon;
+            const eps_eps_prime = epsilon * epsilon_prime;
+
+            Fx[idx] = eps2 * dx + eps_eps_prime * dy;
+            Fy[idx] = eps2 * dy - eps_eps_prime * dx;
+          }
+        }
+      }
+
+      // 2. Perform updates for Phase & Temperature
+      for (let j = 0; j < H; j++) {
+        for (let i = 0; i < W; i++) {
+          const idx = j * W + i;
+          if (obstacles[idx]) {
+            phiNew[idx] = 0.0;
+            tempNew[idx] = 0.0;
+            continue;
+          }
+
+          const p_val = phi[idx];
+          const t_val = temp[idx];
+
+          // Compute Divergence of F: zero-flux boundary at obstacles & domain edges
+          const Fx_c = Fx[idx];
+          const Fy_c = Fy[idx];
+          const Fx_l = (i > 0 && !obstacles[idx - 1]) ? Fx[idx - 1] : Fx_c;
+          const Fx_r = (i < W - 1 && !obstacles[idx + 1]) ? Fx[idx + 1] : Fx_c;
+          const Fy_u = (j > 0 && !obstacles[idx - W]) ? Fy[idx - W] : Fy_c;
+          const Fy_d = (j < H - 1 && !obstacles[idx + W]) ? Fy[idx + W] : Fy_c;
+
+          const div_F = (Fx_r - Fx_l) * 0.5 + (Fy_d - Fy_u) * 0.5;
+
+          // Compute Laplacian of Temperature
+          let lap_T = 0;
+          if (i > 0 && !obstacles[idx - 1]) lap_T += temp[idx - 1]; else lap_T += t_val;
+          if (i < W - 1 && !obstacles[idx + 1]) lap_T += temp[idx + 1]; else lap_T += t_val;
+          if (j > 0 && !obstacles[idx - W]) lap_T += temp[idx - W]; else lap_T += t_val;
+          if (j < H - 1 && !obstacles[idx + W]) lap_T += temp[idx + W]; else lap_T += t_val;
+          lap_T -= 4.0 * t_val;
+
+          // Thermodynamic driving force
+          const m_val = (alpha / Math.PI) * Math.atan(gamma * (1.0 - t_val));
+
+          // Interface noise trigger
+          const interface_factor = p_val * (1.0 - p_val);
+          const noise = noise_amplitude * (Math.random() - 0.5) * interface_factor;
+
+          // Phase field update step
+          const dphi = div_F + interface_factor * (p_val - 0.5 + m_val) + noise;
+          let p_new = p_val + dt * dphi;
+          if (p_new < 0.0) p_new = 0.0;
+          if (p_new > 1.0) p_new = 1.0;
+
+          phiNew[idx] = p_new;
+
+          // Heat diffusion + latent heat release
+          const t_new = t_val + dt_T * lap_T + K * (p_new - p_val);
+          tempNew[idx] = t_new;
+
+          // Local grain orientation inheritance (advection)
+          if (p_val < 0.05 && p_new >= 0.05) {
+            // Find solid neighbor with largest phi
+            let maxPhi = -1;
+            let bestTheta0 = theta0Grid[idx];
+            const neighbors = [
+              idx - 1, idx + 1, idx - W, idx + W
+            ];
+            const validBounds = [
+              i > 0, i < W - 1, j > 0, j < H - 1
+            ];
+            for (let n = 0; n < 4; n++) {
+              if (validBounds[n]) {
+                const nidx = neighbors[n];
+                if (!obstacles[nidx] && phi[nidx] > maxPhi && phi[nidx] > 0.05) {
+                  maxPhi = phi[nidx];
+                  bestTheta0 = theta0Grid[nidx];
+                }
+              }
+            }
+            theta0NewGrid[idx] = bestTheta0;
+          } else {
+            theta0NewGrid[idx] = theta0Grid[idx];
+          }
+        }
+      }
+
+      // Buffer swaps
+      let temp_arr = phi;
+      phi = phiNew;
+      phiNew = temp_arr;
+
+      temp_arr = temp;
+      temp = tempNew;
+      tempNew = temp_arr;
+
+      temp_arr = theta0Grid;
+      theta0Grid = theta0NewGrid;
+      theta0NewGrid = temp_arr;
+    }
+
+    // Render loop
+    function draw() {
+      const data = imgData.data;
+      const palette = palettes[activePalette];
+      
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          const pixelIdx = idx * 4;
+          
+          if (obstacles[idx]) {
+            // Metallic slate gray barrier
+            data[pixelIdx] = 65;
+            data[pixelIdx + 1] = 80;
+            data[pixelIdx + 2] = 95;
+            data[pixelIdx + 3] = 255;
+            continue;
+          }
+          
+          const p = phi[idx];
+          const t = temp[idx];
+          
+          let r, g, b;
+          
+          if (p > 0.95) {
+            // Solid core: warm solid matches melting point, cold solid is pure crystal
+            const factor = Math.max(0, Math.min(1, t));
+            r = Math.round(palette.solid[0] * (1 - factor) + 255 * factor);
+            g = Math.round(palette.solid[1] * (1 - factor) + 255 * factor);
+            b = Math.round(palette.solid[2] * (1 - factor) + 255 * factor);
+          } else if (p < 0.05) {
+            // Liquid: deep background, with violet/red thermal glow around growing tips
+            // Map temperature t (undercooling ~ 0 to melting ~ 1)
+            const t_norm = Math.max(0, Math.min(1, (t - initialUndercooling) / (1.0 - initialUndercooling + 1e-5)));
+            r = Math.round(palette.liquid_cold[0] * (1 - t_norm) + palette.liquid_warm[0] * t_norm);
+            g = Math.round(palette.liquid_cold[1] * (1 - t_norm) + palette.liquid_warm[1] * t_norm);
+            b = Math.round(palette.liquid_cold[2] * (1 - t_norm) + palette.liquid_warm[2] * t_norm);
+          } else {
+            // Active crystallization border
+            const factor = p; // interpolate liquid to solid
+            const r_mid = Math.round(palette.liquid_cold[0] * (1 - factor) + palette.solid[0] * factor);
+            const g_mid = Math.round(palette.liquid_cold[1] * (1 - factor) + palette.solid[1] * factor);
+            const b_mid = Math.round(palette.liquid_cold[2] * (1 - factor) + palette.solid[2] * factor);
+            
+            // Add a glowing fringe/halo boost
+            const fringeFactor = 4 * p * (1 - p); // peak at interface
+            r = Math.round(r_mid * (1 - fringeFactor) + palette.border[0] * fringeFactor);
+            g = Math.round(g_mid * (1 - fringeFactor) + palette.border[1] * fringeFactor);
+            b = Math.round(b_mid * (1 - fringeFactor) + palette.border[2] * fringeFactor);
+          }
+          
+          data[pixelIdx] = r;
+          data[pixelIdx + 1] = g;
+          data[pixelIdx + 2] = b;
+          data[pixelIdx + 3] = 255;
+        }
+      }
+      
+      offCtx.putImageData(imgData, 0, 0);
+      
+      // Clear main canvas and draw upscaled image
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.imageSmoothingEnabled = true; // gives a smooth, glowing look to the pixels
+      ctx.drawImage(offCanvas, 0, 0, canvas.width, canvas.height);
+      
+      // Draw barriers/obstacles on main canvas with outline to look crisp
+      // (This overlay ensures sharp edges on the upscaled obstacles)
+      drawBarriers();
+      
+      // Draw sonification probe
+      drawProbe();
+    }
+
+    function drawBarriers() {
+      ctx.fillStyle = 'rgba(70, 85, 105, 0.95)';
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+      ctx.lineWidth = 1;
+      
+      const gridW = canvas.width / W;
+      const gridH = canvas.height / H;
+      
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const idx = y * W + x;
+          if (obstacles[idx]) {
+            ctx.fillRect(x * gridW, y * gridH, gridW + 0.5, gridH + 0.5);
+          }
+        }
+      }
+    }
+
+    function drawProbe() {
+      if (!audioEnabled) return;
+      const px = (probeX / W) * canvas.width;
+      const py = (probeY / H) * canvas.height;
+      
+      ctx.strokeStyle = '#ff007f'; // Magenta target
+      ctx.lineWidth = 1.5;
+      
+      // Pulse animation
+      const pulse = 8 + Math.sin(Date.now() / 150) * 3;
+      ctx.beginPath();
+      ctx.arc(px, py, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Crosshairs
+      ctx.beginPath();
+      ctx.moveTo(px - 14, py); ctx.lineTo(px - 4, py);
+      ctx.moveTo(px + 4, py); ctx.lineTo(px + 14, py);
+      ctx.moveTo(px, py - 14); ctx.lineTo(px, py - 4);
+      ctx.moveTo(px, py + 4); ctx.lineTo(px, py + 14);
+      ctx.stroke();
+    }
+
+    // Telemetry and plotting
+    function updateTelemetry() {
+      let solidSum = 0;
+      let tempSum = 0;
+      let totalCells = 0;
+      
+      for (let i = 0; i < phi.length; i++) {
+        if (!obstacles[i]) {
+          solidSum += phi[i];
+          tempSum += temp[i];
+          totalCells++;
+        }
+      }
+      
+      const solidPct = totalCells > 0 ? (solidSum / totalCells) : 0;
+      const avgT = totalCells > 0 ? (tempSum / totalCells) : 0;
+      
+      // Update text indicators
+      document.getElementById('stat_solid').innerText = (solidPct * 100).toFixed(1) + '%';
+      document.getElementById('stat_temp').innerText = avgT.toFixed(2);
+      document.getElementById('stat_phase').innerText = dt.toFixed(3);
+      
+      // Log for plot
+      plotHistory.push({ solid: solidPct, temp: avgT });
+      if (plotHistory.length > maxPlotPoints) {
+        plotHistory.shift();
+      }
+      
+      drawTelemetryPlot();
+      
+      // Audio sonification link
+      if (audioEnabled && audioCtx) {
+        const probeIdx = Math.round(probeY) * W + Math.round(probeX);
+        if (probeIdx >= 0 && probeIdx < W * H) {
+          updateHum(phi[probeIdx], temp[probeIdx]);
+        }
+      }
+    }
+
+    function drawTelemetryPlot() {
+      const plotC = document.getElementById('plotCanvas');
+      const pCtx = plotC.getContext('2d');
+      const w = plotC.width;
+      const h = plotC.height;
+      
+      pCtx.fillStyle = '#020206';
+      pCtx.fillRect(0, 0, w, h);
+      
+      // Grid lines
+      pCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      pCtx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const y = (h / 4) * i;
+        pCtx.beginPath();
+        pCtx.moveTo(0, y);
+        pCtx.lineTo(w, y);
+        pCtx.stroke();
+      }
+      
+      if (plotHistory.length < 2) return;
+      
+      // Draw Solid Fraction (Cyan line)
+      pCtx.strokeStyle = '#00f3ff';
+      pCtx.lineWidth = 2;
+      pCtx.beginPath();
+      for (let i = 0; i < plotHistory.length; i++) {
+        const x = (w / (maxPlotPoints - 1)) * i;
+        const y = h - plotHistory[i].solid * h;
+        if (i === 0) pCtx.moveTo(x, y);
+        else pCtx.lineTo(x, y);
+      }
+      pCtx.stroke();
+      
+      // Draw Average Temperature (Pink line)
+      // Map T from [-0.1, 1.1] to height
+      pCtx.strokeStyle = '#ff007f';
+      pCtx.lineWidth = 1.5;
+      pCtx.beginPath();
+      for (let i = 0; i < plotHistory.length; i++) {
+        const x = (w / (maxPlotPoints - 1)) * i;
+        const t_val = plotHistory[i].temp;
+        const normT = (t_val - (-0.1)) / 1.2;
+        const y = h - normT * h;
+        if (i === 0) pCtx.moveTo(x, y);
+        else pCtx.lineTo(x, y);
+      }
+      pCtx.stroke();
+    }
+
+    // Audio Sonification Engine
+    function toggleAudio(enabled) {
+      audioEnabled = enabled;
+      
+      if (enabled) {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        startHum();
+      } else {
+        stopHum();
+      }
+    }
+
+    function startHum() {
+      if (!audioCtx || humOsc) return;
+
+      humOsc = audioCtx.createOscillator();
+      humGain = audioCtx.createGain();
+      filterNode = audioCtx.createBiquadFilter();
+
+      humOsc.type = 'sine';
+      humOsc.frequency.setValueAtTime(100, audioCtx.currentTime);
+
+      filterNode.type = 'lowpass';
+      filterNode.frequency.setValueAtTime(400, audioCtx.currentTime);
+
+      humGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+
+      humOsc.connect(filterNode);
+      filterNode.connect(humGain);
+      humGain.connect(audioCtx.destination);
+
+      humOsc.start();
+      
+      // ramp up volume smoothly
+      humGain.gain.setTargetAtTime(masterVolume * 0.05, audioCtx.currentTime, 0.1);
+    }
+
+    function stopHum() {
+      if (humOsc) {
+        try {
+          humOsc.stop();
+        } catch(e){}
+        humOsc = null;
+      }
+      humGain = null;
+      filterNode = null;
+    }
+
+    function updateVolume(val) {
+      masterVolume = val / 100;
+      document.getElementById('val_vol').innerText = val + '%';
+      if (humGain && audioCtx) {
+        humGain.gain.setTargetAtTime(masterVolume * 0.05, audioCtx.currentTime, 0.1);
+      }
+    }
+
+    function updateHum(phiVal, tempVal) {
+      if (!humOsc || !audioCtx) return;
+
+      // Base pitch rises as phase field gets solid under the probe
+      const targetFreq = 90.0 + 130.0 * phiVal + 60.0 * tempVal;
+      humOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.15);
+
+      // Lowpass filter cutoff expands when warm/interface is active
+      const cutoff = 250 + 600 * (phiVal * (1 - phiVal) * 4) + 150 * Math.max(0, tempVal);
+      filterNode.frequency.setTargetAtTime(cutoff, audioCtx.currentTime, 0.1);
+    }
+
+    // Trigger crackling audio chimes on solidification phase changes
+    function playChime(activity) {
+      if (!audioCtx || !audioEnabled) return;
+
+      const now = audioCtx.currentTime;
+      // throttle chimes
+      if (now - lastChimeTime < 0.1) return;
+      lastChimeTime = now;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.type = Math.random() > 0.4 ? 'sine' : 'triangle';
+      
+      // Crystalline frequency based on activity and local temperature
+      const pIdx = Math.round(probeY) * W + Math.round(probeX);
+      const localT = (pIdx >= 0 && pIdx < W * H) ? temp[pIdx] : 0;
+      const baseFreq = 800 + Math.random() * 1000 + localT * 400;
+      
+      osc.frequency.setValueAtTime(baseFreq, now);
+
+      // Ring modulation / frequency sweep to sound like metallic crystal formations
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, now + 0.35);
+
+      const vol = Math.min(0.2, activity * 8.0) * masterVolume;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+
+      osc.start();
+      osc.stop(now + 0.4);
+    }
+
+    // Interactive Drawing Tools
+    function startDrawing(e) {
+      isDrawing = true;
+      drawOrAction(e);
+    }
+
+    function drawOrAction(e) {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      const gridX = Math.round((mouseX / canvas.width) * W);
+      const gridY = Math.round((mouseY / canvas.height) * H);
+      
+      if (gridX >= 0 && gridX < W && gridY >= 0 && gridY < H) {
+        if (activeTool === 'probe') {
+          probeX = gridX;
+          probeY = gridY;
+        } else {
+          // paint line from last coordinate to prevent gaps
+          if (lastGridX !== -1 && lastGridY !== -1) {
+            paintLine(lastGridX, lastGridY, gridX, gridY, drawRadius, activeTool);
+          } else {
+            paintCircle(gridX, gridY, drawRadius, activeTool);
+          }
+          lastGridX = gridX;
+          lastGridY = gridY;
+        }
+      }
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+      lastGridX = -1;
+      lastGridY = -1;
+    }
+
+    function setTool(tool) {
+      activeTool = tool;
+      document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tool_${tool}`).classList.add('active');
+      
+      // Adjust draw radius based on tool
+      if (tool === 'seed') drawRadius = 1.2;
+      else if (tool === 'barrier') drawRadius = 2.2;
+      else if (tool === 'eraser') drawRadius = 3.5;
+      else drawRadius = 2.5;
+    }
+
+    function paintCircle(cx, cy, r, tool) {
+      for (let dy = -Math.ceil(r); dy <= r; dy++) {
+        for (let dx = -Math.ceil(r); dx <= r; dx++) {
+          if (dx * dx + dy * dy <= r * r) {
+            const px = cx + dx;
+            const py = cy + dy;
+            if (px >= 0 && px < W && py >= 0 && py < H) {
+              applyToolToCell(py * W + px, tool);
+            }
+          }
+        }
+      }
+    }
+
+    function paintLine(x0, y0, x1, y1, r, tool) {
+      const dist = Math.hypot(x1 - x0, y1 - y0);
+      const steps = Math.max(1, Math.round(dist));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const gx = Math.round(x0 + t * (x1 - x0));
+        const gy = Math.round(y0 + t * (y1 - y0));
+        paintCircle(gx, gy, r, tool);
+      }
+    }
+
+    function applyToolToCell(idx, tool) {
+      if (tool === 'seed') {
+        phi[idx] = 1.0;
+        temp[idx] = 0.0;
+        obstacles[idx] = 0;
+        theta0Grid[idx] = theta0_global;
+      } else if (tool === 'cold') {
+        temp[idx] = -0.5;
+        obstacles[idx] = 0;
+      } else if (tool === 'heat') {
+        temp[idx] = 1.5;
+        phi[idx] = 0.0; // melt solid
+        obstacles[idx] = 0;
+      } else if (tool === 'barrier') {
+        obstacles[idx] = 1;
+        phi[idx] = 0.0;
+        temp[idx] = 0.0;
+      } else if (tool === 'eraser') {
+        obstacles[idx] = 0;
+        phi[idx] = 0.0;
+        temp[idx] = initialUndercooling;
+      }
+    }
+
+    // UI Sliders & Selects callbacks
+    function updateParam(param, val) {
+      const floatVal = parseFloat(val);
+      if (param === 'anisotropy') {
+        delta = floatVal;
+        document.getElementById('val_anisotropy').innerText = floatVal.toFixed(3);
+      } else if (param === 'latent') {
+        K = floatVal;
+        document.getElementById('val_latent').innerText = floatVal.toFixed(2);
+      } else if (param === 'temp') {
+        initialUndercooling = floatVal;
+        document.getElementById('val_temp').innerText = floatVal.toFixed(2);
+      } else if (param === 'noise') {
+        noise_amplitude = floatVal;
+        document.getElementById('val_noise').innerText = floatVal.toFixed(3);
+      } else if (param === 'speed') {
+        stepsPerFrame = parseInt(val);
+        document.getElementById('val_speed').innerText = val;
+      } else if (param === 'epsilon') {
+        epsilon_bar = floatVal;
+        document.getElementById('val_epsilon').innerText = floatVal.toFixed(2);
+      } else if (param === 'orientation') {
+        theta0_global = (floatVal * Math.PI) / 180;
+        document.getElementById('val_orientation').innerText = val + '°';
+        if (!useLocalTheta0) {
+          // update grain angles that haven't grown yet
+          for (let i = 0; i < phi.length; i++) {
+            if (phi[i] < 0.05) {
+              theta0Grid[i] = theta0_global;
+            }
+          }
+        }
+      }
+    }
+
+    function updateSymmetry() {
+      j_symmetry = parseInt(symmetrySelect.value);
+      document.getElementById('val_symmetry').innerText = j_symmetry;
+    }
+
+    function changeTheme(val) {
+      activePalette = val;
+    }
+
+    // Presets DB
+    const presets = {
+      snowflake: {
+        j_symmetry: 6,
+        delta: 0.05,
+        K: 1.6,
+        initialUndercooling: 0.0,
+        noise_amplitude: 0.035,
+        epsilon_bar: 0.8,
+        stepsPerFrame: 6,
+        useLocalTheta0: false
+      },
+      cubic: {
+        j_symmetry: 4,
+        delta: 0.065,
+        K: 1.35,
+        initialUndercooling: 0.0,
+        noise_amplitude: 0.02,
+        epsilon_bar: 0.75,
+        stepsPerFrame: 7,
+        useLocalTheta0: false
+      },
+      star8: {
+        j_symmetry: 8,
+        delta: 0.075,
+        K: 1.7,
+        initialUndercooling: -0.02,
+        noise_amplitude: 0.04,
+        epsilon_bar: 0.7,
+        stepsPerFrame: 6,
+        useLocalTheta0: false
+      },
+      seaweed: {
+        j_symmetry: 6,
+        delta: 0.0, // zero anisotropy!
+        K: 1.85,
+        initialUndercooling: -0.06,
+        noise_amplitude: 0.08,
+        epsilon_bar: 0.65,
+        stepsPerFrame: 5,
+        useLocalTheta0: false
+      },
+      faceted: {
+        j_symmetry: 6,
+        delta: 0.015,
+        K: 0.65, // low latent heat
+        initialUndercooling: 0.2, // low driving force
+        noise_amplitude: 0.002,
+        epsilon_bar: 0.95,
+        stepsPerFrame: 8,
+        useLocalTheta0: false
+      },
+      polycrystal: {
+        j_symmetry: 6,
+        delta: 0.055,
+        K: 1.5,
+        initialUndercooling: -0.02,
+        noise_amplitude: 0.03,
+        epsilon_bar: 0.8,
+        stepsPerFrame: 6,
+        useLocalTheta0: true
+      }
+    };
+
+    function loadPreset(name) {
+      const p = presets[name];
+      if (!p) return;
+
+      j_symmetry = p.j_symmetry;
+      delta = p.delta;
+      K = p.K;
+      initialUndercooling = p.initialUndercooling;
+      noise_amplitude = p.noise_amplitude;
+      epsilon_bar = p.epsilon_bar;
+      stepsPerFrame = p.stepsPerFrame;
+      useLocalTheta0 = p.useLocalTheta0;
+
+      // Update UI Sliders
+      symmetrySelect.value = j_symmetry;
+      document.getElementById('val_symmetry').innerText = j_symmetry;
+
+      document.getElementById('slider_anisotropy').value = delta;
+      document.getElementById('val_anisotropy').innerText = delta.toFixed(3);
+
+      document.getElementById('slider_latent').value = K;
+      document.getElementById('val_latent').innerText = K.toFixed(2);
+
+      document.getElementById('slider_temp').value = initialUndercooling;
+      document.getElementById('val_temp').innerText = initialUndercooling.toFixed(2);
+
+      document.getElementById('slider_noise').value = noise_amplitude;
+      document.getElementById('val_noise').innerText = noise_amplitude.toFixed(3);
+
+      document.getElementById('slider_speed').value = stepsPerFrame;
+      document.getElementById('val_speed').innerText = stepsPerFrame;
+
+      document.getElementById('slider_epsilon').value = epsilon_bar;
+      document.getElementById('val_epsilon').innerText = epsilon_bar.toFixed(2);
+
+      // Reset
+      resetSim();
+    }
+
+    // Main animation loop
+    let frameCount = 0;
+    
+    function animate() {
+      if (isRunning) {
+        // Calculate sonification pre-run activity
+        let activitySum = 0;
+        
+        for (let s = 0; s < stepsPerFrame; s++) {
+          // For sonification chimes, calculate average phase activity around the probe
+          let activityBefore = 0;
+          if (audioEnabled) {
+            const pr = 4;
+            let count = 0;
+            for (let dy = -pr; dy <= pr; dy++) {
+              for (let dx = -pr; dx <= pr; dx++) {
+                const px = Math.round(probeX + dx);
+                const py = Math.round(probeY + dy);
+                if (px >= 0 && px < W && py >= 0 && py < H) {
+                  activityBefore += phi[py * W + px];
+                  count++;
+                }
+              }
+            }
+            activitySum -= activityBefore / count;
+          }
+          
+          step();
+          
+          if (audioEnabled) {
+            const pr = 4;
+            let count = 0;
+            let activityAfter = 0;
+            for (let dy = -pr; dy <= pr; dy++) {
+              for (let dx = -pr; dx <= pr; dx++) {
+                const px = Math.round(probeX + dx);
+                const py = Math.round(probeY + dy);
+                if (px >= 0 && px < W && py >= 0 && py < H) {
+                  activityAfter += phi[py * W + px];
+                  count++;
+                }
+              }
+            }
+            activitySum += activityAfter / count;
+          }
+        }
+        
+        // Trigger crystallization emission sound
+        if (audioEnabled && activitySum > 0.0001) {
+          playChime(activitySum);
+        }
+      }
+      
+      draw();
+      
+      // Update plot & text status every 15 frames (~4 times a second)
+      if (frameCount % 15 === 0) {
+        updateTelemetry();
+      }
+      frameCount++;
+      
+      requestAnimationFrame(animate);
+    }
+
+    // Attach canvas events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', drawOrAction);
+    window.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    
+    // Touch support
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      startDrawing({ clientX: touch.clientX, clientY: touch.clientY });
+    });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      drawOrAction({ clientX: touch.clientX, clientY: touch.clientY });
+    });
+    canvas.addEventListener('touchend', stopDrawing);
+
+    // Play Pause Button
+    playPauseBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      playPauseBtn.innerText = isRunning ? 'Pause' : 'Run';
+      playPauseBtn.className = isRunning ? 'action-btn primary' : 'action-btn';
+    });
+
+    // Step Button
+    stepBtn.addEventListener('click', () => {
+      if (!isRunning) {
+        step();
+        updateTelemetry();
+        draw();
+      }
+    });
+
+    // Reset Button
+    resetBtn.addEventListener('click', resetSim);
+    
+    // Clear All Button
+    clearAllBtn.addEventListener('click', clearAll);
+
+    // Init
+    initGrids();
+    loadPreset('snowflake');
+    animate();
+
+  </script>
+</body>
+</html>
