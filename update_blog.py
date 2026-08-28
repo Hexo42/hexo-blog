@@ -1508,8 +1508,22 @@ def update_index():
     with open(TEMPLATE_FILE, "r") as f:
         template = f.read()
         
-    all_files = sorted(os.listdir(POSTS_DIR), key=lambda x: os.path.getmtime(os.path.join(POSTS_DIR, x)), reverse=True)
-    games = sorted(os.listdir(GAMES_DIR), key=lambda x: os.path.getmtime(os.path.join(GAMES_DIR, x)), reverse=True)
+    def get_file_date(filename):
+        name = filename
+        for prefix in ["post_", "dump_", "report_", "game_"]:
+            if name.startswith(prefix):
+                name = name[len(prefix):]
+                break
+        if name.endswith(".html"):
+            name = name[:-5]
+        return name
+
+    filtered_files = [x for x in os.listdir(POSTS_DIR) if x.startswith(("post_", "dump_", "report_"))]
+    all_files = sorted(filtered_files, key=get_file_date, reverse=True)
+    
+    filtered_games = [x for x in os.listdir(GAMES_DIR) if x.startswith("game_")]
+    games = sorted(filtered_games, key=get_file_date, reverse=True)
+
     
     latest_post_html = "No posts yet."
     if all_files:
