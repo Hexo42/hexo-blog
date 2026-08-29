@@ -1,30 +1,1286 @@
-<!DOCTYPE html><html><head><title>Physics Sim - 2026-08-29 00-00</title>
-        <style>body { background: #111; margin: 0; overflow: hidden; } canvas { display: block; }</style>
-        </head><body>
-        <canvas id="physics"></canvas>
-        <script>
-          const canvas = document.getElementById('physics');
-          const ctx = canvas.getContext('2d');
-          canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-          const balls = [];
-          for(let i=0; i<30; i++) {
-            balls.push({
-              x: Math.random()*canvas.width, y: Math.random()*canvas.height,
-              r: 10 + Math.random()*20, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
-              color: 'hsl('+Math.random()*360+', 70%, 50%)'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>plasma-magnetosphere: solar wind & planetary dipole shield</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --neon-green: #00ff66;
+      --neon-blue: #00f3ff;
+      --neon-pink: #ff007f;
+      --terminal-bg: #050806;
+      --panel-border: rgba(0, 255, 102, 0.3);
+      --font-stack: "Courier New", Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--terminal-bg);
+      color: var(--neon-green);
+      font-family: var(--font-stack);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      font-size: 14px;
+    }
+
+    /* main layout */
+    #container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: radial-gradient(circle at center, #0a110d 0%, #030504 100%);
+      cursor: grab;
+    }
+
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* overlay hud */
+    .hud {
+      position: absolute;
+      pointer-events: none;
+      text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+    }
+
+    #hud-top-left {
+      top: 15px;
+      left: 15px;
+    }
+
+    #hud-top-left h1 {
+      font-size: 1.4em;
+      color: #fff;
+      text-transform: lowercase;
+      border-bottom: 1px solid var(--neon-green);
+      padding-bottom: 5px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #hud-top-left h1::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: var(--neon-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: blink 1.5s infinite steps(2);
+    }
+
+    #hud-bottom-left {
+      bottom: 15px;
+      left: 15px;
+      font-size: 0.85em;
+    }
+
+    #hud-bottom-right {
+      bottom: 15px;
+      right: 285px; /* clear the control panel */
+      text-align: right;
+      font-size: 0.85em;
+    }
+
+    /* control panel sidebar */
+    #sidebar {
+      width: 270px;
+      height: 100%;
+      background-color: rgba(5, 8, 6, 0.95);
+      border-left: 2px solid var(--neon-green);
+      padding: 15px;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: -5px 0 20px rgba(0, 255, 102, 0.05);
+      display: flex;
+      flex-direction: flex-col;
+      gap: 15px;
+      text-transform: lowercase;
+    }
+
+    .panel-section {
+      border: 1px solid var(--panel-border);
+      padding: 10px;
+      margin-bottom: 12px;
+      background-color: rgba(0, 255, 102, 0.02);
+    }
+
+    .panel-section-title {
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed var(--panel-border);
+      padding-bottom: 3px;
+      font-size: 0.9em;
+      letter-spacing: 1px;
+    }
+
+    /* interactive inputs */
+    label {
+      display: block;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-size: 0.85em;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(0, 255, 102, 0.15);
+      height: 4px;
+      outline: none;
+      border: 1px solid rgba(0, 255, 102, 0.3);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      background: var(--neon-green);
+      border-radius: 0;
+      cursor: pointer;
+      box-shadow: 0 0 5px var(--neon-green);
+    }
+
+    .value-display {
+      font-size: 0.8em;
+      min-width: 50px;
+      text-align: right;
+      color: #fff;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--neon-green);
+      color: var(--neon-green);
+      font-family: var(--font-stack);
+      padding: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.2s ease;
+      text-transform: lowercase;
+    }
+
+    .btn:hover {
+      background: var(--neon-green);
+      color: #000;
+      box-shadow: 0 0 10px var(--neon-green);
+    }
+
+    .btn:active {
+      background: #00cc52;
+    }
+
+    .btn-secondary {
+      border-color: var(--neon-blue);
+      color: var(--neon-blue);
+    }
+    .btn-secondary:hover {
+      background: var(--neon-blue);
+      color: #000;
+      box-shadow: 0 0 10px var(--neon-blue);
+    }
+
+    .btn-alert {
+      border-color: var(--neon-pink);
+      color: var(--neon-pink);
+    }
+    .btn-alert:hover {
+      background: var(--neon-pink);
+      color: #000;
+      box-shadow: 0 0 10px var(--neon-pink);
+    }
+
+    .select-style {
+      width: 100%;
+      background: #000;
+      border: 1px solid var(--panel-border);
+      color: var(--neon-green);
+      font-family: var(--font-stack);
+      padding: 4px;
+      outline: none;
+      text-transform: lowercase;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--neon-green);
+      cursor: pointer;
+    }
+
+    /* audio overlay indicator */
+    #audio-prompt {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(5, 8, 6, 0.9);
+      border: 2px solid var(--neon-green);
+      padding: 20px;
+      text-align: center;
+      z-index: 100;
+      box-shadow: 0 0 20px rgba(0,255,102,0.3);
+      max-width: 320px;
+      text-transform: lowercase;
+    }
+
+    #audio-prompt p {
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+
+    .flex-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* animations */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* telemetry numbers */
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8em;
+      margin-bottom: 4px;
+    }
+
+    .telemetry-val {
+      color: #fff;
+    }
+
+    /* navigation links */
+    #home-link {
+      pointer-events: auto;
+      color: var(--neon-blue);
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px solid var(--neon-blue);
+      padding: 2px 6px;
+      display: inline-block;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+
+    #home-link:hover {
+      background: var(--neon-blue);
+      color: #000;
+      box-shadow: 0 0 8px var(--neon-blue);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <!-- canvas workspace -->
+    <div id="canvas-container" id="workspace">
+      <canvas id="gl-canvas"></canvas>
+
+      <!-- hud overlays -->
+      <div id="hud-top-left" class="hud">
+        <h1>magnetosphere-flow</h1>
+        <div>telemetry: dynamic 3d simulation</div>
+        <div>geomagnetic shield simulator</div>
+        <a href="../index.html" id="home-link">&lt;&lt; back to terminal</a>
+      </div>
+
+      <div id="hud-bottom-left" class="hud">
+        <div>drag mouse to orbit camera | scroll to zoom</div>
+        <div>press [space] to freeze particles</div>
+      </div>
+
+      <div id="hud-bottom-right" class="hud">
+        <div id="system-time">time: 2026-08-29 00:00:00 utc</div>
+        <div id="active-particles">particles tracked: 0</div>
+      </div>
+    </div>
+
+    <!-- control panel sidebar -->
+    <div id="sidebar">
+      <div class="panel-section">
+        <div class="panel-section-title">magnetic core</div>
+        
+        <label for="dipole-m">dipole strength (M):</label>
+        <div class="slider-row">
+          <input type="range" id="dipole-m" min="0" max="30" step="0.5" value="12">
+          <span class="value-display" id="val-dipole-m">12.0</span>
+        </div>
+
+        <label for="dipole-tilt">axis tilt (deg):</label>
+        <div class="slider-row">
+          <input type="range" id="dipole-tilt" min="-90" max="90" step="1" value="11">
+          <span class="value-display" id="val-dipole-tilt">11°</span>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="core-spin" checked>
+          <label for="core-spin">diurnal rotation (spin)</label>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">solar wind parameters</div>
+
+        <label for="wind-speed">wind velocity (V):</label>
+        <div class="slider-row">
+          <input type="range" id="wind-speed" min="1" max="6" step="0.1" value="3.2">
+          <span class="value-display" id="val-wind-speed">3.2</span>
+        </div>
+
+        <label for="wind-density">density (particle rate):</label>
+        <div class="slider-row">
+          <input type="range" id="wind-density" min="1" max="15" step="1" value="6">
+          <span class="value-display" id="val-wind-density">6</span>
+        </div>
+
+        <label for="imf-dir">interplanetary field (IMF):</label>
+        <select id="imf-dir" class="select-style">
+          <option value="none">none (pure field)</option>
+          <option value="northward">northward (+Bz shield)</option>
+          <option value="southward" selected>southward (-Bz stormy)</option>
+          <option value="eastward">eastward (+By shear)</option>
+          <option value="westward">westward (-By shear)</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">rendering filters</div>
+        
+        <div class="checkbox-row">
+          <input type="checkbox" id="show-particles" checked>
+          <label for="show-particles">render particles</label>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="show-lines" checked>
+          <label for="show-lines">magnetic field lines</label>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="show-grid" checked>
+          <label for="show-grid">earth longitude/latitude grid</label>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="show-shock">
+          <label for="show-shock">model bow shock wave</label>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">shield telemetry</div>
+        <div class="telemetry-row">
+          <span>shield status:</span>
+          <span id="tel-shield-status" class="telemetry-val">nominal</span>
+        </div>
+        <div class="telemetry-row">
+          <span>magnetopause distance:</span>
+          <span id="tel-magnetopause" class="telemetry-val">4.2 Re</span>
+        </div>
+        <div class="telemetry-row">
+          <span>auroral Kp index:</span>
+          <span id="tel-kp" class="telemetry-val" style="color: var(--neon-pink);">Kp 4 (active)</span>
+        </div>
+        <div class="telemetry-row">
+          <span>polar precipitations:</span>
+          <span id="tel-precipitation" class="telemetry-val">0 hits/s</span>
+        </div>
+      </div>
+
+      <div class="panel-section" style="margin-bottom: 0;">
+        <div class="panel-section-title">actions</div>
+        <button class="btn btn-alert" id="btn-cme">trigger solar flare (CME)</button>
+        <button class="btn" id="btn-reset">flush particles</button>
+        <button class="btn btn-secondary" id="btn-sound">toggle audio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Prompt Dialog -->
+  <div id="audio-prompt">
+    <p><strong>audio diagnostic link</strong></p>
+    <p>this simulation synthesizes raw solar wind hum and auroral chimes in real-time. click below to enable the audio node.</p>
+    <button class="btn" id="btn-allow-audio">enable audio</button>
+    <button class="btn btn-secondary" id="btn-skip-audio" style="margin-top:5px;">mute simulation</button>
+  </div>
+
+  <script>
+    // --- config & constants ---
+    const EARTH_RADIUS = 1.0;
+    const MAX_PARTICLES = 1500;
+    const TIME_FACTOR = 0.05;
+
+    // --- audio synthesizer setup ---
+    let audioCtx = null;
+    let windNoise = null;
+    let windFilter = null;
+    let audioEnabled = false;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Solar wind noise generator (brownian/white noise)
+        const bufferSize = 2 * audioCtx.sampleRate;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        
+        // Simple white noise
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+
+        const noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+        noiseNode.loop = true;
+
+        // Bandpass filter to create resonant wind sound
+        windFilter = audioCtx.createBiquadFilter();
+        windFilter.type = 'bandpass';
+        windFilter.frequency.value = 180;
+        windFilter.Q.value = 3.0;
+
+        // Master gain
+        windNoise = audioCtx.createGain();
+        windNoise.gain.value = 0.08;
+
+        noiseNode.connect(windFilter);
+        windFilter.connect(windNoise);
+        windNoise.connect(audioCtx.destination);
+        
+        noiseNode.start(0);
+        audioEnabled = true;
+        document.getElementById('btn-sound').textContent = "mute audio";
+      } catch(e) {
+        console.error("audio context initialization failed:", e);
+      }
+    }
+
+    function playAuroraChime(latitude, intensity) {
+      if (!audioEnabled || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        // High frequency chime for polar collisions
+        osc.type = 'sine';
+        // map latitude to frequency (higher latitude = higher pitch)
+        const freq = 600 + Math.abs(latitude) * 500 + Math.random() * 100;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        // Fast attack, exponential decay
+        gainNode.gain.setValueAtTime(0.005 * intensity, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+      } catch(e) {}
+    }
+
+    function adjustWindSound(speed, particleCount) {
+      if (!audioEnabled || !windFilter || !windNoise) return;
+      // Solar wind sound maps to wind speed and density
+      const centerFreq = 100 + speed * 40 + (particleCount / 100) * 15;
+      windFilter.frequency.setTargetAtTime(centerFreq, audioCtx.currentTime, 0.1);
+      
+      const gainVal = 0.03 + (speed / 6) * 0.05 + Math.min(0.05, particleCount / 20000);
+      windNoise.gain.setTargetAtTime(gainVal, audioCtx.currentTime, 0.15);
+    }
+
+    // --- canvas and sizing ---
+    const canvas = document.getElementById('gl-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // --- physics simulation state ---
+    let particles = [];
+    let fieldLines = [];
+    let auroras = []; // array of { lat, lon, intensity, age }
+    let earthSpinAngle = 0.0;
+    
+    // camera orientation
+    let yaw = -0.4;  // look slightly sideways
+    let pitch = 0.25; // look slightly from top
+    let cameraDistance = 320; 
+
+    // state toggles
+    let isFrozen = false;
+    let precipitationCount = 0;
+    let precipitationTimer = 0;
+
+    // elements
+    const slideDipoleM = document.getElementById('dipole-m');
+    const slideDipoleTilt = document.getElementById('dipole-tilt');
+    const checkCoreSpin = document.getElementById('core-spin');
+    const slideWindSpeed = document.getElementById('wind-speed');
+    const slideWindDensity = document.getElementById('wind-density');
+    const selectImfDir = document.getElementById('imf-dir');
+
+    const checkShowParticles = document.getElementById('show-particles');
+    const checkShowLines = document.getElementById('show-lines');
+    const checkShowGrid = document.getElementById('show-grid');
+    const checkShowShock = document.getElementById('show-shock');
+
+    // --- event listeners for panels ---
+    function updateValueDisplay(id, val) {
+      document.getElementById(id).textContent = val;
+    }
+    slideDipoleM.addEventListener('input', (e) => updateValueDisplay('val-dipole-m', parseFloat(e.target.value).toFixed(1)));
+    slideDipoleTilt.addEventListener('input', (e) => updateValueDisplay('val-dipole-tilt', e.target.value + '°'));
+    slideWindSpeed.addEventListener('input', (e) => updateValueDisplay('val-wind-speed', parseFloat(e.target.value).toFixed(1)));
+    slideWindDensity.addEventListener('input', (e) => updateValueDisplay('val-wind-density', e.target.value));
+
+    // camera interactions
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      yaw += dx * 0.005;
+      pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, pitch - dy * 0.005));
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      cameraDistance = Math.max(100, Math.min(800, cameraDistance + e.deltaY * 0.5));
+    });
+
+    // keyboard actions
+    window.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.code === 'Space') {
+        isFrozen = !isFrozen;
+        e.preventDefault();
+      }
+    });
+
+    // audio permission handlers
+    document.getElementById('btn-allow-audio').addEventListener('click', () => {
+      initAudio();
+      document.getElementById('audio-prompt').style.display = 'none';
+    });
+    
+    document.getElementById('btn-skip-audio').addEventListener('click', () => {
+      document.getElementById('audio-prompt').style.display = 'none';
+    });
+
+    document.getElementById('btn-sound').addEventListener('click', () => {
+      if (!audioCtx) {
+        initAudio();
+      } else {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+          audioEnabled = true;
+          document.getElementById('btn-sound').textContent = "mute audio";
+        } else if (audioCtx.state === 'running') {
+          audioCtx.suspend();
+          audioEnabled = false;
+          document.getElementById('btn-sound').textContent = "enable audio";
+        }
+      }
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      particles = [];
+      auroras = [];
+      precipitationCount = 0;
+    });
+
+    document.getElementById('btn-cme').addEventListener('click', () => {
+      triggerCME();
+    });
+
+    // --- 3D Projection Engine ---
+    function project(x, y, z) {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      
+      // Yaw rotation (Y axis)
+      let x1 = x * Math.cos(yaw) - z * Math.sin(yaw);
+      let z1 = x * Math.sin(yaw) + z * Math.cos(yaw);
+      
+      // Pitch rotation (X axis)
+      let y2 = y * Math.cos(pitch) - z1 * Math.sin(pitch);
+      let z2 = y * Math.sin(pitch) + z1 * Math.cos(pitch);
+      
+      const scale = (canvas.height * 0.75) * (cameraDistance / (cameraDistance + z2));
+      
+      return {
+        x: cx + x1 * scale,
+        y: cy - y2 * scale,
+        z: z2,
+        visible: (cameraDistance + z2) > 10
+      };
+    }
+
+    // --- physics algorithms: dipole & boris method ---
+
+    // return the B vector field at position p=[x,y,z]
+    function getMagneticField(x, y, z) {
+      const M = parseFloat(slideDipoleM.value);
+      const tiltDeg = parseFloat(slideDipoleTilt.value);
+      const tiltRad = tiltDeg * Math.PI / 180.0;
+      
+      // Dipole direction vector
+      // Spin around Earth Y-axis dynamically
+      const tiltX = Math.sin(tiltRad) * Math.cos(earthSpinAngle);
+      const tiltY = Math.cos(tiltRad);
+      const tiltZ = Math.sin(tiltRad) * Math.sin(earthSpinAngle);
+
+      const mx = M * tiltX;
+      const my = M * tiltY;
+      const mz = M * tiltZ;
+
+      // Position relative to earth center (0,0,0)
+      const r_sq = x*x + y*y + z*z;
+      const r = Math.sqrt(r_sq);
+      
+      let Bx = 0.0;
+      let By = 0.0;
+      let Bz = 0.0;
+
+      if (r > 0.05) {
+        // Dipole field formula: B = 3*(m . r)*r / r^5 - m / r^3
+        const dot = mx*x + my*y + mz*z;
+        const coef = 3.0 * dot / (r_sq * r_sq * r);
+        
+        Bx = coef * x - mx / (r_sq * r);
+        By = coef * y - my / (r_sq * r);
+        Bz = coef * z - mz / (r_sq * r);
+      }
+
+      // Add Interplanetary Magnetic Field (IMF)
+      const imf = selectImfDir.value;
+      const imfVal = 0.8; // strength factor
+      if (imf === 'northward') {
+        By += imfVal;
+      } else if (imf === 'southward') {
+        By -= imfVal;
+      } else if (imf === 'eastward') {
+        Bz += imfVal;
+      } else if (imf === 'westward') {
+        Bz -= imfVal;
+      }
+
+      return [Bx, By, Bz];
+    }
+
+    // boris method step for charged particles in magnetic field
+    function borisStep(p, dt) {
+      const B = getMagneticField(p.x, p.y, p.z);
+      
+      // Boris rotation parameters
+      const q_m = p.q / p.m;
+      const tx = q_m * B[0] * dt * 0.5;
+      const ty = q_m * B[1] * dt * 0.5;
+      const tz = q_m * B[2] * dt * 0.5;
+      const t_sq = tx*tx + ty*ty + tz*tz;
+
+      // v' = v + v x t
+      const v_prime_x = p.vx + (p.vy * tz - p.vz * ty);
+      const v_prime_y = p.vy + (p.vz * tx - p.vx * tz);
+      const v_prime_z = p.vz + (p.vx * ty - p.vy * tx);
+
+      // s = 2t / (1 + t^2)
+      const s_factor = 2.0 / (1.0 + t_sq);
+      const sx = tx * s_factor;
+      const sy = ty * s_factor;
+      const sz = tz * s_factor;
+
+      // v_new = v + v' x s
+      p.vx += (v_prime_y * sz - v_prime_z * sy);
+      p.vy += (v_prime_z * sx - v_prime_x * sz);
+      p.vz += (v_prime_x * sy - v_prime_y * sx);
+    }
+
+    // --- trigger cme (coronal mass ejection) ---
+    function triggerCME() {
+      // flash alert message
+      const initialColor = document.getElementById('tel-shield-status');
+      initialColor.style.color = '#ff007f';
+      initialColor.textContent = 'warning: solar storm alert';
+      
+      if (audioEnabled && audioCtx) {
+        // play explosion noise
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 1.2);
+          
+          gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+          
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 1.3);
+        } catch(e) {}
+      }
+
+      // burst spawn 400 fast particles from left
+      for(let i = 0; i < 400; i++) {
+        const sideVal = 5.0;
+        const angle = Math.random() * Math.PI * 2;
+        const rad = Math.random() * 3.5;
+        
+        particles.push({
+          x: -6.5 - Math.random() * 2,
+          y: rad * Math.cos(angle),
+          z: rad * Math.sin(angle),
+          vx: 5.5 + Math.random() * 2.5, // much faster
+          vy: (Math.random() - 0.5) * 0.5,
+          vz: (Math.random() - 0.5) * 0.5,
+          q: Math.random() > 0.4 ? 1 : -1,
+          m: Math.random() > 0.4 ? 4.0 : 1.0, // proton or electron
+          trail: [],
+          cme: true
+        });
+      }
+    }
+
+    // --- update logic ---
+    function updatePhysics() {
+      if (isFrozen) return;
+
+      const dt = TIME_FACTOR;
+      const windSpeed = parseFloat(slideWindSpeed.value);
+      const windDensity = parseInt(slideWindDensity.value);
+
+      // spin the earth
+      if (checkCoreSpin.checked) {
+        earthSpinAngle += 0.01;
+        if (earthSpinAngle > Math.PI * 2) earthSpinAngle -= Math.PI * 2;
+      }
+
+      // spawn solar wind
+      for (let i = 0; i < windDensity; i++) {
+        if (particles.length < MAX_PARTICLES) {
+          // spawn in a disc facing the sun (-X direction)
+          const angle = Math.random() * Math.PI * 2;
+          const rad = Math.random() * 3.2; // radius of injection stream
+          
+          const chargeVal = Math.random() > 0.5 ? 1 : -1;
+          
+          particles.push({
+            x: -6.5,
+            y: rad * Math.cos(angle),
+            z: rad * Math.sin(angle),
+            vx: windSpeed + (Math.random() - 0.5) * 0.3,
+            vy: (Math.random() - 0.5) * 0.15,
+            vz: (Math.random() - 0.5) * 0.15,
+            q: chargeVal,
+            m: chargeVal === 1 ? 4.0 : 1.0, // heavier ions, lighter electrons
+            trail: [],
+            cme: false
+          });
+        }
+      }
+
+      // process particle motion
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        
+        // save trail history
+        p.trail.push({x: p.x, y: p.y, z: p.z});
+        if (p.trail.length > 8) p.trail.shift();
+
+        // Boris rotation for cyclotron dynamics
+        borisStep(p, dt);
+
+        // update position
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.z += p.vz * dt;
+
+        // boundary checks
+        const dist = Math.sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
+        if (dist < EARTH_RADIUS) {
+          // collision with earth's atmosphere
+          // trigger aurora if it hits polar auroral oval region (latitude ~ 60 - 80 deg)
+          const lat = Math.asin(p.y / dist) * 180 / Math.PI;
+          const lon = Math.atan2(p.z, p.x);
+          
+          if (Math.abs(lat) > 55 && Math.abs(lat) < 85) {
+            auroras.push({
+              lat: lat,
+              lon: lon + earthSpinAngle, // anchor to rotating globe
+              intensity: p.cme ? 4.5 : 1.5,
+              age: 0,
+              color: p.q === 1 ? 'rgba(0, 255, 102, 0.8)' : 'rgba(255, 0, 127, 0.8)'
             });
+            
+            precipitationCount++;
+            playAuroraChime(lat, p.cme ? 3.0 : 1.0);
           }
-          function draw() {
-            ctx.fillStyle = 'rgba(17,17,17,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-            balls.forEach(b => {
-              b.x += b.vx; b.y += b.vy; b.vy += 0.2; // gravity
-              if(b.x + b.r > canvas.width || b.x - b.r < 0) b.vx *= -0.9;
-              if(b.y + b.r > canvas.height) { b.y = canvas.height - b.r; b.vy *= -0.8; }
-              ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+
+          particles.splice(i, 1);
+          continue;
+        }
+
+        // cull if out of box bounds
+        if (p.x > 6.5 || p.x < -10.0 || Math.abs(p.y) > 5.5 || Math.abs(p.z) > 5.5) {
+          particles.splice(i, 1);
+        }
+      }
+
+      // animate aurora rings decay
+      for(let i = auroras.length - 1; i >= 0; i--) {
+        auroras[i].age += 1;
+        if(auroras[i].age > 40) {
+          auroras.splice(i, 1);
+        }
+      }
+
+      // update sound settings dynamically
+      adjustWindSound(windSpeed, particles.length);
+
+      // increment telemetry counters
+      precipitationTimer += dt;
+      if (precipitationTimer > 1.0) {
+        document.getElementById('tel-precipitation').textContent = precipitationCount + " hits/s";
+        
+        // dynamic shield Kp evaluation
+        const CMECount = particles.filter(p => p.cme).length;
+        const imf = selectImfDir.value;
+        let shieldStatus = "nominal";
+        let shieldColor = "var(--neon-green)";
+        let kpVal = "Kp 2 (quiet)";
+        let magnetopause = (6.5 - (windSpeed * 0.5)).toFixed(1);
+
+        if (CMECount > 200) {
+          kpVal = "Kp 8 (severe storm)";
+          shieldStatus = "breached";
+          shieldColor = "var(--neon-pink)";
+          magnetopause = "2.8 Re";
+        } else if (imf === 'southward') {
+          kpVal = "Kp 5 (active reconnection)";
+          shieldStatus = "reconnection storm";
+          shieldColor = "orange";
+          magnetopause = "3.5 Re";
+        } else if (windSpeed > 4.5) {
+          kpVal = "Kp 4 (unsettled)";
+          shieldStatus = "compressed";
+          shieldColor = "yellow";
+        }
+
+        const elStatus = document.getElementById('tel-shield-status');
+        elStatus.textContent = shieldStatus;
+        elStatus.style.color = shieldColor;
+        document.getElementById('tel-kp').textContent = kpVal;
+        document.getElementById('tel-kp').style.color = shieldColor;
+        document.getElementById('tel-magnetopause').textContent = magnetopause + " Re";
+
+        precipitationCount = 0;
+        precipitationTimer = 0;
+      }
+    }
+
+    // --- trace field lines ---
+    function traceFieldLines() {
+      fieldLines = [];
+      const tiltDeg = parseFloat(slideDipoleTilt.value);
+      const tiltRad = tiltDeg * Math.PI / 180.0;
+      
+      const tiltX = Math.sin(tiltRad) * Math.cos(earthSpinAngle);
+      const tiltY = Math.cos(tiltRad);
+      const tiltZ = Math.sin(tiltRad) * Math.sin(earthSpinAngle);
+
+      // starting points at different latitudes and longitudes
+      const lats = [-75, -65, -55, 55, 65, 75];
+      const lons = [0, 45, 90, 135, 180, 225, 270, 315];
+      const startRadius = EARTH_RADIUS * 1.15;
+
+      lats.forEach(lat => {
+        const latRad = lat * Math.PI / 180.0;
+        lons.forEach(lon => {
+          const lonRad = lon * Math.PI / 180.0;
+
+          // compute starting point in earth coordinates
+          const ex = startRadius * Math.cos(latRad) * Math.cos(lonRad);
+          const ey = startRadius * Math.sin(latRad);
+          const ez = startRadius * Math.cos(latRad) * Math.sin(lonRad);
+
+          // Trace positive path
+          let px = ex;
+          let py = ey;
+          let pz = ez;
+          const linePoints = [{x: px, y: py, z: pz}];
+          
+          let ds = 0.08;
+          let step = 0;
+          let maxSteps = 150;
+          let enteredAtmosphere = false;
+
+          while (step < maxSteps) {
+            const B = getMagneticField(px, py, pz);
+            const B_mag = Math.sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2]);
+            if (B_mag < 0.001) break;
+
+            // move along field line
+            px += (B[0] / B_mag) * ds;
+            py += (B[1] / B_mag) * ds;
+            pz += (B[2] / B_mag) * ds;
+
+            linePoints.push({x: px, y: py, z: pz});
+
+            const r = Math.sqrt(px*px + py*py + pz*pz);
+            if (r < EARTH_RADIUS) {
+              enteredAtmosphere = true;
+              break;
+            }
+            if (r > 8.0) break; // exit box limit
+            step++;
+          }
+
+          fieldLines.push({
+            points: linePoints,
+            closed: enteredAtmosphere
+          });
+        });
+      });
+    }
+
+    // --- rendering loop ---
+    function draw() {
+      // clear screen
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // pre-sort arrays or depth buffer projections
+      // compute 3D field lines
+      if (checkShowLines.checked) {
+        traceFieldLines();
+      }
+
+      // draw field lines behind the Earth
+      if (checkShowLines.checked) {
+        ctx.lineWidth = 1.0;
+        fieldLines.forEach(line => {
+          ctx.beginPath();
+          let first = true;
+          line.points.forEach(pt => {
+            const screen = project(pt.x, pt.y, pt.z);
+            if (screen.visible) {
+              if (first) {
+                ctx.moveTo(screen.x, screen.y);
+                first = false;
+              } else {
+                ctx.lineTo(screen.x, screen.y);
+              }
+            }
+          });
+          // color open vs closed lines differently
+          ctx.strokeStyle = line.closed ? 'rgba(0, 243, 255, 0.25)' : 'rgba(0, 255, 102, 0.15)';
+          ctx.stroke();
+        });
+      }
+
+      // draw bow shock region model
+      if (checkShowShock.checked) {
+        ctx.strokeStyle = 'rgba(255, 0, 127, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        // project a paraboloid bow shock
+        const steps = 40;
+        for (let i = -steps; i <= steps; i++) {
+          const theta = (i / steps) * Math.PI * 0.8;
+          // paraboloid shock formula: r = 2.5 / (1 + cos(theta))
+          const shockX = -4.0 + 1.8 * Math.cos(theta);
+          const shockY = 3.5 * Math.sin(theta);
+          
+          const screen = project(shockX, shockY, 0);
+          if (screen.visible) {
+            if (i === -steps) ctx.moveTo(screen.x, screen.y);
+            else ctx.lineTo(screen.x, screen.y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // draw particles
+      if (checkShowParticles.checked) {
+        particles.forEach(p => {
+          // draw trails
+          if (p.trail.length > 1) {
+            ctx.beginPath();
+            ctx.lineWidth = 0.8;
+            ctx.strokeStyle = p.cme ? 'rgba(255, 230, 0, 0.15)' : (p.q === 1 ? 'rgba(0, 243, 255, 0.08)' : 'rgba(255, 0, 127, 0.08)');
+            let first = true;
+            p.trail.forEach(tPt => {
+              const sc = project(tPt.x, tPt.y, tPt.z);
+              if (sc.visible) {
+                if (first) {
+                  ctx.moveTo(sc.x, sc.y);
+                  first = false;
+                } else {
+                  ctx.lineTo(sc.x, sc.y);
+                }
+              }
             });
-            requestAnimationFrame(draw);
+            ctx.stroke();
           }
-          draw();
-        </script>
-        <br><br><a href="../index.html" style="color:cyan; position:absolute; top:10px; left:10px;">[back to home]</a>
-        </body></html>
+
+          // draw particle head
+          const sc = project(p.x, p.y, p.z);
+          if (sc.visible) {
+            // size depends on depth
+            const sz = Math.max(1, 3.5 * (300 / (300 + sc.z)));
+            ctx.fillStyle = p.cme ? '#ffe600' : (p.q === 1 ? varColor('blue') : varColor('pink'));
+            ctx.shadowBlur = p.cme ? 6 : 3;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, sz, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // reset
+          }
+        });
+      }
+
+      // draw Earth Globe
+      drawEarth();
+
+      // draw Auroral precipitation flashes
+      auroras.forEach(au => {
+        const tiltDeg = parseFloat(slideDipoleTilt.value);
+        const tiltRad = tiltDeg * Math.PI / 180.0;
+        
+        // Auroral position mapped with Earth rotation
+        const latRad = au.lat * Math.PI / 180.0;
+        // convert rotating coordinates back to global frames
+        const adjustedLon = au.lon - earthSpinAngle;
+        
+        const ex = EARTH_RADIUS * Math.cos(latRad) * Math.cos(adjustedLon);
+        const ey = EARTH_RADIUS * Math.sin(latRad);
+        const ez = EARTH_RADIUS * Math.cos(latRad) * Math.sin(adjustedLon);
+        
+        const screen = project(ex, ey, ez);
+        if (screen.visible) {
+          // fade over time
+          const alpha = 1.0 - (au.age / 40.0);
+          ctx.strokeStyle = au.color.replace('0.8', alpha.toFixed(2));
+          ctx.lineWidth = 3.0;
+          ctx.beginPath();
+          ctx.arc(screen.x, screen.y, 4 + au.intensity * 2, 0, Math.PI*2);
+          ctx.stroke();
+        }
+      });
+
+      // update bottom-right hud counters
+      document.getElementById('active-particles').textContent = `particles tracked: ${particles.length}`;
+      const now = new Date();
+      document.getElementById('system-time').textContent = `time: 2026-08-29 ${now.toISOString().substring(11,19)} utc`;
+    }
+
+    // draw the Earth with longitude/latitude lines, spin poles, and dark terminator
+    function drawEarth() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const rScreen = (canvas.height * 0.75) * (cameraDistance / (cameraDistance));
+
+      // 1. Draw Earth shadow background (dark side)
+      const centerProj = project(0, 0, 0);
+      if (!centerProj.visible) return;
+
+      const size = EARTH_RADIUS * (canvas.height * 0.75) * (cameraDistance / (cameraDistance + centerProj.z));
+      
+      // Draw ocean sphere base
+      ctx.beginPath();
+      ctx.arc(centerProj.x, centerProj.y, size, 0, Math.PI*2);
+      ctx.fillStyle = '#051811';
+      ctx.fill();
+      
+      // 2. Draw wireframe grid lines
+      if (checkShowGrid.checked) {
+        ctx.strokeStyle = 'rgba(0, 255, 102, 0.25)';
+        ctx.lineWidth = 0.7;
+
+        // Draw parallels (latitude circles)
+        for (let lat = -60; lat <= 60; lat += 30) {
+          ctx.beginPath();
+          const latRad = lat * Math.PI / 180.0;
+          const rLat = Math.cos(latRad) * EARTH_RADIUS;
+          const yLat = Math.sin(latRad) * EARTH_RADIUS;
+          
+          let first = true;
+          for (let lon = 0; lon <= 360; lon += 10) {
+            const lonRad = (lon + earthSpinAngle * (180/Math.PI)) * Math.PI / 180.0;
+            const px = rLat * Math.cos(lonRad);
+            const pz = rLat * Math.sin(lonRad);
+            
+            const screen = project(px, yLat, pz);
+            // only draw on front hemisphere facing camera
+            if (screen.visible && screen.z < centerProj.z) {
+              if (first) {
+                ctx.moveTo(screen.x, screen.y);
+                first = false;
+              } else {
+                ctx.lineTo(screen.x, screen.y);
+              }
+            }
+          }
+          ctx.stroke();
+        }
+
+        // Draw meridians (longitude circles)
+        for (let lon = 0; lon < 360; lon += 30) {
+          ctx.beginPath();
+          const lonRad = (lon + earthSpinAngle * (180/Math.PI)) * Math.PI / 180.0;
+          
+          let first = true;
+          for (let lat = -90; lat <= 90; lat += 5) {
+            const latRad = lat * Math.PI / 180.0;
+            const px = EARTH_RADIUS * Math.cos(latRad) * Math.cos(lonRad);
+            const py = EARTH_RADIUS * Math.sin(latRad);
+            const pz = EARTH_RADIUS * Math.cos(latRad) * Math.sin(lonRad);
+            
+            const screen = project(px, py, pz);
+            if (screen.visible && screen.z < centerProj.z) {
+              if (first) {
+                ctx.moveTo(screen.x, screen.y);
+                first = false;
+              } else {
+                ctx.lineTo(screen.x, screen.y);
+              }
+            }
+          }
+          ctx.stroke();
+        }
+      }
+
+      // 3. Draw magnetic pole axis stick
+      const tiltDeg = parseFloat(slideDipoleTilt.value);
+      const tiltRad = tiltDeg * Math.PI / 180.0;
+      
+      const tiltX = Math.sin(tiltRad) * Math.cos(earthSpinAngle);
+      const tiltY = Math.cos(tiltRad);
+      const tiltZ = Math.sin(tiltRad) * Math.sin(earthSpinAngle);
+
+      const pNorth = project(1.3 * tiltX, 1.3 * tiltY, 1.3 * tiltZ);
+      const pSouth = project(-1.3 * tiltX, -1.3 * tiltY, -1.3 * tiltZ);
+
+      if (pNorth.visible && pSouth.visible) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 0, 127, 0.7)';
+        ctx.lineWidth = 2.0;
+        ctx.moveTo(pNorth.x, pNorth.y);
+        ctx.lineTo(pSouth.x, pSouth.y);
+        ctx.stroke();
+      }
+
+      // 4. Draw Day/Night terminator shade (Shadow coming from nightside, i.e., +X side)
+      // Since solar wind/sunlight comes from -X (left), the lit side is left.
+      // We overlay a dark semi-circle gradient on the right side of the globe
+      const grad = ctx.createLinearGradient(
+        centerProj.x - size, centerProj.y,
+        centerProj.x + size, centerProj.y
+      );
+      grad.addColorStop(0, 'rgba(0,0,0,0)');       // lit side
+      grad.addColorStop(0.45, 'rgba(0,0,0,0.2)');
+      grad.addColorStop(0.7, 'rgba(0,0,0,0.85)');  // terminator
+      grad.addColorStop(1, 'rgba(0,0,0,0.96)');    // deep night
+
+      ctx.beginPath();
+      ctx.arc(centerProj.x, centerProj.y, size, 0, Math.PI*2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // 5. Draw atmosphere glow rim
+      const glow = ctx.createRadialGradient(
+        centerProj.x, centerProj.y, size * 0.95,
+        centerProj.x, centerProj.y, size * 1.08
+      );
+      glow.addColorStop(0, 'rgba(0, 255, 102, 0.15)');
+      glow.addColorStop(0.5, 'rgba(0, 243, 255, 0.08)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+
+      ctx.beginPath();
+      ctx.arc(centerProj.x, centerProj.y, size * 1.08, 0, Math.PI*2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+    }
+
+    // utility color picker
+    function varColor(name) {
+      if (name === 'green') return '#00ff66';
+      if (name === 'blue') return '#00f3ff';
+      if (name === 'pink') return '#ff007f';
+      return '#fff';
+    }
+
+    // --- main simulation frame loops ---
+    function loop() {
+      updatePhysics();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Start simulation
+    loop();
+
+  </script>
+</body>
+</html>
