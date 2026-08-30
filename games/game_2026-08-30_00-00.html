@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>acoustic-horizon: analog gravity & hawking radiation sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --neon-green: #00ff66;
+      --neon-blue: #00f3ff;
+      --neon-pink: #ff007f;
+      --terminal-bg: #050806;
+      --panel-border: rgba(0, 255, 102, 0.3);
+      --font-stack: "Courier New", Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--terminal-bg);
+      color: var(--neon-green);
+      font-family: var(--font-stack);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      font-size: 14px;
+    }
+
+    /* main layout */
+    #container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: radial-gradient(circle at center, #0a110d 0%, #030504 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: crosshair;
+    }
+
+    canvas#main-canvas {
+      display: block;
+      background: #000;
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 0 20px rgba(0, 255, 102, 0.05);
+    }
+
+    /* overlay hud */
+    .hud {
+      position: absolute;
+      pointer-events: none;
+      text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+    }
+
+    #hud-top-left {
+      top: 15px;
+      left: 15px;
+      pointer-events: auto;
+    }
+
+    #hud-top-left h1 {
+      font-size: 1.4em;
+      color: #fff;
+      text-transform: lowercase;
+      border-bottom: 1px solid var(--neon-green);
+      padding-bottom: 5px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #hud-top-left h1::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: var(--neon-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: blink 1.5s infinite steps(2);
+    }
+
+    #hud-bottom-left {
+      bottom: 15px;
+      left: 15px;
+      font-size: 0.85em;
+      background: rgba(5, 8, 6, 0.7);
+      padding: 5px;
+      border: 1px solid rgba(0, 255, 102, 0.15);
+    }
+
+    #hud-bottom-right {
+      bottom: 15px;
+      right: 285px; /* clear the control panel */
+      text-align: left;
+      font-size: 0.85em;
+      background: rgba(5, 8, 6, 0.8);
+      padding: 10px;
+      border: 1px solid var(--panel-border);
+      min-width: 170px;
+    }
+
+    /* control panel sidebar */
+    #sidebar {
+      width: 270px;
+      height: 100%;
+      background-color: rgba(5, 8, 6, 0.95);
+      border-left: 2px solid var(--neon-green);
+      padding: 15px;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: -5px 0 20px rgba(0, 255, 102, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      text-transform: lowercase;
+    }
+
+    .panel-section {
+      border: 1px solid var(--panel-border);
+      padding: 10px;
+      background-color: rgba(0, 255, 102, 0.02);
+    }
+
+    .panel-section-title {
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed var(--panel-border);
+      padding-bottom: 3px;
+      font-size: 0.9em;
+      letter-spacing: 1px;
+    }
+
+    /* interactive inputs */
+    label {
+      display: block;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-size: 0.85em;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: rgba(0, 255, 102, 0.15);
+      height: 4px;
+      outline: none;
+      border: 1px solid rgba(0, 255, 102, 0.3);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      background: var(--neon-green);
+      border-radius: 0;
+      cursor: pointer;
+      box-shadow: 0 0 5px var(--neon-green);
+    }
+
+    .value-display {
+      font-size: 0.8em;
+      min-width: 50px;
+      text-align: right;
+      color: #fff;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--neon-green);
+      color: var(--neon-green);
+      font-family: var(--font-stack);
+      padding: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.2s ease;
+      text-transform: lowercase;
+    }
+
+    .btn:hover {
+      background: var(--neon-green);
+      color: #000;
+      box-shadow: 0 0 10px var(--neon-green);
+    }
+
+    .btn:active {
+      background: #00cc52;
+    }
+
+    .btn-secondary {
+      border-color: var(--neon-blue);
+      color: var(--neon-blue);
+    }
+    .btn-secondary:hover {
+      background: var(--neon-blue);
+      color: #000;
+      box-shadow: 0 0 10px var(--neon-blue);
+    }
+
+    .btn-alert {
+      border-color: var(--neon-pink);
+      color: var(--neon-pink);
+    }
+    .btn-alert:hover {
+      background: var(--neon-pink);
+      color: #000;
+      box-shadow: 0 0 10px var(--neon-pink);
+    }
+
+    .select-style {
+      width: 100%;
+      background: #000;
+      border: 1px solid var(--panel-border);
+      color: var(--neon-green);
+      font-family: var(--font-stack);
+      padding: 4px;
+      outline: none;
+      text-transform: lowercase;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--neon-green);
+      cursor: pointer;
+    }
+
+    .tool-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+      margin-top: 5px;
+    }
+
+    .tool-btn {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--neon-green);
+      padding: 4px;
+      font-size: 0.8em;
+      font-family: var(--font-stack);
+      cursor: pointer;
+      text-transform: lowercase;
+    }
+
+    .tool-btn.active {
+      background: rgba(0, 255, 102, 0.2);
+      border-color: var(--neon-green);
+      box-shadow: 0 0 5px rgba(0, 255, 102, 0.3);
+    }
+
+    /* audio overlay indicator */
+    #audio-prompt {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(5, 8, 6, 0.95);
+      border: 2px solid var(--neon-green);
+      padding: 20px;
+      text-align: center;
+      z-index: 100;
+      box-shadow: 0 0 20px rgba(0,255,102,0.3);
+      max-width: 340px;
+      text-transform: lowercase;
+    }
+
+    #audio-prompt p {
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+
+    /* animations */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* telemetry numbers */
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8em;
+      margin-bottom: 4px;
+    }
+
+    .telemetry-val {
+      color: #fff;
+    }
+
+    /* navigation links */
+    #home-link {
+      pointer-events: auto;
+      color: var(--neon-blue);
+      text-decoration: none;
+      font-weight: bold;
+      border: 1px solid var(--neon-blue);
+      padding: 2px 6px;
+      display: inline-block;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+
+    #home-link:hover {
+      background: var(--neon-blue);
+      color: #000;
+      box-shadow: 0 0 8px var(--neon-blue);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="container">
+    <!-- canvas workspace -->
+    <div id="canvas-container">
+      <canvas id="main-canvas"></canvas>
+
+      <!-- hud overlays -->
+      <div id="hud-top-left" class="hud">
+        <h1>acoustic-horizon</h1>
+        <div>analog gravity & acoustic event horizon</div>
+        <div>spacetime metric fluid simulator</div>
+        <a href="../index.html" id="home-link">&lt;&lt; back to terminal</a>
+      </div>
+
+      <div id="hud-bottom-left" class="hud">
+        <div>selected tool action: <span id="current-action-hud" style="color: #fff;">emitter</span></div>
+        <div id="mouse-coords">grid: x:0.0 y:0.0 | drag to emit/draw</div>
+      </div>
+
+      <div id="hud-bottom-right" class="hud">
+        <div>probe oscilloscope</div>
+        <canvas id="scope-canvas" width="160" height="50" style="border: 1px solid var(--panel-border); background: #000; display: block; margin-top: 5px; margin-bottom: 5px;"></canvas>
+        <div class="telemetry-row" style="margin-bottom:0;">
+          <span>probe status:</span>
+          <span id="scope-status" class="telemetry-val" style="color: var(--neon-pink);">inactive</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- control panel sidebar -->
+    <div id="sidebar">
+      <div class="panel-section">
+        <div class="panel-section-title">simulation model</div>
+        
+        <label for="sim-mode">visualization mode:</label>
+        <select id="sim-mode" class="select-style">
+          <option value="wave" selected>wave field simulation</option>
+          <option value="ray">phonon ray tracing</option>
+          <option value="overlay">hybrid wave + ray overlay</option>
+        </select>
+
+        <label for="flow-profile">spacetime geometry:</label>
+        <select id="flow-profile" class="select-style">
+          <option value="bathtub" selected>bathtub vortex (black hole)</option>
+          <option value="nozzle">de laval nozzle (flat horizon)</option>
+          <option value="cavity">cosmic cavity (double horizon)</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">fluid metric controls</div>
+        
+        <div id="ctrl-drain">
+          <label for="drain-rate" id="lbl-drain">drain speed (D):</label>
+          <div class="slider-row">
+            <input type="range" id="drain-rate" min="0" max="45" step="0.5" value="20">
+            <span class="value-display" id="val-drain-rate">20.0</span>
+          </div>
+        </div>
+
+        <div id="ctrl-circulation">
+          <label for="circulation" id="lbl-circulation">circulation (C):</label>
+          <div class="slider-row">
+            <input type="range" id="circulation" min="0" max="40" step="0.5" value="15">
+            <span class="value-display" id="val-circulation">15.0</span>
+          </div>
+        </div>
+
+        <label for="sound-speed">speed of sound (c):</label>
+        <div class="slider-row">
+          <input type="range" id="sound-speed" min="0.8" max="2.0" step="0.05" value="1.2">
+          <span class="value-display" id="val-sound-speed">1.2</span>
+        </div>
+
+        <label for="viscosity">acoustic absorption:</label>
+        <div class="slider-row">
+          <input type="range" id="viscosity" min="0.002" max="0.05" step="0.002" value="0.01">
+          <span class="value-display" id="val-viscosity">0.01</span>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">interactive tools</div>
+        <div class="tool-selector">
+          <button class="tool-btn active" id="tool-emitter" onclick="setTool('emitter')">emitter</button>
+          <button class="tool-btn" id="tool-pulse" onclick="setTool('pulse')">pulse</button>
+          <button class="tool-btn" id="tool-raygun" onclick="setTool('raygun')">raygun</button>
+          <button class="tool-btn" id="tool-probe" onclick="setTool('probe')">probe</button>
+          <button class="tool-btn" id="tool-barrier" onclick="setTool('barrier')">barrier</button>
+          <button class="tool-btn" id="tool-eraser" onclick="setTool('eraser')">eraser</button>
+        </div>
+
+        <label for="emitter-freq">source frequency (Hz):</label>
+        <div class="slider-row">
+          <input type="range" id="emitter-freq" min="0.5" max="3.0" step="0.05" value="1.5">
+          <span class="value-display" id="val-emitter-freq">1.5</span>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">cosmology display</div>
+        
+        <div class="checkbox-row">
+          <input type="checkbox" id="show-vectors" checked>
+          <label for="show-vectors">render fluid flow vectors</label>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="show-horizon" checked>
+          <label for="show-horizon">render event horizon</label>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="show-ergosphere" checked>
+          <label for="show-ergosphere">render ergosphere</label>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="hawking-active">
+          <label for="hawking-active">quantum fluctuations (hawking)</label>
+        </div>
+
+        <label for="color-theme">color palette:</label>
+        <select id="color-theme" class="select-style">
+          <option value="cyberpunk" selected>cyberpunk (cyan / magenta)</option>
+          <option value="gold">acoustic gold (gold / amber)</option>
+          <option value="solar">solar flare (orange / white)</option>
+        </select>
+      </div>
+
+      <div class="panel-section" style="margin-bottom: 0;">
+        <div class="panel-section-title">system actions</div>
+        <button class="btn btn-alert" id="btn-clear">clear custom elements</button>
+        <button class="btn btn-secondary" id="btn-sound">toggle audio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Prompt Dialog -->
+  <div id="audio-prompt">
+    <p><strong>analog acoustics link</strong></p>
+    <p>this laboratory synthesizes low-frequency fluid hums, acoustic probe pitch modulations, and hawking decay chirps. click to boot audio.</p>
+    <button class="btn" id="btn-allow-audio">enable audio</button>
+    <button class="btn btn-secondary" id="btn-skip-audio">mute simulation</button>
+  </div>
+
+  <script>
+    // --- Grid & Metric configuration ---
+    const Nx = 128;
+    const Ny = 128;
+    
+    // Wave grids (1D arrays for fast indexing)
+    const psi = new Float32Array(Nx * Ny);
+    const pi = new Float32Array(Nx * Ny);
+    const next_psi = new Float32Array(Nx * Ny);
+    const next_pi = new Float32Array(Nx * Ny);
+    
+    const vx = new Float32Array(Nx * Ny);
+    const vy = new Float32Array(Nx * Ny);
+    const damping = new Float32Array(Nx * Ny);
+    const barrier = new Uint8Array(Nx * Ny);
+
+    // Emitters and Rays
+    let emitters = [];
+    let rays = [];
+    let staticRayguns = [];
+    
+    // Physical Parameters
+    let speedOfSound = 1.2;
+    let D = 20.0; // Draining bathtub radial drain rate
+    let C = 15.0; // Circulation vortex rate
+    let baseDamping = 0.01;
+    let emitterFreq = 1.5;
+    
+    // Linear nozzle profiles parameters
+    let D_nozzle = 1.8;
+    let D_cavity = 2.0;
+
+    // Simulation states
+    let flowProfile = 'bathtub';
+    let simMode = 'wave';
+    let colorTheme = 'cyberpunk';
+    let selectedTool = 'emitter';
+    let hawkingActive = false;
+    let frameCount = 0;
+    
+    // Audio Nodes
+    let audioCtx = null;
+    let audioEnabled = false;
+    let flowHumOsc = null;
+    let flowHumGain = null;
+    let probeOsc = null;
+    let probeGain = null;
+
+    // Acoustic Probe settings
+    let probeActive = false;
+    let probePos = { x: 0, y: 0 }; // Screen positions
+    const probeHistory = new Float32Array(100);
+    let probeHistoryIdx = 0;
+
+    // Fluid flow indicator dust particles
+    const flowDust = [];
+    const maxDustParticles = 120;
+    
+    // Interactive mouse state
+    let isDrawing = false;
+    let startDragPos = null;
+
+    // WebGL / Canvas elements
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Offscreen canvas for fast pixel drawing
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = Nx;
+    offscreenCanvas.height = Ny;
+    const offscreenCtx = offscreenCanvas.getContext('2d');
+
+    // Initialize dust particles
+    for (let p = 0; p < maxDustParticles; p++) {
+      flowDust.push({
+        x: (Math.random() - 0.5) * Nx,
+        y: (Math.random() - 0.5) * Ny,
+        life: Math.random()
+      });
+    }
+
+    // --- Ray Class definition ---
+    class PhononRay {
+      constructor(x, y, angle, freq) {
+        this.x = x; // grid position relative to center [-Nx/2, Nx/2]
+        this.y = y;
+        
+        let kMag = freq / speedOfSound;
+        this.kx = kMag * Math.cos(angle);
+        this.ky = kMag * Math.sin(angle);
+        
+        this.history = [[x, y]];
+        this.age = 0;
+        this.maxAge = 400;
+        this.color = 'var(--neon-pink)';
+        this.initialLocalFreq = freq;
+      }
+    }
+
+    // --- Sound Synthesis Helpers ---
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Fluid hum node (sawtooth with low-pass to create a machine/fluid rumble)
+        flowHumOsc = audioCtx.createOscillator();
+        flowHumOsc.type = 'sawtooth';
+        flowHumOsc.frequency.value = 50 + D * 0.8;
+        
+        const lowpass = audioCtx.createBiquadFilter();
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = 100;
+        lowpass.Q.value = 1.0;
+        
+        flowHumGain = audioCtx.createGain();
+        flowHumGain.gain.value = 0.04;
+        
+        flowHumOsc.connect(lowpass);
+        lowpass.connect(flowHumGain);
+        flowHumGain.connect(audioCtx.destination);
+        
+        flowHumOsc.start(0);
+
+        // Acoustic probe synthesizer (modulate frequency to convert physical waves into sound)
+        probeOsc = audioCtx.createOscillator();
+        probeOsc.type = 'sine';
+        probeOsc.frequency.value = 220;
+        
+        probeGain = audioCtx.createGain();
+        probeGain.gain.value = 0.0;
+        
+        probeOsc.connect(probeGain);
+        probeGain.connect(audioCtx.destination);
+        probeOsc.start(0);
+        
+        audioEnabled = true;
+        document.getElementById('btn-sound').textContent = "mute audio";
+      } catch (e) {
+        console.error("failed to boot web audio node:", e);
+      }
+    }
+
+    function playChime(freq, duration, type = 'sine') {
+      if (!audioCtx || !audioEnabled) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = type;
+        osc.frequency.value = freq;
+        
+        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(0);
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (err) {
+        // silent catch
+      }
+    }
+
+    // --- Mathematics: Velocity Field and Gradients ---
+    function getVelocityAndDerivatives(x, y) {
+      let vx_val = 0, vy_val = 0;
+      let dvx_dx = 0, dvx_dy = 0, dvy_dx = 0, dvy_dy = 0;
+      
+      if (flowProfile === 'bathtub') {
+        const r2 = x*x + y*y;
+        const r = Math.sqrt(r2);
+        const r_reg = Math.max(r, 6.0);
+        const r_reg2 = r_reg * r_reg;
+        
+        const vr = -D / r_reg;
+        const vtheta = C / r_reg;
+        
+        vx_val = (vr * x - vtheta * y) / r_reg;
+        vy_val = (vr * y + vtheta * x) / r_reg;
+        
+        const r_reg4 = r_reg2 * r_reg2;
+        dvx_dx = (D * (x*x - y*y) + 2 * C * x * y) / r_reg4;
+        dvx_dy = (C * (y*y - x*x) + 2 * D * x * y) / r_reg4;
+        dvy_dx = dvx_dy;
+        dvy_dy = (D * (y*y - x*x) - 2 * C * x * y) / r_reg4;
+      } else if (flowProfile === 'nozzle') {
+        const gridI = x + Nx/2;
+        vx_val = -D_nozzle * (0.2 + 1.6 * (gridI / Nx));
+        vy_val = 0;
+        
+        dvx_dx = -D_nozzle * (1.6 / Nx);
+        dvx_dy = 0;
+        dvy_dx = 0;
+        dvy_dy = 0;
+      } else if (flowProfile === 'cavity') {
+        const gridI = x + Nx/2;
+        vx_val = -D_cavity * (0.2 + 1.6 * Math.sin((Math.PI * gridI) / Nx));
+        vy_val = 0;
+        
+        dvx_dx = -D_cavity * (1.6 * Math.PI / Nx) * Math.cos((Math.PI * gridI) / Nx);
+        dvx_dy = 0;
+        dvy_dx = 0;
+        dvy_dy = 0;
+      }
+      
+      return { vx_val, vy_val, dvx_dx, dvx_dy, dvy_dx, dvy_dy };
+    }
+
+    function initVelocityField() {
+      for (let i = 0; i < Nx; i++) {
+        for (let j = 0; j < Ny; j++) {
+          let idx = i * Ny + j;
+          let x = i - Nx/2;
+          let y = j - Ny/2;
+          
+          let data = getVelocityAndDerivatives(x, y);
+          vx[idx] = data.vx_val;
+          vy[idx] = data.vy_val;
+          
+          // Damping layers at borders to absorb reflections
+          let dist_to_border = Math.min(i, Nx - 1 - i, j, Ny - 1 - j);
+          let border_width = 8;
+          let boundary_factor = dist_to_border < border_width ? (border_width - dist_to_border) / border_width : 0;
+          damping[idx] = baseDamping + boundary_factor * 0.16;
+        }
+      }
+      
+      if (audioEnabled && flowHumOsc) {
+        flowHumOsc.frequency.setTargetAtTime(50 + D * 0.8, audioCtx.currentTime, 0.1);
+      }
+    }
+
+    // --- Wave Grid Simulator Update ---
+    function updateGrid(dt) {
+      const c2 = speedOfSound * speedOfSound;
+      
+      for (let i = 1; i < Nx - 1; i++) {
+        for (let j = 1; j < Ny - 1; j++) {
+          const idx = i * Ny + j;
+          
+          if (barrier[idx]) {
+            next_psi[idx] = 0;
+            next_pi[idx] = 0;
+            continue;
+          }
+          
+          // Standard Laplacian
+          const laplacian = psi[idx + 1] + psi[idx - 1] + psi[idx + Ny] + psi[idx - Ny] - 4.0 * psi[idx];
+          
+          // Upwind differencing for advection: vx * d/dx + vy * d/dy
+          const vx_val = vx[idx];
+          const vy_val = vy[idx];
+          
+          let dpsi_dx = 0;
+          if (vx_val > 0) {
+            dpsi_dx = psi[idx] - psi[idx - Ny];
+          } else {
+            dpsi_dx = psi[idx + Ny] - psi[idx];
+          }
+          
+          let dpsi_dy = 0;
+          if (vy_val > 0) {
+            dpsi_dy = psi[idx] - psi[idx - 1];
+          } else {
+            dpsi_dy = psi[idx + 1] - psi[idx];
+          }
+          const adv_psi = vx_val * dpsi_dx + vy_val * dpsi_dy;
+          
+          let dpi_dx = 0;
+          if (vx_val > 0) {
+            dpi_dx = pi[idx] - pi[idx - Ny];
+          } else {
+            dpi_dx = pi[idx + Ny] - pi[idx];
+          }
+          
+          let dpi_dy = 0;
+          if (vy_val > 0) {
+            dpi_dy = pi[idx] - pi[idx - 1];
+          } else {
+            dpi_dy = pi[idx + 1] - pi[idx];
+          }
+          const adv_pi = vx_val * dpi_dx + vy_val * dpi_dy;
+          
+          // Update formulas: pi represents dpsi/dt + v.grad(psi)
+          next_psi[idx] = psi[idx] + dt * (pi[idx] - adv_psi);
+          next_pi[idx] = pi[idx] + dt * (c2 * laplacian - adv_pi) - damping[idx] * pi[idx];
+        }
+      }
+      
+      // Swap grids
+      psi.set(next_psi);
+      pi.set(next_pi);
+      
+      // Update custom wave emitters
+      for (let em of emitters) {
+        let gridX = Math.round((em.x / canvas.width) * Nx);
+        let gridY = Math.round((em.y / canvas.height) * Ny);
+        if (gridX > 0 && gridX < Nx - 1 && gridY > 0 && gridY < Ny - 1) {
+          let idx = gridX * Ny + gridY;
+          if (em.type === 'sine') {
+            psi[idx] += em.amplitude * Math.sin(em.phase);
+            em.phase += em.frequency * dt * 10;
+          } else if (em.type === 'pulse') {
+            if (em.pulseDuration > 0) {
+              psi[idx] += em.amplitude * Math.sin(em.phase);
+              em.phase += em.frequency * dt * 10;
+              em.pulseDuration -= dt;
+            }
+          }
+        }
+      }
+      
+      // Inject random horizon noise if Hawking is active
+      if (hawkingActive && Math.random() < 0.25) {
+        injectHorizonWaveNoise();
+      }
+    }
+
+    function injectHorizonWaveNoise() {
+      if (flowProfile === 'bathtub') {
+        let r_H = D / speedOfSound;
+        let theta = Math.random() * Math.PI * 2;
+        let gx = Math.round(Nx/2 + r_H * Math.cos(theta));
+        let gy = Math.round(Ny/2 + r_H * Math.sin(theta));
+        let idx = gx * Ny + gy;
+        if (idx > 0 && idx < Nx*Ny && !barrier[idx]) {
+          psi[idx] += (Math.random() - 0.5) * 0.45;
+        }
+      } else if (flowProfile === 'nozzle') {
+        let i_H = Math.round((speedOfSound / D_nozzle - 0.2) / 1.6 * Nx);
+        let gy = Math.round(5 + Math.random() * (Ny - 10));
+        let idx = i_H * Ny + gy;
+        if (idx > 0 && idx < Nx*Ny && !barrier[idx]) {
+          psi[idx] += (Math.random() - 0.5) * 0.45;
+        }
+      } else if (flowProfile === 'cavity') {
+        let Y_h = (speedOfSound / D_cavity - 0.2) / 1.6;
+        if (Y_h >= 0 && Y_h <= 1.0) {
+          let theta = Math.asin(Y_h);
+          let i2 = Math.round((1 - theta / Math.PI) * Nx); // black hole horizon
+          let gy = Math.round(5 + Math.random() * (Ny - 10));
+          let idx = i2 * Ny + gy;
+          if (idx > 0 && idx < Nx*Ny && !barrier[idx]) {
+            psi[idx] += (Math.random() - 0.5) * 0.45;
+          }
+        }
+      }
+    }
+
+    // --- Phonon Ray Simulator Update ---
+    function updateRays(dt) {
+      for (let i = rays.length - 1; i >= 0; i--) {
+        let r = rays[i];
+        
+        // RK4 integration step in grid coordinates
+        let rx = r.x;
+        let ry = r.y;
+        let rkx = r.kx;
+        let rky = r.ky;
+        
+        function rkDeriv(tx, ty, tkx, tky) {
+          let k = Math.sqrt(tkx*tkx + tky*tky) || 1e-5;
+          let data = getVelocityAndDerivatives(tx, ty);
+          
+          let dx_dt = speedOfSound * tkx / k + data.vx_val;
+          let dy_dt = speedOfSound * tky / k + data.vy_val;
+          
+          let dkx_dt = -tkx * data.dvx_dx - tky * data.dvy_dx;
+          let dky_dt = -tkx * data.dvx_dy - tky * data.dvy_dy;
+          
+          return [dx_dt, dy_dt, dkx_dt, dky_dt];
+        }
+        
+        let [dx1, dy1, dkx1, dky1] = rkDeriv(rx, ry, rkx, rky);
+        let [dx2, dy2, dkx2, dky2] = rkDeriv(rx + dx1*dt/2, ry + dy1*dt/2, rkx + dkx1*dt/2, rky + dky1*dt/2);
+        let [dx3, dy3, dkx3, dky3] = rkDeriv(rx + dx2*dt/2, ry + dy2*dt/2, rkx + dkx2*dt/2, rky + dky2*dt/2);
+        let [dx4, dy4, dkx4, dky4] = rkDeriv(rx + dx3*dt, ry + dy3*dt, rkx + dkx3*dt, rky + dky3*dt);
+        
+        r.x += (dx1 + 2*dx2 + 2*dx3 + dx4) * dt / 6;
+        r.y += (dy1 + 2*dy2 + 2*dy3 + dy4) * dt / 6;
+        r.kx += (dkx1 + 2*dkx2 + 2*dkx3 + dkx4) * dt / 6;
+        r.ky += (dky1 + 2*dky2 + 2*dky3 + dky4) * dt / 6;
+        
+        r.age += dt;
+        r.history.push([r.x, r.y]);
+        if (r.history.length > 70) {
+          r.history.shift();
+        }
+        
+        // Boundaries checks
+        let kCurrent = Math.sqrt(r.kx*r.kx + r.ky*r.ky);
+        let localFreq = speedOfSound * kCurrent;
+        
+        // Color transition representing local frequency (redshift visualization)
+        let ratio = localFreq / r.initialLocalFreq;
+        ratio = Math.max(0.1, Math.min(ratio, 3.0));
+        let hue;
+        if (ratio < 1) {
+          hue = 320 - (1 - ratio) * 320; // Redshifted towards red
+        } else {
+          hue = 320 - (ratio - 1) * 75;  // Blueshifted towards cyan
+        }
+        r.color = `hsl(${hue}, 100%, 60%)`;
+
+        let captureRange = 4.0;
+        let dist = Math.sqrt(r.x*r.x + r.y*r.y);
+        let isCaptured = false;
+        let isEscaped = false;
+
+        if (flowProfile === 'bathtub') {
+          if (dist < captureRange) {
+            isCaptured = true;
+          } else if (dist > Nx/2 + 10) {
+            isEscaped = true;
+          }
+        } else {
+          // Nozzle and Cavity
+          if (r.x < -Nx/2 || r.x > Nx/2 || r.y < -Ny/2 || r.y > Ny/2) {
+            isEscaped = true;
+          }
+          if (flowProfile === 'nozzle' && r.x < -Nx/2 + 2) {
+            isCaptured = true; // Swept through supersonic end
+          }
+        }
+        
+        if (isCaptured) {
+          if (audioEnabled) playChime(150, 0.08, 'triangle');
+          rays.splice(i, 1);
+        } else if (isEscaped || r.age > r.maxAge) {
+          if (isEscaped && audioEnabled) {
+            // escaper chirp
+            playChime(250 + localFreq * 40, 0.06, 'sine');
+          }
+          rays.splice(i, 1);
+        }
+      }
+    }
+
+    function shootRay(gx, gy, angle) {
+      const ray = new PhononRay(gx, gy, angle, emitterFreq * 2.0);
+      rays.push(ray);
+      if (audioEnabled) playChime(500, 0.04, 'sine');
+    }
+
+    function updateStaticRayguns() {
+      for (let rg of staticRayguns) {
+        rg.lastShot++;
+        if (rg.lastShot >= rg.interval) {
+          shootRay(rg.gx, rg.gy, rg.angle);
+          rg.lastShot = 0;
+        }
+      }
+    }
+
+    // --- Hawking Radiation Spawner ---
+    function spawnHawkingPair() {
+      if (flowProfile === 'bathtub') {
+        const r_H = D / speedOfSound;
+        const theta = Math.random() * Math.PI * 2;
+        
+        // Outgoing partner just outside horizon
+        const rx_out = (r_H + 0.4) * Math.cos(theta);
+        const ry_out = (r_H + 0.4) * Math.sin(theta);
+        const r_out = new PhononRay(rx_out, ry_out, theta, emitterFreq * 1.5);
+        r_out.color = 'var(--neon-green)';
+        rays.push(r_out);
+        
+        // Ingoing partner just inside horizon
+        const rx_in = (r_H - 0.4) * Math.cos(theta);
+        const ry_in = (r_H - 0.4) * Math.sin(theta);
+        const r_in = new PhononRay(rx_in, ry_in, theta + Math.PI, emitterFreq * 1.5);
+        r_in.color = 'var(--neon-pink)';
+        rays.push(r_in);
+      } else if (flowProfile === 'nozzle') {
+        const i_H = (speedOfSound / D_nozzle - 0.2) / 1.6 * Nx;
+        const hx = i_H - Nx/2;
+        const gy = (Math.random() - 0.5) * (Ny - 10);
+        
+        const r_out = new PhononRay(hx + 0.4, gy, 0, emitterFreq * 1.5); // moves right
+        r_out.color = 'var(--neon-green)';
+        rays.push(r_out);
+        
+        const r_in = new PhononRay(hx - 0.4, gy, Math.PI, emitterFreq * 1.5); // moves left (swept in)
+        r_in.color = 'var(--neon-pink)';
+        rays.push(r_in);
+      } else if (flowProfile === 'cavity') {
+        const Y_h = (speedOfSound / D_cavity - 0.2) / 1.6;
+        if (Y_h >= 0 && Y_h <= 1.0) {
+          const theta = Math.asin(Y_h);
+          const i2 = (1 - theta / Math.PI) * Nx; // black hole horizon
+          const hx = i2 - Nx/2;
+          const gy = (Math.random() - 0.5) * (Ny - 10);
+          
+          const r_out = new PhononRay(hx + 0.4, gy, 0, emitterFreq * 1.5);
+          r_out.color = 'var(--neon-green)';
+          rays.push(r_out);
+          
+          const r_in = new PhononRay(hx - 0.4, gy, Math.PI, emitterFreq * 1.5);
+          r_in.color = 'var(--neon-pink)';
+          rays.push(r_in);
+        }
+      }
+      
+      if (audioEnabled) {
+        playChime(800, 0.05, 'sine'); // light double-decay chime
+      }
+    }
+
+    // --- Background Fluid Indicator Dust Update ---
+    function updateFlowDust(dt) {
+      for (let p of flowDust) {
+        let gx = Math.round(p.x + Nx/2);
+        let gy = Math.round(p.y + Ny/2);
+        
+        if (gx >= 0 && gx < Nx && gy >= 0 && gy < Ny) {
+          let idx = gx * Ny + gy;
+          p.x += vx[idx] * dt * 4;
+          p.y += vy[idx] * dt * 4;
+        } else {
+          p.life = 0;
+        }
+        
+        p.life -= 0.005;
+        if (p.life <= 0) {
+          // Respawn at a random border or outer region
+          if (flowProfile === 'bathtub') {
+            let theta = Math.random() * Math.PI * 2;
+            let radius = Nx/2 - 2 - Math.random() * 10;
+            p.x = radius * Math.cos(theta);
+            p.y = radius * Math.sin(theta);
+          } else {
+            // linear flow (right to left)
+            p.x = Nx/2 - 2;
+            p.y = (Math.random() - 0.5) * Ny;
+          }
+          p.life = 1.0;
+        }
+      }
+    }
+
+    // --- Interactive Coordinates & Setup ---
+    function resizeCanvas() {
+      const container = document.getElementById('canvas-container');
+      const size = Math.min(container.clientWidth, container.clientHeight) - 30;
+      canvas.width = size;
+      canvas.height = size;
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function getMousePos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) / rect.width * canvas.width,
+        y: (e.clientY - rect.top) / rect.height * canvas.height
+      };
+    }
+
+    canvas.addEventListener('mousedown', function(e) {
+      let pos = getMousePos(e);
+      isDrawing = true;
+      startDragPos = pos;
+      
+      if (selectedTool === 'emitter') {
+        emitters.push({
+          x: pos.x,
+          y: pos.y,
+          frequency: emitterFreq,
+          amplitude: 0.8,
+          phase: 0,
+          type: 'sine'
+        });
+      } else if (selectedTool === 'pulse') {
+        emitters.push({
+          x: pos.x,
+          y: pos.y,
+          frequency: emitterFreq,
+          amplitude: 1.5,
+          phase: 0,
+          type: 'pulse',
+          pulseDuration: 1.5
+        });
+        if (audioEnabled) playChime(400, 0.1, 'sine');
+      } else if (selectedTool === 'probe') {
+        probePos = { x: pos.x, y: pos.y };
+        probeActive = true;
+        document.getElementById('scope-status').textContent = 'active';
+        document.getElementById('scope-status').style.color = 'var(--neon-green)';
+      } else if (selectedTool === 'barrier') {
+        setBarrierAtMouse(pos, 1);
+      } else if (selectedTool === 'eraser') {
+        eraseAtMouse(pos);
+      }
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+      let pos = getMousePos(e);
+      
+      // Update coordinates display
+      let gx = (pos.x / canvas.width) * Nx - Nx/2;
+      let gy = (pos.y / canvas.height) * Ny - Ny/2;
+      document.getElementById('mouse-coords').textContent = `grid: x:${gx.toFixed(1)} y:${gy.toFixed(1)} | drag to draw/place`;
+      
+      if (!isDrawing) return;
+      
+      if (selectedTool === 'barrier') {
+        setBarrierAtMouse(pos, 1);
+      } else if (selectedTool === 'eraser') {
+        eraseAtMouse(pos);
+      } else if (selectedTool === 'probe') {
+        probePos = { x: pos.x, y: pos.y };
+      }
+    });
+
+    window.addEventListener('mouseup', function(e) {
+      if (!isDrawing) return;
+      isDrawing = false;
+      
+      let pos = getMousePos(e);
+      
+      if (selectedTool === 'raygun' && startDragPos) {
+        let dx = pos.x - startDragPos.x;
+        let dy = pos.y - startDragPos.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        
+        let gx = (startDragPos.x / canvas.width) * Nx - Nx/2;
+        let gy = (startDragPos.y / canvas.height) * Ny - Ny/2;
+        
+        if (dist > 10) {
+          let angle = Math.atan2(dy, dx);
+          shootRay(gx, gy, angle);
+        } else {
+          // click without drag: static raygun pointing along local flow
+          let flowData = getVelocityAndDerivatives(gx, gy);
+          let flowAngle = Math.atan2(flowData.vy_val, flowData.vx_val);
+          if (flowData.vx_val === 0 && flowData.vy_val === 0) flowAngle = 0;
+          staticRayguns.push({ gx, gy, angle: flowAngle, interval: 20, lastShot: 0 });
+        }
+      }
+      startDragPos = null;
+    });
+
+    function setBarrierAtMouse(pos, state) {
+      let gridX = Math.round((pos.x / canvas.width) * Nx);
+      let gridY = Math.round((pos.y / canvas.height) * Ny);
+      
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          let gx = gridX + dx;
+          let gy = gridY + dy;
+          if (gx > 0 && gx < Nx - 1 && gy > 0 && gy < Ny - 1) {
+            let idx = gx * Ny + gy;
+            barrier[idx] = state;
+            if (state === 1) {
+              psi[idx] = 0;
+              pi[idx] = 0;
+            }
+          }
+        }
+      }
+    }
+
+    function eraseAtMouse(pos) {
+      // erase barrier
+      setBarrierAtMouse(pos, 0);
+      
+      // erase emitter nearby
+      emitters = emitters.filter(em => {
+        let dx = em.x - pos.x;
+        let dy = em.y - pos.y;
+        return Math.sqrt(dx*dx + dy*dy) > 15;
+      });
+
+      // erase static rayguns nearby
+      let gx = (pos.x / canvas.width) * Nx - Nx/2;
+      let gy = (pos.y / canvas.height) * Ny - Ny/2;
+      staticRayguns = staticRayguns.filter(rg => {
+        let dx = rg.gx - gx;
+        let dy = rg.gy - gy;
+        return Math.sqrt(dx*dx + dy*dy) > 4;
+      });
+    }
+
+    // --- Visual Rendering Functions ---
+    function updateOffscreenCanvas() {
+      const imgData = offscreenCtx.getImageData(0, 0, Nx, Ny);
+      const data = imgData.data;
+      const soundSpeedLocal = speedOfSound;
+      
+      for (let i = 0; i < Nx; i++) {
+        for (let j = 0; j < Ny; j++) {
+          const idx = i * Ny + j;
+          const pxIdx = (i + j * Nx) * 4;
+          
+          if (barrier[idx]) {
+            data[pxIdx] = 30;
+            data[pxIdx + 1] = 30;
+            data[pxIdx + 2] = 30;
+            data[pxIdx + 3] = 255;
+            continue;
+          }
+          
+          let val = psi[idx] * 0.95;
+          val = Math.max(-1, Math.min(val, 1));
+          
+          // Calculate background flow illumination
+          let vx_val = vx[idx];
+          let vy_val = vy[idx];
+          let speed = Math.sqrt(vx_val*vx_val + vy_val*vy_val);
+          let speed_rel = speed / soundSpeedLocal;
+          let glow = Math.min(Math.floor(speed_rel * 40), 75);
+          
+          let r = 0, g = 0, b = 0;
+          
+          if (colorTheme === 'cyberpunk') {
+            if (val > 0) {
+              r = 0;
+              g = Math.floor((1 - val) * glow + val * 243);
+              b = Math.floor((1 - val) * (glow * 0.5) + val * 255);
+            } else {
+              let av = -val;
+              r = Math.floor(av * 255);
+              g = Math.floor((1 - av) * glow);
+              b = Math.floor((1 - av) * (glow * 0.5) + av * 127);
+            }
+          } else if (colorTheme === 'gold') {
+            if (val > 0) {
+              r = Math.floor(val * 255);
+              g = Math.floor((1 - val) * glow + val * 195);
+              b = Math.floor((1 - val) * (glow * 0.2));
+            } else {
+              let av = -val;
+              r = Math.floor(av * 240);
+              g = Math.floor((1 - av) * glow + av * 90);
+              b = Math.floor((1 - av) * (glow * 0.2));
+            }
+          } else {
+            // Solar flare Theme
+            if (val > 0) {
+              r = Math.floor(val * 255);
+              g = Math.floor(val * 240);
+              b = Math.floor((1 - val) * glow + val * 150);
+            } else {
+              let av = -val;
+              r = Math.floor((1 - av) * glow + av * 220);
+              g = Math.floor((1 - av) * glow);
+              b = 0;
+            }
+          }
+          
+          data[pxIdx] = r;
+          data[pxIdx + 1] = g;
+          data[pxIdx + 2] = b;
+          data[pxIdx + 3] = 255;
+        }
+      }
+      offscreenCtx.putImageData(imgData, 0, 0);
+    }
+
+    function drawVectorField() {
+      const spacing = 28;
+      ctx.strokeStyle = colorTheme === 'cyberpunk' ? 'rgba(0, 255, 102, 0.22)' : 'rgba(255, 204, 0, 0.22)';
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.lineWidth = 1;
+      
+      for (let px = spacing/2; px < canvas.width; px += spacing) {
+        for (let py = spacing/2; py < canvas.height; py += spacing) {
+          let gx = Math.floor((px / canvas.width) * Nx);
+          let gy = Math.floor((py / canvas.height) * Ny);
+          let idx = gx * Ny + gy;
+          if (idx >= 0 && idx < Nx*Ny && !barrier[idx]) {
+            let v_x = vx[idx];
+            let v_y = vy[idx];
+            let v_mag = Math.sqrt(v_x*v_x + v_y*v_y);
+            if (v_mag > 0.05) {
+              let dx = (v_x / v_mag) * 7;
+              let dy = (v_y / v_mag) * 7;
+              
+              ctx.beginPath();
+              ctx.moveTo(px - dx/2, py - dy/2);
+              ctx.lineTo(px + dx/2, py + dy/2);
+              ctx.stroke();
+              
+              // Arrow point
+              ctx.beginPath();
+              ctx.arc(px + dx/2, py + dy/2, 1.2, 0, Math.PI*2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+    }
+
+    function drawMetricBoundaries() {
+      // Event Horizons & Ergosphere boundaries drawing
+      if (flowProfile === 'bathtub') {
+        const r_H = D / speedOfSound;
+        const r_ergo = Math.sqrt(D*D + C*C) / speedOfSound;
+        
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        
+        // 1. Draw event horizon (neon pink)
+        if (document.getElementById('show-horizon').checked) {
+          const px_rH = (r_H / Nx) * canvas.width;
+          ctx.strokeStyle = 'var(--neon-pink)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.arc(cx, cy, px_rH, 0, Math.PI*2);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#fff';
+          ctx.font = '9px "Courier New"';
+          ctx.fillText('event horizon (v_r = c)', cx - 60, cy - px_rH - 5);
+        }
+        
+        // 2. Draw ergosphere (neon cyan)
+        if (document.getElementById('show-ergosphere').checked && C > 0) {
+          const px_rErgo = (r_ergo / Nx) * canvas.width;
+          ctx.strokeStyle = 'var(--neon-blue)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 4]);
+          ctx.beginPath();
+          ctx.arc(cx, cy, px_rErgo, 0, Math.PI*2);
+          ctx.stroke();
+          
+          ctx.fillStyle = 'var(--neon-blue)';
+          ctx.fillText('ergosphere boundary (v = c)', cx - 75, cy - px_rErgo - 5);
+        }
+        
+        ctx.setLineDash([]);
+        
+        // Draw singularity core
+        ctx.fillStyle = '#000';
+        ctx.strokeStyle = 'rgba(255, 0, 127, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, (4.0 / Nx) * canvas.width, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (flowProfile === 'nozzle') {
+        // Linear Nozzle Event Horizon
+        if (document.getElementById('show-horizon').checked) {
+          const i_H = (speedOfSound / D_nozzle - 0.2) / 1.6 * Nx;
+          if (i_H >= 0 && i_H < Nx) {
+            const px_x = (i_H / Nx) * canvas.width;
+            ctx.strokeStyle = 'var(--neon-pink)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(px_x, 0);
+            ctx.lineTo(px_x, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '9px "Courier New"';
+            ctx.fillText('event horizon (v = c)', px_x + 5, 20);
+            ctx.fillText('<- supersonic | subsonic ->', px_x - 140, 35);
+          }
+        }
+      } else if (flowProfile === 'cavity') {
+        // Double Horizon (Cavity)
+        const Y_h = (speedOfSound / D_cavity - 0.2) / 1.6;
+        if (Y_h >= 0 && Y_h <= 1.0) {
+          const theta = Math.asin(Y_h);
+          const i1 = (theta / Math.PI) * Nx; // Left boundary (white hole)
+          const i2 = (1 - theta / Math.PI) * Nx; // Right boundary (black hole)
+          
+          if (document.getElementById('show-horizon').checked) {
+            ctx.strokeStyle = 'var(--neon-pink)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 6]);
+            
+            // Draw Black Hole Horizon
+            const px_x2 = (i2 / Nx) * canvas.width;
+            ctx.beginPath();
+            ctx.moveTo(px_x2, 0);
+            ctx.lineTo(px_x2, canvas.height);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '9px "Courier New"';
+            ctx.fillText('black hole horizon (v = c)', px_x2 + 5, 20);
+            ctx.fillText('<- supersonic cavity ->', px_x2 - 150, 35);
+            
+            // Draw White Hole Horizon
+            const px_x1 = (i1 / Nx) * canvas.width;
+            ctx.strokeStyle = 'var(--neon-blue)';
+            ctx.beginPath();
+            ctx.moveTo(px_x1, 0);
+            ctx.lineTo(px_x1, canvas.height);
+            ctx.stroke();
+            
+            ctx.fillStyle = 'var(--neon-blue)';
+            ctx.fillText('white hole horizon (v = c)', px_x1 - 165, 20);
+            ctx.fillText('subsonic', px_x1 - 60, 35);
+            
+            ctx.setLineDash([]);
+          }
+        }
+      }
+    }
+
+    function drawCustomElements() {
+      // Emitters
+      for (let em of emitters) {
+        ctx.shadowColor = em.type === 'sine' ? 'var(--neon-blue)' : 'var(--neon-pink)';
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = em.type === 'sine' ? 'var(--neon-blue)' : 'var(--neon-pink)';
+        ctx.beginPath();
+        ctx.arc(em.x, em.y, em.type === 'sine' ? 5 : 6, 0, Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      
+      // Static Rayguns
+      for (let rg of staticRayguns) {
+        let sx = (rg.gx + Nx/2) / Nx * canvas.width;
+        let sy = (rg.gy + Ny/2) / Ny * canvas.height;
+        ctx.shadowColor = 'var(--neon-pink)';
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = 'var(--neon-pink)';
+        
+        ctx.beginPath();
+        ctx.moveTo(sx + 6*Math.cos(rg.angle), sy + 6*Math.sin(rg.angle));
+        ctx.lineTo(sx + 5*Math.cos(rg.angle + 2.3), sy + 5*Math.sin(rg.angle + 2.3));
+        ctx.lineTo(sx + 5*Math.cos(rg.angle - 2.3), sy + 5*Math.sin(rg.angle - 2.3));
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      
+      // Drag line for Raygun
+      if (selectedTool === 'raygun' && isDrawing && startDragPos) {
+        ctx.strokeStyle = 'var(--neon-pink)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath();
+        ctx.moveTo(startDragPos.x, startDragPos.y);
+        // drag line
+        let movePos = probePos; // cursor tracking coordinate
+        ctx.lineTo(movePos.x, movePos.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      
+      // Acoustic Probe
+      if (probeActive) {
+        ctx.strokeStyle = 'var(--neon-green)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(probePos.x, probePos.y, 8, 0, Math.PI*2);
+        ctx.moveTo(probePos.x - 12, probePos.y);
+        ctx.lineTo(probePos.x + 12, probePos.y);
+        ctx.moveTo(probePos.x, probePos.y - 12);
+        ctx.lineTo(probePos.x, probePos.y + 12);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = '8px "Courier New"';
+        ctx.fillText('probe mic', probePos.x + 10, probePos.y - 10);
+      }
+    }
+
+    function drawRays() {
+      for (let r of rays) {
+        ctx.strokeStyle = r.color;
+        ctx.lineWidth = r.color === 'var(--neon-green)' ? 2.2 : 1.5;
+        ctx.beginPath();
+        for (let idx = 0; idx < r.history.length; idx++) {
+          let h = r.history[idx];
+          let px = (h[0] + Nx/2) / Nx * canvas.width;
+          let py = (h[1] + Ny/2) / Ny * canvas.height;
+          if (idx === 0) {
+            ctx.moveTo(px, py);
+          } else {
+            ctx.lineTo(px, py);
+          }
+        }
+        ctx.stroke();
+        
+        // draw leading photon particle
+        if (r.history.length > 0) {
+          let head = r.history[r.history.length - 1];
+          let px = (head[0] + Nx/2) / Nx * canvas.width;
+          let py = (head[1] + Ny/2) / Ny * canvas.height;
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(px, py, 2.5, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+    }
+
+    function drawFlowDust() {
+      ctx.fillStyle = colorTheme === 'cyberpunk' ? 'rgba(0, 243, 255, 0.28)' : 'rgba(255, 204, 0, 0.28)';
+      for (let p of flowDust) {
+        let px = (p.x + Nx/2) / Nx * canvas.width;
+        let py = (p.y + Ny/2) / Ny * canvas.height;
+        ctx.fillRect(px, py, 1.5, 1.5);
+      }
+    }
+
+    function drawOscilloscope() {
+      const scopeCanvas = document.getElementById('scope-canvas');
+      if (!scopeCanvas) return;
+      const sCtx = scopeCanvas.getContext('2d');
+      sCtx.clearRect(0, 0, scopeCanvas.width, scopeCanvas.height);
+      
+      // centerline
+      sCtx.strokeStyle = 'rgba(0, 255, 102, 0.12)';
+      sCtx.lineWidth = 1;
+      sCtx.beginPath();
+      sCtx.moveTo(0, scopeCanvas.height / 2);
+      sCtx.lineTo(scopeCanvas.width, scopeCanvas.height / 2);
+      sCtx.stroke();
+      
+      if (!probeActive) return;
+      
+      sCtx.strokeStyle = 'var(--neon-green)';
+      sCtx.lineWidth = 1.5;
+      sCtx.shadowColor = 'var(--neon-green)';
+      sCtx.shadowBlur = 3;
+      sCtx.beginPath();
+      
+      for (let i = 0; i < 100; i++) {
+        let idx = (probeHistoryIdx + i) % 100;
+        let val = probeHistory[idx];
+        
+        let x = (i / 100) * scopeCanvas.width;
+        let y = scopeCanvas.height / 2 - val * (scopeCanvas.height / 2 * 0.85);
+        
+        if (i === 0) {
+          sCtx.moveTo(x, y);
+        } else {
+          sCtx.lineTo(x, y);
+        }
+      }
+      sCtx.stroke();
+      sCtx.shadowBlur = 0;
+    }
+
+    // --- Main Simulation Update & Loop ---
+    function tickSimulation() {
+      frameCount++;
+      
+      // Calculate dynamic dt to respect CFL stability: dt < dx / (c + vMax)
+      let vMax = 0;
+      for (let idx = 0; idx < Nx*Ny; idx++) {
+        let v2 = vx[idx]*vx[idx] + vy[idx]*vy[idx];
+        if (v2 > vMax) vMax = v2;
+      }
+      vMax = Math.sqrt(vMax);
+      let dt_cfl = 0.32 / (speedOfSound + vMax);
+      let simSubsteps = 4;
+      let stepDt = dt_cfl;
+
+      // Update Physical Grid (wave propagation)
+      if (simMode === 'wave' || simMode === 'overlay') {
+        for (let step = 0; step < simSubsteps; step++) {
+          updateGrid(stepDt);
+        }
+      }
+      
+      // Update dust particles
+      updateFlowDust(stepDt * simSubsteps);
+      
+      // Update Phonon Rays
+      if (simMode === 'ray' || simMode === 'overlay') {
+        updateRays(stepDt * simSubsteps);
+        updateStaticRayguns();
+      }
+      
+      // Random hawking particles
+      if (hawkingActive && Math.random() < 0.05 && (simMode === 'ray' || simMode === 'overlay')) {
+        spawnHawkingPair();
+      }
+
+      // Record acoustic probe
+      if (probeActive) {
+        let gridX = Math.round((probePos.x / canvas.width) * Nx);
+        let gridY = Math.round((probePos.y / canvas.height) * Ny);
+        let idx = gridX * Ny + gridY;
+        let waveVal = 0;
+        if (gridX > 0 && gridX < Nx - 1 && gridY > 0 && gridY < Ny - 1) {
+          waveVal = psi[idx];
+        }
+        
+        // Save to oscilloscope
+        recordProbe(waveVal);
+        
+        // Modulate Web Audio oscillator
+        if (audioEnabled && probeGain && probeOsc) {
+          let targetGain = Math.min(Math.abs(waveVal) * 1.5, 0.12);
+          probeGain.gain.setTargetAtTime(targetGain, audioCtx.currentTime, 0.03);
+          
+          let targetFreq = 220 + waveVal * 160;
+          probeOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.03);
+        }
+      } else {
+        recordProbe(0.0);
+        if (audioEnabled && probeGain) {
+          probeGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.03);
+        }
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // 1. Draw Wave grid
+      if (simMode === 'wave' || simMode === 'overlay') {
+        updateOffscreenCanvas();
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(offscreenCanvas, 0, 0, canvas.width, canvas.height);
+      } else {
+        // Draw black background
+        ctx.fillStyle = '#010201';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      
+      // 2. Draw background dust
+      drawFlowDust();
+      
+      // 3. Vector fields
+      if (document.getElementById('show-vectors').checked) {
+        drawVectorField();
+      }
+      
+      // 4. Horizons
+      drawMetricBoundaries();
+      
+      // 5. Rays
+      if (simMode === 'ray' || simMode === 'overlay') {
+        drawRays();
+      }
+      
+      // 6. Custom placed tools
+      drawCustomElements();
+      
+      // 7. Oscilloscope panel update
+      drawOscilloscope();
+    }
+
+    function mainLoop() {
+      tickSimulation();
+      render();
+      requestAnimationFrame(mainLoop);
+    }
+
+    // --- Interactive Control Listeners ---
+    document.getElementById('sim-mode').addEventListener('change', function(e) {
+      simMode = e.target.value;
+    });
+
+    document.getElementById('flow-profile').addEventListener('change', function(e) {
+      flowProfile = e.target.value;
+      const drainCtrl = document.getElementById('ctrl-drain');
+      const circCtrl = document.getElementById('ctrl-circulation');
+      const lblDrain = document.getElementById('lbl-drain');
+      
+      if (flowProfile === 'bathtub') {
+        drainCtrl.style.display = 'block';
+        circCtrl.style.display = 'block';
+        lblDrain.textContent = "drain speed (D):";
+      } else if (flowProfile === 'nozzle') {
+        drainCtrl.style.display = 'block';
+        circCtrl.style.display = 'none';
+        lblDrain.textContent = "nozzle acceleration:";
+      } else if (flowProfile === 'cavity') {
+        drainCtrl.style.display = 'block';
+        circCtrl.style.display = 'none';
+        lblDrain.textContent = "cavity choke speed:";
+      }
+      
+      clearSystem();
+      initVelocityField();
+    });
+
+    document.getElementById('drain-rate').addEventListener('input', function(e) {
+      let val = parseFloat(e.target.value);
+      D = val;
+      D_nozzle = val / 11;
+      D_cavity = val / 10;
+      document.getElementById('val-drain-rate').textContent = val.toFixed(1);
+      initVelocityField();
+    });
+
+    document.getElementById('circulation').addEventListener('input', function(e) {
+      let val = parseFloat(e.target.value);
+      C = val;
+      document.getElementById('val-circulation').textContent = val.toFixed(1);
+      initVelocityField();
+    });
+
+    document.getElementById('sound-speed').addEventListener('input', function(e) {
+      let val = parseFloat(e.target.value);
+      speedOfSound = val;
+      document.getElementById('val-sound-speed').textContent = val.toFixed(2);
+      initVelocityField();
+    });
+
+    document.getElementById('viscosity').addEventListener('input', function(e) {
+      let val = parseFloat(e.target.value);
+      baseDamping = val;
+      document.getElementById('val-viscosity').textContent = val.toFixed(3);
+      initVelocityField();
+    });
+
+    document.getElementById('emitter-freq').addEventListener('input', function(e) {
+      let val = parseFloat(e.target.value);
+      emitterFreq = val;
+      document.getElementById('val-emitter-freq').textContent = val.toFixed(2);
+      // update active sine emitters
+      for (let em of emitters) {
+        if (em.type === 'sine') em.frequency = val;
+      }
+    });
+
+    document.getElementById('hawking-active').addEventListener('change', function(e) {
+      hawkingActive = e.target.checked;
+    });
+
+    document.getElementById('color-theme').addEventListener('change', function(e) {
+      colorTheme = e.target.value;
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', clearSystem);
+
+    document.getElementById('btn-sound').addEventListener('click', function() {
+      if (!audioCtx) {
+        initAudio();
+      } else {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+          audioEnabled = true;
+          document.getElementById('btn-sound').textContent = "mute audio";
+        } else if (audioCtx.state === 'running') {
+          audioCtx.suspend();
+          audioEnabled = false;
+          document.getElementById('btn-sound').textContent = "enable audio";
+        }
+      }
+    });
+
+    function setTool(tool) {
+      selectedTool = tool;
+      document.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(`tool-${tool}`).classList.add('active');
+      document.getElementById('current-action-hud').textContent = tool;
+    }
+
+    function clearSystem() {
+      emitters = [];
+      rays = [];
+      staticRayguns = [];
+      barrier.fill(0);
+      psi.fill(0);
+      pi.fill(0);
+      probeActive = false;
+      document.getElementById('scope-status').textContent = 'inactive';
+      document.getElementById('scope-status').style.color = 'var(--neon-pink)';
+    }
+
+    // Audio Prompt dialog callbacks
+    document.getElementById('btn-allow-audio').addEventListener('click', function() {
+      initAudio();
+      document.getElementById('audio-prompt').style.display = 'none';
+    });
+
+    document.getElementById('btn-skip-audio').addEventListener('click', function() {
+      document.getElementById('audio-prompt').style.display = 'none';
+    });
+
+    // Start everything
+    initVelocityField();
+    mainLoop();
+  </script>
+</body>
+</html>
