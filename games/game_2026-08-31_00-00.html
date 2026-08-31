@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>doppler-cooling: laser cooling & magneto-optical trap (MOT) sandbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --neon-green: #00ff66;
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007f;
+      --dark-bg: #030504;
+      --panel-bg: rgba(5, 8, 6, 0.95);
+      --border-color: rgba(0, 255, 102, 0.3);
+      --font-stack: "Courier New", Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--dark-bg);
+      color: var(--neon-green);
+      font-family: var(--font-stack);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      font-size: 14px;
+    }
+
+    #container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #canvas-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: radial-gradient(circle at center, #07120a 0%, #010302 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: crosshair;
+    }
+
+    canvas#main-canvas {
+      display: block;
+      background: #000;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 0 30px rgba(0, 255, 102, 0.05);
+    }
+
+    /* HUD overlay */
+    .hud {
+      position: absolute;
+      pointer-events: none;
+      text-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+    }
+
+    #hud-top-left {
+      top: 15px;
+      left: 15px;
+      pointer-events: auto;
+    }
+
+    #hud-top-left h1 {
+      font-size: 1.3em;
+      color: #fff;
+      text-transform: lowercase;
+      border-bottom: 1px solid var(--neon-green);
+      padding-bottom: 5px;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #hud-top-left h1::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: var(--neon-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: blink 2s infinite steps(2);
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { opacity: 0.2; }
+    }
+
+    #hud-bottom-left {
+      bottom: 15px;
+      left: 15px;
+      font-size: 0.85em;
+      background: rgba(5, 8, 6, 0.85);
+      padding: 8px;
+      border: 1px solid rgba(0, 255, 102, 0.15);
+      pointer-events: auto;
+      max-width: 320px;
+    }
+
+    #hud-bottom-left p {
+      margin-bottom: 4px;
+    }
+
+    #hud-bottom-left p:last-child {
+      margin-bottom: 0;
+    }
+
+    #sidebar {
+      width: 280px;
+      height: 100%;
+      background-color: var(--panel-bg);
+      border-left: 2px solid var(--neon-green);
+      padding: 15px;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: -5px 0 25px rgba(0, 255, 102, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-transform: lowercase;
+    }
+
+    .panel-section {
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      background-color: rgba(0, 255, 102, 0.01);
+    }
+
+    .panel-section-title {
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 3px;
+      font-size: 0.85em;
+      letter-spacing: 1px;
+    }
+
+    /* controls */
+    .control-group {
+      margin-bottom: 10px;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+      font-size: 0.85em;
+    }
+
+    .control-value {
+      color: #fff;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      background: #111;
+      border: 1px solid rgba(0, 255, 102, 0.2);
+      height: 6px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      background: var(--neon-green);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--neon-green);
+      border-radius: 0;
+    }
+
+    /* Buttons */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 5px;
+    }
+
+    button {
+      background: rgba(0, 255, 102, 0.05);
+      color: var(--neon-green);
+      border: 1px solid var(--border-color);
+      padding: 6px 10px;
+      font-family: var(--font-stack);
+      font-size: 0.85em;
+      cursor: pointer;
+      text-transform: lowercase;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: rgba(0, 255, 102, 0.15);
+      box-shadow: 0 0 8px rgba(0, 255, 102, 0.2);
+      color: #fff;
+    }
+
+    button.active {
+      background: var(--neon-green);
+      color: #000;
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    /* audio overlay initial */
+    #audio-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(3, 5, 4, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      border: 2px solid var(--neon-green);
+    }
+
+    #audio-overlay-box {
+      border: 1px solid var(--border-color);
+      padding: 30px;
+      text-align: center;
+      background: rgba(0, 15, 5, 0.9);
+      max-width: 400px;
+      box-shadow: 0 0 30px rgba(0, 255, 102, 0.1);
+    }
+
+    #audio-overlay h2 {
+      color: #fff;
+      margin-bottom: 15px;
+    }
+
+    #audio-overlay p {
+      margin-bottom: 25px;
+      font-size: 0.9em;
+      line-height: 1.5;
+    }
+
+    /* tools selection */
+    .tool-btn {
+      width: 100%;
+      margin-bottom: 6px;
+    }
+
+    /* Plot canvases */
+    canvas.plot-canvas {
+      width: 100%;
+      height: 160px;
+      background: #000;
+      border: 1px solid var(--border-color);
+      display: block;
+      margin-top: 5px;
+    }
+
+    canvas#temp-canvas {
+      height: 80px;
+    }
+
+    .info-stat {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 255, 102, 0.1);
+      padding: 4px 0;
+      font-size: 0.9em;
+    }
+
+    .info-stat span:last-child {
+      color: #fff;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Audio unlock gesture required by browsers -->
+  <div id="audio-overlay">
+    <div id="audio-overlay-box">
+      <h2>:: vacuum chamber status ::</h2>
+      <p>ultra-high vacuum initialized.<br>magnetic coils aligned.<br>lasers calibrated.<br>click below to ignite the magneto-optical trap and activate the bio-acoustic telemetry.</p>
+      <button id="btn-unlock" class="active" style="padding: 12px 24px; font-size: 1.1em; font-weight: bold;">[ignite trap]</button>
+    </div>
+  </div>
+
+  <div id="container">
+    <div id="canvas-container">
+      <canvas id="main-canvas" width="800" height="600"></canvas>
+      
+      <!-- HUD overlays -->
+      <div class="hud" id="hud-top-left">
+        <h1>mot-sandbox // doppler-cooling</h1>
+      </div>
+
+      <div class="hud" id="hud-bottom-left">
+        <p><strong>[controls]</strong> drag mouse inside chamber to activate tools. change laser detuning to observe transition from stable trap (red-detuned) to explosive heating (blue-detuned).</p>
+      </div>
+    </div>
+
+    <!-- Sidebar controls -->
+    <div id="sidebar">
+      <!-- Preset configs -->
+      <div class="panel-section">
+        <div class="panel-section-title">presets</div>
+        <div class="btn-grid">
+          <button id="preset-mot" class="active">mot mode</button>
+          <button id="preset-molasses">molasses</button>
+          <button id="preset-heating">blue heat</button>
+          <button id="preset-recoil">high recoil</button>
+        </div>
+      </div>
+
+      <!-- Live statistics -->
+      <div class="panel-section">
+        <div class="panel-section-title">telemetry</div>
+        <div class="info-stat">
+          <span>atom count:</span>
+          <span id="stat-count">0</span>
+        </div>
+        <div class="info-stat">
+          <span>temperature:</span>
+          <span id="stat-temp">300.0 K</span>
+        </div>
+        <div class="info-stat">
+          <span>trapped fraction:</span>
+          <span id="stat-trapped">0%</span>
+        </div>
+        <div class="info-stat">
+          <span>state:</span>
+          <span id="stat-phase" style="color: var(--neon-cyan);">gaseous</span>
+        </div>
+      </div>
+
+      <!-- Simulator variables -->
+      <div class="panel-section">
+        <div class="panel-section-title">parameters</div>
+        
+        <div class="control-group">
+          <div class="control-label">
+            <span>detuning (&delta;):</span>
+            <span class="control-value" id="val-detuning">-1.5</span>
+          </div>
+          <input type="range" id="slider-detuning" min="-4.0" max="2.0" step="0.1" value="-1.5">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>mag gradient (&alpha;):</span>
+            <span class="control-value" id="val-mag">0.0200</span>
+          </div>
+          <input type="range" id="slider-mag" min="0.00" max="0.05" step="0.002" value="0.02">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>laser intensity:</span>
+            <span class="control-value" id="val-intensity">1.5</span>
+          </div>
+          <input type="range" id="slider-intensity" min="0.1" max="3.0" step="0.1" value="1.5">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>photon recoil:</span>
+            <span class="control-value" id="val-recoil">0.12</span>
+          </div>
+          <input type="range" id="slider-recoil" min="0.01" max="0.40" step="0.01" value="0.12">
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>gravity:</span>
+            <span class="control-value" id="val-gravity">0.00</span>
+          </div>
+          <input type="range" id="slider-gravity" min="0.00" max="0.15" step="0.01" value="0.00">
+        </div>
+      </div>
+
+      <!-- Interaction Tool -->
+      <div class="panel-section">
+        <div class="panel-section-title">cursor tools</div>
+        <button id="tool-tweezer" class="tool-btn active">optical tweezer (pull)</button>
+        <button id="tool-push" class="tool-btn">push beam (repel)</button>
+        <button id="tool-gas" class="tool-btn">inject hot atoms</button>
+      </div>
+
+      <!-- Environment parameters -->
+      <div class="panel-section">
+        <div class="panel-section-title">vacuum status</div>
+        <div class="control-group" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>bkg collisions:</span>
+          <button id="btn-collisions" style="padding: 2px 8px;">disabled</button>
+        </div>
+      </div>
+
+      <!-- Oscilloscope widget: Phase Space -->
+      <div class="panel-section">
+        <div class="panel-section-title">phase space (x vs v_x)</div>
+        <canvas id="phase-canvas" class="plot-canvas" width="240" height="160"></canvas>
+      </div>
+
+      <!-- Oscilloscope widget: Temperature History -->
+      <div class="panel-section">
+        <div class="panel-section-title">temperature profile</div>
+        <canvas id="temp-canvas" class="plot-canvas" width="240" height="80"></canvas>
+      </div>
+
+      <!-- Audio controls -->
+      <div class="panel-section">
+        <div class="control-group">
+          <div class="control-label">
+            <span>telemetry audio:</span>
+            <span class="control-value" id="val-volume">25%</span>
+          </div>
+          <input type="range" id="slider-volume" min="0" max="100" step="5" value="25">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Physics parameters & state
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const chamberRadius = 240;
+    const beamWaist = 180;
+    const maxSpeed = 12.0;
+    const k = 1.0; // wavevector scale
+
+    let atoms = [];
+    let photons = [];
+    let backgroundMolecules = [];
+    let temperatureHistory = [];
+    let tickCount = 0;
+
+    let currentTempDisplay = "300.0 K";
+    let currentTempRaw = 300.0;
+    let trappedFraction = 0.0;
+
+    // Default settings
+    const settings = {
+      detuning: -1.5,
+      magneticGradient: 0.02,
+      intensity: 1.5,
+      recoil: 0.12,
+      gravity: 0.0,
+      activeTool: 'tweezer', // 'tweezer', 'push', 'gas'
+      backgroundCollisions: false,
+      volume: 0.25
+    };
+
+    // Mouse interactive state
+    const mouse = {
+      x: 0,
+      y: 0,
+      pressed: false,
+      insideChamber: false
+    };
+
+    // Particles structure
+    function createAtom(x, y, vx, vy) {
+      return {
+        x: x ?? (centerX + (Math.random() - 0.5) * 150),
+        y: y ?? (centerY + (Math.random() - 0.5) * 150),
+        vx: vx ?? (Math.random() - 0.5) * 6.0,
+        vy: vy ?? (Math.random() - 0.5) * 6.0,
+        lastAbsorbed: 0
+      };
+    }
+
+    function initAtoms(count) {
+      atoms = [];
+      for (let i = 0; i < count; i++) {
+        atoms.push(createAtom());
+      }
+    }
+
+    // Interactive custom tools
+    function applyToolForce(atom) {
+      if (!mouse.pressed) return;
+      const dx = mouse.x - atom.x;
+      const dy = mouse.y - atom.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (settings.activeTool === 'tweezer') {
+        const waist = 70;
+        const forceStrength = 0.35;
+        if (dist > 2) {
+          const force = forceStrength * (dist / waist) * Math.exp(-(dist * dist) / (waist * waist));
+          atom.vx += (dx / dist) * force;
+          atom.vy += (dy / dist) * force;
+        }
+      } else if (settings.activeTool === 'push') {
+        const radius = 100;
+        const pushForce = 0.45;
+        if (dist < radius && dist > 2) {
+          const force = pushForce * (1.0 - dist / radius);
+          atom.vx -= (dx / dist) * force; // Push away
+          atom.vy -= (dy / dist) * force;
+        }
+      }
+    }
+
+    function emitPhoton(atom, beamIndex) {
+      // Isotropic emission recoil
+      const angle = Math.random() * Math.PI * 2;
+      atom.vx += settings.recoil * Math.cos(angle);
+      atom.vy += settings.recoil * Math.sin(angle);
+      atom.lastAbsorbed = Date.now();
+
+      // Visual flash particles
+      if (photons.length < 200 && Math.random() < 0.3) {
+        photons.push({
+          x: atom.x,
+          y: atom.y,
+          vx: Math.cos(angle) * 3,
+          vy: Math.sin(angle) * 3,
+          life: 1.0,
+          color: beamIndex < 2 ? 'var(--neon-pink)' : 'var(--neon-cyan)'
+        });
+      }
+    }
+
+    // Physics Engine Solver
+    function solvePhysics() {
+      const dt = 1.0;
+      let sumVx = 0, sumVy = 0, sumV2 = 0;
+      let trappedCount = 0;
+
+      // Vacuum collision logic
+      if (settings.backgroundCollisions && Math.random() < 0.05) {
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? centerX - chamberRadius * 1.3 : centerX + chamberRadius * 1.3;
+        const startY = centerY + (Math.random() - 0.5) * chamberRadius * 1.5;
+        backgroundMolecules.push({
+          x: startX,
+          y: startY,
+          vx: fromLeft ? 6 + Math.random() * 5 : -6 - Math.random() * 5,
+          vy: (Math.random() - 0.5) * 3
+        });
+      }
+
+      // Update background gas molecules
+      for (let i = backgroundMolecules.length - 1; i >= 0; i--) {
+        const m = backgroundMolecules[i];
+        m.x += m.vx;
+        m.y += m.vy;
+
+        const dist = Math.sqrt((m.x - centerX) ** 2 + (m.y - centerY) ** 2);
+        if (dist > chamberRadius * 1.5) {
+          backgroundMolecules.splice(i, 1);
+          continue;
+        }
+
+        // Molecule collision checking with atoms
+        for (let j = 0; j < atoms.length; j++) {
+          const a = atoms[j];
+          const collisionDist = Math.sqrt((a.x - m.x) ** 2 + (a.y - m.y) ** 2);
+          if (collisionDist < 12) {
+            // Massive elastic bounce - thermal collision
+            const angle = Math.atan2(a.y - m.y, a.x - m.x);
+            const speed = 7.0 + Math.random() * 5.0;
+            a.vx = Math.cos(angle) * speed;
+            a.vy = Math.sin(angle) * speed;
+            backgroundMolecules.splice(i, 1);
+            break;
+          }
+        }
+      }
+
+      // Physics loop for atoms
+      for (let i = 0; i < atoms.length; i++) {
+        const a = atoms[i];
+
+        // 1. Tool interactions
+        applyToolForce(a);
+
+        // 2. Gravity
+        a.vy += settings.gravity * dt;
+
+        // 3. Quadrupole magnetic field coordinates
+        const rx = a.x - centerX;
+        const ry = a.y - centerY;
+
+        // Laser profiles (intensity profiles decay exponentially away from core beams)
+        const s_h = settings.intensity * Math.exp(-(ry * ry) / (beamWaist * beamWaist));
+        const s_v = settings.intensity * Math.exp(-(rx * rx) / (beamWaist * beamWaist));
+        const s_total = 2 * s_h + 2 * s_v;
+
+        // Effective detuning: detuning + Doppler shift + Zeeman shift
+        // Zeeman shift sign matches polarization choice to push inward
+        const d_L2R = settings.detuning - k * a.vx - settings.magneticGradient * rx;
+        const d_R2L = settings.detuning + k * a.vx + settings.magneticGradient * rx;
+        const d_T2B = settings.detuning - k * a.vy - settings.magneticGradient * ry;
+        const d_B2T = settings.detuning + k * a.vy + settings.magneticGradient * ry;
+
+        // Multi-beam scattering rates
+        const rate_L2R = 0.5 * s_h / (1 + s_total + 4 * d_L2R * d_L2R);
+        const rate_R2L = 0.5 * s_h / (1 + s_total + 4 * d_R2L * d_R2L);
+        const rate_T2B = 0.5 * s_v / (1 + s_total + 4 * d_T2B * d_T2B);
+        const rate_B2T = 0.5 * s_v / (1 + s_total + 4 * d_B2T * d_B2T);
+
+        const r = Math.random();
+        const p_L2R = rate_L2R * dt;
+        const p_R2L = rate_R2L * dt;
+        const p_T2B = rate_T2B * dt;
+        const p_B2T = rate_B2T * dt;
+
+        if (r < p_L2R) {
+          a.vx += settings.recoil;
+          emitPhoton(a, 0);
+        } else if (r < p_L2R + p_R2L) {
+          a.vx -= settings.recoil;
+          emitPhoton(a, 1);
+        } else if (r < p_L2R + p_R2L + p_T2B) {
+          a.vy += settings.recoil;
+          emitPhoton(a, 2);
+        } else if (r < p_L2R + p_R2L + p_T2B + p_B2T) {
+          a.vy -= settings.recoil;
+          emitPhoton(a, 3);
+        }
+
+        // Limit velocity
+        const velocity = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
+        if (velocity > maxSpeed) {
+          a.vx = (a.vx / velocity) * maxSpeed;
+          a.vy = (a.vy / velocity) * maxSpeed;
+        }
+
+        // Apply motion
+        a.x += a.vx * dt;
+        a.y += a.vy * dt;
+
+        // Boundaries checks: elastic wall deflection on chamber walls
+        const r_center = Math.sqrt(rx * rx + ry * ry);
+        if (r_center > chamberRadius) {
+          const normX = rx / r_center;
+          const normY = ry / r_center;
+          a.x = centerX + normX * (chamberRadius - 2);
+          a.y = centerY + normY * (chamberRadius - 2);
+          // Bounce off wall with damping
+          const dot = a.vx * normX + a.vy * normY;
+          a.vx = (a.vx - 2 * dot * normX) * 0.5;
+          a.vy = (a.vy - 2 * dot * normY) * 0.5;
+          // Re-heat returning atoms slightly to simulate warm walls
+          a.vx += (Math.random() - 0.5) * 1.5;
+          a.vy += (Math.random() - 0.5) * 1.5;
+        }
+
+        // Telemetry accumulation
+        sumVx += a.vx;
+        sumVy += a.vy;
+        sumV2 += a.vx * a.vx + a.vy * a.vy;
+
+        // Trapped determination: low speed near central field zero
+        if (r_center < 45 && velocity < 0.5) {
+          trappedCount++;
+        }
+      }
+
+      // Calculate thermodynamics
+      if (atoms.length > 0) {
+        const meanVx = sumVx / atoms.length;
+        const meanVy = sumVy / atoms.length;
+        // Variance proportional to temperature
+        const variance = (sumV2 / atoms.length) - (meanVx * meanVx + meanVy * meanVy);
+        
+        // Physics calibration scale: Room Temp 300K mapping to variance ~ 16
+        // Microkelvin limits mapping to variance ~ 0.005
+        const tempK = Math.max(0.0001, variance * 18.5);
+        if (tempK < 0.001) {
+          currentTempDisplay = (tempK * 1e6).toFixed(1) + " μK";
+        } else if (tempK < 1.0) {
+          currentTempDisplay = (tempK * 1000).toFixed(1) + " mK";
+        } else {
+          currentTempDisplay = tempK.toFixed(1) + " K";
+        }
+        currentTempRaw = tempK;
+        trappedFraction = trappedCount / atoms.length;
+
+        // Record history
+        temperatureHistory.push(variance);
+        if (temperatureHistory.length > 100) {
+          temperatureHistory.shift();
+        }
+      } else {
+        currentTempDisplay = "0 K";
+        currentTempRaw = 0;
+        trappedFraction = 0;
+      }
+    }
+
+    // Graphical Render loops
+    function drawFieldLines() {
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+      ctx.lineWidth = 1;
+      // Hyperbolic lines modeling Quadrupole fields: x*y = Constant
+      const hyperbolas = [-15000, -8000, -3000, 3000, 8000, 15000];
+      hyperbolas.forEach(c => {
+        ctx.beginPath();
+        let first = true;
+        for (let lx = centerX - chamberRadius; lx <= centerX + chamberRadius; lx += 8) {
+          const dx = lx - centerX;
+          if (Math.abs(dx) < 10) continue;
+          const dy = c / dx;
+          const ly = centerY + dy;
+          if (Math.sqrt(dx*dx + dy*dy) < chamberRadius) {
+            if (first) {
+              ctx.moveTo(lx, ly);
+              first = false;
+            } else {
+              ctx.lineTo(lx, ly);
+            }
+          }
+        }
+        ctx.stroke();
+      });
+    }
+
+    function drawLasers() {
+      if (settings.intensity <= 0) return;
+      
+      let baseColor;
+      if (settings.detuning < -0.1) {
+        baseColor = `255, 0, 127`; // red detuned = neon pink
+      } else if (settings.detuning > 0.1) {
+        baseColor = `0, 243, 255`; // blue detuned = neon cyan
+      } else {
+        baseColor = `255, 255, 255`; // resonant = white
+      }
+
+      // Draw horizontal lasers
+      const gradH = ctx.createLinearGradient(0, centerY - beamWaist, 0, centerY + beamWaist);
+      gradH.addColorStop(0, `rgba(${baseColor}, 0)`);
+      gradH.addColorStop(0.5, `rgba(${baseColor}, ${0.07 * settings.intensity})`);
+      gradH.addColorStop(1, `rgba(${baseColor}, 0)`);
+      ctx.fillStyle = gradH;
+      ctx.fillRect(centerX - chamberRadius, centerY - beamWaist, chamberRadius * 2, beamWaist * 2);
+
+      // Draw vertical lasers
+      const gradV = ctx.createLinearGradient(centerX - beamWaist, 0, centerX + beamWaist, 0);
+      gradV.addColorStop(0, `rgba(${baseColor}, 0)`);
+      gradV.addColorStop(0.5, `rgba(${baseColor}, ${0.07 * settings.intensity})`);
+      gradV.addColorStop(1, `rgba(${baseColor}, 0)`);
+      ctx.fillStyle = gradV;
+      ctx.fillRect(centerX - beamWaist, centerY - chamberRadius, beamWaist * 2, chamberRadius * 2);
+    }
+
+    function drawChamber() {
+      // Main steel cylinder wall
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, chamberRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 255, 102, 0.35)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, chamberRadius + 8, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 255, 102, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Zero-field coils grid lines
+      ctx.strokeStyle = 'rgba(0, 255, 102, 0.15)';
+      ctx.beginPath();
+      ctx.moveTo(centerX - 15, centerY);
+      ctx.lineTo(centerX + 15, centerY);
+      ctx.moveTo(centerX, centerY - 15);
+      ctx.lineTo(centerX, centerY + 15);
+      ctx.stroke();
+    }
+
+    function drawBackgroundGas() {
+      ctx.fillStyle = 'rgba(255, 50, 50, 0.7)';
+      backgroundMolecules.forEach(m => {
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw trailing path
+        ctx.strokeStyle = 'rgba(255, 50, 50, 0.15)';
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(m.x - m.vx * 1.5, m.y - m.vy * 1.5);
+        ctx.stroke();
+      });
+    }
+
+    function renderPhotons() {
+      for (let i = photons.length - 1; i >= 0; i--) {
+        const p = photons[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.05;
+        if (p.life <= 0) {
+          photons.splice(i, 1);
+          continue;
+        }
+        ctx.fillStyle = p.color.replace(')', `, ${p.life})`);
+        ctx.fillRect(p.x, p.y, 1.8, 1.8);
+      }
+    }
+
+    function renderAtoms() {
+      for (let i = 0; i < atoms.length; i++) {
+        const a = atoms[i];
+        const dx = a.x - centerX;
+        const dy = a.y - centerY;
+        const r = Math.sqrt(dx*dx + dy*dy);
+        const speed = Math.sqrt(a.vx*a.vx + a.vy*a.vy);
+
+        let color = '#ff3300'; // Hot (red)
+        let radius = 3.5;
+        let isTrapped = false;
+
+        if (speed < 0.45 && r < 45 && settings.detuning < 0 && settings.magneticGradient > 0) {
+          color = '#00ff66'; // Trapped (neon green)
+          radius = 4.2;
+          isTrapped = true;
+        } else if (speed < 0.7) {
+          color = '#00f3ff'; // Ultra-cold (neon cyan)
+        } else if (speed < 1.8) {
+          color = '#fffb80'; // Warm-cold (yellow-white)
+        } else if (speed < 3.8) {
+          color = '#ff9900'; // Warm (orange)
+        }
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glowing halos for laser-trapped particles
+        if (isTrapped) {
+          ctx.fillStyle = 'rgba(0, 255, 102, 0.15)';
+          ctx.beginPath();
+          ctx.arc(a.x, a.y, radius * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Absorb recoil ripple circles
+        const age = Date.now() - a.lastAbsorbed;
+        if (age < 100) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 * (1.0 - age / 100)})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(a.x, a.y, radius * 3.0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function renderTweezer() {
+      if (mouse.pressed && mouse.insideChamber) {
+        ctx.lineWidth = 1;
+        if (settings.activeTool === 'tweezer') {
+          ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)';
+          ctx.beginPath();
+          ctx.arc(mouse.x, mouse.y, 45, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.fillStyle = 'rgba(0, 243, 255, 0.05)';
+          ctx.beginPath();
+          ctx.arc(mouse.x, mouse.y, 45, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (settings.activeTool === 'push') {
+          ctx.strokeStyle = 'rgba(255, 0, 127, 0.4)';
+          ctx.beginPath();
+          ctx.arc(mouse.x, mouse.y, 75, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Telemetry Oscilloscopes drawing
+    const phaseCanvas = document.getElementById('phase-canvas');
+    const phaseCtx = phaseCanvas.getContext('2d');
+
+    function drawPhasePlot() {
+      phaseCtx.fillStyle = '#020302';
+      phaseCtx.fillRect(0, 0, phaseCanvas.width, phaseCanvas.height);
+
+      phaseCtx.strokeStyle = 'rgba(0, 255, 102, 0.2)';
+      phaseCtx.lineWidth = 1;
+      phaseCtx.strokeRect(0, 0, phaseCanvas.width, phaseCanvas.height);
+
+      // Grid coordinate lines
+      phaseCtx.strokeStyle = 'rgba(0, 255, 102, 0.1)';
+      phaseCtx.beginPath();
+      phaseCtx.moveTo(phaseCanvas.width / 2, 0);
+      phaseCtx.lineTo(phaseCanvas.width / 2, phaseCanvas.height);
+      phaseCtx.moveTo(0, phaseCanvas.height / 2);
+      phaseCtx.lineTo(phaseCanvas.width, phaseCanvas.height / 2);
+      phaseCtx.stroke();
+
+      // Plot atoms coordinates
+      atoms.forEach(a => {
+        const rx = a.x - centerX;
+        const px = (phaseCanvas.width / 2) + (rx / chamberRadius) * (phaseCanvas.width / 2 - 10);
+        const py = (phaseCanvas.height / 2) - (a.vx / 4.0) * (phaseCanvas.height / 2 - 10);
+
+        if (px > 0 && px < phaseCanvas.width && py > 0 && py < phaseCanvas.height) {
+          const speed = Math.sqrt(a.vx*a.vx + a.vy*a.vy);
+          const r = Math.sqrt(rx*rx + (a.y-centerY)*(a.y-centerY));
+          
+          let col = '#ff3300';
+          if (speed < 0.45 && r < 45 && settings.detuning < 0 && settings.magneticGradient > 0) {
+            col = '#00ff66';
+          } else if (speed < 0.7) {
+            col = '#00f3ff';
+          }
+          phaseCtx.fillStyle = col;
+          phaseCtx.fillRect(px, py, 1.8, 1.8);
+        }
+      });
+
+      phaseCtx.fillStyle = 'rgba(0, 255, 102, 0.5)';
+      phaseCtx.font = '8px monospace';
+      phaseCtx.fillText("x pos", phaseCanvas.width - 32, phaseCanvas.height / 2 - 4);
+      phaseCtx.fillText("v_x", phaseCanvas.width / 2 + 4, 10);
+    }
+
+    const tempCanvas = document.getElementById('temp-canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+
+    function drawTempPlot() {
+      tempCtx.fillStyle = '#020302';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+      tempCtx.strokeStyle = 'rgba(0, 255, 102, 0.2)';
+      tempCtx.strokeRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+      if (temperatureHistory.length < 2) return;
+
+      // Find local scaling bounds
+      let maxVal = 0.01;
+      temperatureHistory.forEach(v => {
+        if (v > maxVal) maxVal = v;
+      });
+
+      tempCtx.beginPath();
+      tempCtx.strokeStyle = 'var(--neon-green)';
+      tempCtx.lineWidth = 1.2;
+
+      const step = tempCanvas.width / (temperatureHistory.length - 1);
+      for (let i = 0; i < temperatureHistory.length; i++) {
+        const lx = i * step;
+        const ly = tempCanvas.height - (temperatureHistory[i] / maxVal) * (tempCanvas.height - 12) - 4;
+        if (i === 0) {
+          tempCtx.moveTo(lx, ly);
+        } else {
+          tempCtx.lineTo(lx, ly);
+        }
+      }
+      tempCtx.stroke();
+    }
+
+    // Audio synthesizer context using Web Audio API
+    let audioCtx = null;
+    let humOsc = null;
+    let laserOsc = null;
+    let noiseSrc = null;
+    let noiseFilter = null;
+    let masterGain = null;
+
+    function initSynth() {
+      if (audioCtx) return;
+      
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioCtxClass();
+
+      // 1. Magnetic Quadrupole Field Coils hum (low triangle wave)
+      humOsc = audioCtx.createOscillator();
+      humOsc.type = 'triangle';
+      humOsc.frequency.setValueAtTime(60, audioCtx.currentTime);
+
+      // 2. Optical resonance sound (high sine)
+      laserOsc = audioCtx.createOscillator();
+      laserOsc.type = 'sine';
+      laserOsc.frequency.setValueAtTime(250, audioCtx.currentTime);
+
+      // 3. Scattering noise simulating photon recoil emissions
+      const bufferSize = audioCtx.sampleRate * 2;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2.0 - 1.0;
+      }
+      noiseSrc = audioCtx.createBufferSource();
+      noiseSrc.buffer = noiseBuffer;
+      noiseSrc.loop = true;
+
+      noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(800, audioCtx.currentTime);
+      noiseFilter.Q.setValueAtTime(3.0, audioCtx.currentTime);
+
+      // Connect channels
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(settings.volume * 0.15, audioCtx.currentTime);
+
+      humOsc.connect(masterGain);
+      laserOsc.connect(masterGain);
+      
+      noiseSrc.connect(noiseFilter);
+      noiseFilter.connect(masterGain);
+
+      masterGain.connect(audioCtx.destination);
+
+      // Start sound engines
+      humOsc.start();
+      laserOsc.start();
+      noiseSrc.start();
+    }
+
+    function processAudio() {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      // Map thermodynamic telemetry to audio filters
+      // Lower temperature -> pure tone (sine)
+      // High temperature -> noisy buzz
+      const normTemp = Math.min(1.0, currentTempRaw / 150.0); // normalize temperature range
+
+      // Pitch tracking
+      const targetFrequency = 110 + (1.0 - trappedFraction) * 330 + normTemp * 400;
+      laserOsc.frequency.setTargetAtTime(targetFrequency, audioCtx.currentTime, 0.1);
+
+      // Filter settings
+      const filterFreq = 400 + (normTemp * 2200) + (settings.intensity * 200);
+      noiseFilter.frequency.setTargetAtTime(filterFreq, audioCtx.currentTime, 0.1);
+
+      const qVal = 1.0 + trappedFraction * 5.0;
+      noiseFilter.Q.setTargetAtTime(qVal, audioCtx.currentTime, 0.1);
+
+      // Magnetic field hum tracking
+      const humFrequency = 60 + settings.magneticGradient * 1200;
+      humOsc.frequency.setTargetAtTime(humFrequency, audioCtx.currentTime, 0.1);
+    }
+
+    // Interactive updates
+    function updateTelemetry() {
+      document.getElementById('stat-count').innerText = atoms.length;
+      document.getElementById('stat-temp').innerText = currentTempDisplay;
+      document.getElementById('stat-trapped').innerText = Math.round(trappedFraction * 100) + "%";
+
+      // Classify thermodynamic phase
+      let phaseName = "gaseous";
+      let phaseColor = "var(--neon-cyan)";
+      
+      if (settings.detuning > 0.05) {
+        phaseName = "thermal chaos";
+        phaseColor = "var(--neon-pink)";
+      } else if (trappedFraction > 0.75) {
+        phaseName = "ultra-cold mot crystal";
+        phaseColor = "var(--neon-green)";
+      } else if (trappedFraction > 0.2) {
+        phaseName = "mot condensation";
+        phaseColor = "#fff";
+      } else if (settings.detuning < -0.1) {
+        phaseName = "optical molasses";
+        phaseColor = "var(--neon-cyan)";
+      }
+
+      const statPhase = document.getElementById('stat-phase');
+      statPhase.innerText = phaseName;
+      statPhase.style.color = phaseColor;
+    }
+
+    // Main event loop
+    function loop() {
+      tickCount++;
+      solvePhysics();
+
+      // Main chamber render
+      ctx.fillStyle = '#020403';
+      ctx.fillRect(0, 0, width, height);
+
+      drawFieldLines();
+      drawLasers();
+      drawChamber();
+      drawBackgroundGas();
+      renderPhotons();
+      renderAtoms();
+      renderTweezer();
+
+      // Widgets rendering
+      drawPhasePlot();
+      drawTempPlot();
+
+      // Audio update
+      processAudio();
+
+      if (tickCount % 6 === 0) {
+        updateTelemetry();
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    // Set interactive variables from inputs
+    document.getElementById('slider-detuning').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      settings.detuning = val;
+      document.getElementById('val-detuning').innerText = val.toFixed(1);
+    });
+
+    document.getElementById('slider-mag').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      settings.magneticGradient = val;
+      document.getElementById('val-mag').innerText = val.toFixed(4);
+    });
+
+    document.getElementById('slider-intensity').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      settings.intensity = val;
+      document.getElementById('val-intensity').innerText = val.toFixed(1);
+    });
+
+    document.getElementById('slider-recoil').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      settings.recoil = val;
+      document.getElementById('val-recoil').innerText = val.toFixed(2);
+    });
+
+    document.getElementById('slider-gravity').addEventListener('input', e => {
+      const val = parseFloat(e.target.value);
+      settings.gravity = val;
+      document.getElementById('val-gravity').innerText = val.toFixed(2);
+    });
+
+    document.getElementById('slider-volume').addEventListener('input', e => {
+      const vol = parseInt(e.target.value);
+      settings.volume = vol / 100;
+      document.getElementById('val-volume').innerText = vol + "%";
+      if (masterGain && audioCtx) {
+        masterGain.gain.setValueAtTime(settings.volume * 0.15, audioCtx.currentTime);
+      }
+    });
+
+    // Preset setup logic
+    function setPreset(name) {
+      document.querySelectorAll('.btn-grid button').forEach(b => b.classList.remove('active'));
+      
+      if (name === 'mot') {
+        document.getElementById('preset-mot').classList.add('active');
+        settings.detuning = -1.5;
+        settings.magneticGradient = 0.02;
+        settings.intensity = 1.5;
+        settings.recoil = 0.12;
+        settings.gravity = 0.00;
+      } else if (name === 'molasses') {
+        document.getElementById('preset-molasses').classList.add('active');
+        settings.detuning = -1.2;
+        settings.magneticGradient = 0.0;
+        settings.intensity = 1.8;
+        settings.recoil = 0.10;
+        settings.gravity = 0.00;
+      } else if (name === 'heating') {
+        document.getElementById('preset-heating').classList.add('active');
+        settings.detuning = 1.0;
+        settings.magneticGradient = 0.02;
+        settings.intensity = 1.5;
+        settings.recoil = 0.15;
+        settings.gravity = 0.00;
+      } else if (name === 'recoil') {
+        document.getElementById('preset-recoil').classList.add('active');
+        settings.detuning = -2.0;
+        settings.magneticGradient = 0.015;
+        settings.intensity = 2.5;
+        settings.recoil = 0.35; // visually distinct quantum kicks
+        settings.gravity = 0.00;
+      }
+
+      // Update slider values
+      document.getElementById('slider-detuning').value = settings.detuning;
+      document.getElementById('val-detuning').innerText = settings.detuning.toFixed(1);
+      document.getElementById('slider-mag').value = settings.magneticGradient;
+      document.getElementById('val-mag').innerText = settings.magneticGradient.toFixed(4);
+      document.getElementById('slider-intensity').value = settings.intensity;
+      document.getElementById('val-intensity').innerText = settings.intensity.toFixed(1);
+      document.getElementById('slider-recoil').value = settings.recoil;
+      document.getElementById('val-recoil').innerText = settings.recoil.toFixed(2);
+      document.getElementById('slider-gravity').value = settings.gravity;
+      document.getElementById('val-gravity').innerText = settings.gravity.toFixed(2);
+    }
+
+    document.getElementById('preset-mot').addEventListener('click', () => setPreset('mot'));
+    document.getElementById('preset-molasses').addEventListener('click', () => setPreset('molasses'));
+    document.getElementById('preset-heating').addEventListener('click', () => setPreset('heating'));
+    document.getElementById('preset-recoil').addEventListener('click', () => setPreset('recoil'));
+
+    // Collision toggle
+    const colBtn = document.getElementById('btn-collisions');
+    colBtn.addEventListener('click', () => {
+      settings.backgroundCollisions = !settings.backgroundCollisions;
+      if (settings.backgroundCollisions) {
+        colBtn.innerText = "active";
+        colBtn.classList.add('active');
+      } else {
+        colBtn.innerText = "disabled";
+        colBtn.classList.remove('active');
+        backgroundMolecules = [];
+      }
+    });
+
+    // Tool switching
+    function selectTool(toolName) {
+      document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+      settings.activeTool = toolName;
+      if (toolName === 'tweezer') {
+        document.getElementById('tool-tweezer').classList.add('active');
+      } else if (toolName === 'push') {
+        document.getElementById('tool-push').classList.add('active');
+      } else if (toolName === 'gas') {
+        document.getElementById('tool-gas').classList.add('active');
+      }
+    }
+
+    document.getElementById('tool-tweezer').addEventListener('click', () => selectTool('tweezer'));
+    document.getElementById('tool-push').addEventListener('click', () => selectTool('push'));
+    document.getElementById('tool-gas').addEventListener('click', () => selectTool('gas'));
+
+    // Mouse tracking handlers
+    function getMousePos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = width / rect.width;
+      const scaleY = height / rect.height;
+      return {
+        x: (evt.clientX - rect.left) * scaleX,
+        y: (evt.clientY - rect.top) * scaleY
+      };
+    }
+
+    canvas.addEventListener('mousedown', e => {
+      const pos = getMousePos(e);
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+      mouse.pressed = true;
+
+      const rx = mouse.x - centerX;
+      const ry = mouse.y - centerY;
+      mouse.insideChamber = (rx * rx + ry * ry) < chamberRadius * chamberRadius;
+
+      if (mouse.insideChamber && settings.activeTool === 'gas') {
+        // Spray a few hot atoms in
+        for (let i = 0; i < 15; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 4 + Math.random() * 4;
+          atoms.push(createAtom(
+            mouse.x + (Math.random() - 0.5) * 10,
+            mouse.y + (Math.random() - 0.5) * 10,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed
+          ));
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const pos = getMousePos(e);
+      mouse.x = pos.x;
+      mouse.y = pos.y;
+
+      const rx = mouse.x - centerX;
+      const ry = mouse.y - centerY;
+      mouse.insideChamber = (rx * rx + ry * ry) < chamberRadius * chamberRadius;
+    });
+
+    window.addEventListener('mouseup', () => {
+      mouse.pressed = false;
+    });
+
+    // Handle gestures to unlock Audio API
+    document.getElementById('btn-unlock').addEventListener('click', () => {
+      document.getElementById('audio-overlay').style.display = 'none';
+      initSynth();
+      initAtoms(300);
+      loop();
+    });
+  </script>
+</body>
+</html>
